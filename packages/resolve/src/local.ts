@@ -112,27 +112,69 @@ export class LocalResolver implements Resolver {
         const cands = s.resolve
           ? s.resolve(text, ctx, {})
           : candidatesForOptions(tokens, optionsFor(act, name));
-        if ((cands[0]?.score ?? 0) >= this.routing.tauFill) covered++;
+        if ((cands[0]?.score ?? 0) < this.routing.tauFill) continue;
+
+        // A matched slot is evidence for THIS act only as far as it is not
+        // evidence for every other one. "laundry" belongs to the chore act;
+        // "Maya" is a person both acts have a slot for, and on its own it
+        // means nothing about which act was meant. Without this, the two
+        // score identically and the router has to guess.
+        covered += this.discrimination(act, name, text, acts, ctx, optionsFor, tokens);
       }
 
-      if (evaluable.length === 0) {
-        // Nothing to corroborate the phrase with, so the phrase carries it alone.
-        scores.push({ act: act.name, phraseMatch, requiredCoverage: 0, score: phraseMatch });
-        continue;
+      const requiredCoverage = evaluable.length ? covered / evaluable.length : 0;
+
+      // Score over the signals that actually spoke, not over every signal that
+      // could have. A trigger phrase nobody used is absence of evidence, the
+      // same as a slot this tier cannot evaluate — and dividing by a weight
+      // nothing filled is what buried "do the laundry" at 0.30.
+      let weight = 0;
+      let total = 0;
+      if (phraseMatch >= this.routing.phraseFloor) {
+        weight += this.routing.phraseWeight;
+        total += this.routing.phraseWeight * phraseMatch;
+      }
+      if (evaluable.length > 0) {
+        weight += this.routing.coverageWeight;
+        total += this.routing.coverageWeight * requiredCoverage;
       }
 
-      const requiredCoverage = covered / evaluable.length;
       scores.push({
         act: act.name,
         phraseMatch,
         requiredCoverage,
-        score:
-          this.routing.phraseWeight * phraseMatch +
-          this.routing.coverageWeight * requiredCoverage,
+        score: weight > 0 ? total / weight : 0,
       });
     }
 
     return scores.sort((a, b) => b.score - a.score);
+  }
+
+  /**
+   * 1 when only this act could have matched those words, falling toward 0 as
+   * more acts could have matched them just as well.
+   */
+  private discrimination(
+    act: ActDef,
+    slot: string,
+    text: string,
+    acts: ActDef[],
+    ctx: Ctx,
+    optionsFor: OptionsFor,
+    tokens: Token[],
+  ): number {
+    let rivals = 0;
+    for (const other of acts) {
+      if (other.name === act.name) continue;
+      for (const [name, sd] of Object.entries(other.slots)) {
+        if (!sd.required) continue;
+        const cands = sd.resolve
+          ? sd.resolve(text, ctx, {})
+          : candidatesForOptions(tokens, optionsFor(other, name));
+        if ((cands[0]?.score ?? 0) >= this.routing.tauFill) { rivals++; break; }
+      }
+    }
+    return 1 / (1 + rivals);
   }
 
   fillSync(

@@ -10,7 +10,7 @@ None of them answers the one after it: **how does the human accept, reject, or c
 proposed?** No commit model, no repair grammar, no notion of what a mutation costs if it is wrong.
 That is this layer.
 
-Spec **v0.3**. Nine packages, **171 tests**, four apps. `aiuic-core` has no dependencies.
+Spec **v0.3**. Ten packages, **183 tests**, four apps. `aiuic-core` has no dependencies.
 
 ---
 
@@ -27,6 +27,7 @@ Spec **v0.3**. Nine packages, **171 tests**, four apps. `aiuic-core` has no depe
 | `aiuic-brand` | brand colour, measured legibility, initials marks | 7 |
 | `aiuic-devtools` | why an act is not committing; recorder, timeline, linter | 14 |
 | `aiuic-present` | the renderer boundary: one view, a text presenter and a DOM one | 15 |
+| `aiuic-eval` | labelled suites, the false-confirm rate, reliability curves, threshold sweeps | 12 |
 
 `aiuic-core` imports nothing from the others. That is how the boundary gets tested.
 
@@ -39,7 +40,25 @@ a rule. If a rule ever has to be repeated inside a presenter, the boundary is in
 ```bash
 npm test        # every suite
 npm run typecheck
+npm run eval    # the seed suite, with numbers
 ```
+
+## The number that decides whether any of this is safe
+
+```
+cases            28
+routing          28/28  (100.0%)
+confirmed right  39
+confirmed WRONG  0      <- the only one that silence-commits a mistake
+FALSE CONFIRM    0.0%
+```
+
+A confident miss is the one failure the contract cannot catch. A provisional
+fill holds and waits; an empty slot asks; a narrowed slot offers two. Only a
+slot filled **confidently and wrongly** silence-commits the wrong thing, and
+the user finds out afterwards. Twenty-eight sentences is not enough to tune on
+— a few hundred from real users is — but the harness is there and the number
+is real.
 
 ## Apps
 

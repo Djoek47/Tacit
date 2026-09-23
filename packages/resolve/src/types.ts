@@ -54,6 +54,12 @@ export type RoutingConfig = {
   tauFill: number;
   phraseWeight: number;
   coverageWeight: number;
+  /**
+   * A trigger phrase either matched or it did not. Short words are one edit
+   * from each other — "pay" scores 0.75 against "play" — and treating that as
+   * partial evidence routes "play something" to a payment act.
+   */
+  phraseFloor: number;
 };
 
 export const DEFAULT_ROUTING: RoutingConfig = {
@@ -62,6 +68,7 @@ export const DEFAULT_ROUTING: RoutingConfig = {
   tauFill: 0.85,
   phraseWeight: 0.4,
   coverageWeight: 0.6,
+  phraseFloor: 0.9,
 };
 
 export type RouteDecision =
