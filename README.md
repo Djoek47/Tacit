@@ -10,7 +10,7 @@ None of them answers the one after it: **how does the human accept, reject, or c
 proposed?** No commit model, no repair grammar, no notion of what a mutation costs if it is wrong.
 That is this layer.
 
-Spec **v0.3**. Eight packages, **156 tests**, four apps. `aiuic-core` has no dependencies.
+Spec **v0.3**. Nine packages, **171 tests**, four apps. `aiuic-core` has no dependencies.
 
 ---
 
@@ -26,8 +26,15 @@ Spec **v0.3**. Eight packages, **156 tests**, four apps. `aiuic-core` has no dep
 | `aiuic-memory` | stated facts; remembering and forgetting as acts | 10 |
 | `aiuic-brand` | brand colour, measured legibility, initials marks | 7 |
 | `aiuic-devtools` | why an act is not committing; recorder, timeline, linter | 14 |
+| `aiuic-present` | the renderer boundary: one view, a text presenter and a DOM one | 15 |
 
 `aiuic-core` imports nothing from the others. That is how the boundary gets tested.
+
+**Renderer-agnostic, concretely.** `toView()` turns a live act into everything a renderer needs and
+nothing it has to work out — options resolved, values formatted, the preview sentence, which
+controls are live. Two presenters ship against that one view: `TextPresenter` draws words,
+`DomPresenter` drives elements. They are tested side by side on the same act, and neither restates
+a rule. If a rule ever has to be repeated inside a presenter, the boundary is in the wrong place.
 
 ```bash
 npm test        # every suite
