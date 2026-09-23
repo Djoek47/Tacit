@@ -1,0 +1,149 @@
+<title>Heckit</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Azeret+Mono:wght@300;400&family=Instrument+Sans:wght@400;500&display=swap">
+<style>
+  :root{
+    color-scheme:dark;
+    --void:#06050e; --deep:#0b0a18; --rise:#12102450;
+    --edge:rgba(255,255,255,.10); --edge-lit:rgba(255,255,255,.22);
+    --glass:rgba(146,140,214,.055); --glass-2:rgba(146,140,214,.10);
+    --ink:#eeecf8; --dim:#a29dc4; --faint:#6e6994;
+    --cy:#8fe8ff; --am:#b98cff; --gold:#ffc46b; --mint:#5ef0c4; --rose:#ff7a94;
+    --blur:22px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--void); color:var(--ink); overflow:hidden;
+    font-family:"Instrument Sans",system-ui,-apple-system,sans-serif; font-size:15px; line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  #sky{position:fixed; inset:0; z-index:0; display:block}
+  .veil{position:fixed; inset:0; z-index:1; pointer-events:none;
+    background:
+      radial-gradient(95% 70% at 50% 46%, transparent 32%, rgba(6,5,14,.42) 74%, rgba(6,5,14,.88) 100%),
+      linear-gradient(180deg, rgba(6,5,14,.7) 0%, transparent 18%, transparent 72%, rgba(6,5,14,.85) 100%);
+  }
+
+  .app{position:relative; z-index:2; height:100%; display:grid;
+       grid-template-rows:auto 1fr auto; padding-inline:18px; padding-block:0 0}
+  .topbar{display:flex; align-items:center; justify-content:space-between; gap:12px;
+          padding-top:calc(14px + env(safe-area-inset-top,0px)); padding-bottom:6px}
+  .mark{display:flex; align-items:baseline; gap:10px}
+  .mark h1{font-family:Archivo,system-ui,sans-serif; font-size:15px; font-weight:700;
+           letter-spacing:.34em; text-transform:uppercase; margin:0; color:var(--ink)}
+  .mark .sub{font-family:"Azeret Mono",ui-monospace,monospace; font-size:10px; color:var(--faint);
+             letter-spacing:.16em; text-transform:uppercase}
+  .status{font-family:"Azeret Mono",ui-monospace,monospace; font-size:10px; letter-spacing:.16em;
+          text-transform:uppercase; color:var(--faint); display:flex; align-items:center; gap:8px}
+  .status .dot{width:6px; height:6px; border-radius:50%; background:var(--faint); box-shadow:0 0 10px currentColor}
+  .status.live .dot{background:var(--cy); color:var(--cy)}
+  .status.think .dot{background:var(--am); color:var(--am)}
+  .status.hold .dot{background:var(--gold); color:var(--gold)}
+  .status.done .dot{background:var(--mint); color:var(--mint)}
+
+  .middle{position:relative; min-height:0; display:grid;
+          grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:20px}
+  @media (max-width:900px){
+    .middle{grid-template-columns:1fr; grid-template-rows:auto auto auto; align-content:start;
+            overflow-y:auto; gap:14px; padding-block:8px}
+  }
+
+  .orbzone{position:relative; width:min(38vh,320px); aspect-ratio:1; flex:none}
+  @media (max-width:900px){ .centre{order:-1} .orbzone{width:min(30vh,210px)} .speech{max-width:26ch} }
+  .ring{position:absolute; inset:8%; transform:rotate(-90deg)}
+  .ring circle{fill:none; stroke-width:2.5; stroke-linecap:round}
+  .ring .trk{stroke:rgba(255,255,255,.035)}
+  .ring .arc{stroke:var(--gold); filter:drop-shadow(0 0 7px rgba(255,196,107,.65))}
+  /* The orb is presence; the words are speech. Keeping them apart means the
+     core can be as bright as it likes without eating the sentence. */
+  .centre{display:flex; flex-direction:column; align-items:center; gap:18px; justify-self:center}
+  .speech{text-align:center; max-width:30ch; min-height:62px}
+  .speech .q{font-family:Archivo,system-ui,sans-serif; font-weight:500; font-size:clamp(17px,2.5vh,23px);
+             line-height:1.35; letter-spacing:-.005em; text-wrap:balance; color:var(--ink);
+             text-shadow:0 2px 26px rgba(6,5,14,.85)}
+  .speech .ms{font-family:"Azeret Mono",monospace; font-size:10px; color:var(--gold);
+              letter-spacing:.16em; text-transform:uppercase; margin-top:10px; min-height:14px}
+
+  /* glass panels */
+  .pane{
+    background:linear-gradient(160deg, var(--glass-2), var(--glass));
+    border:1px solid var(--edge); border-radius:18px;
+    backdrop-filter:blur(var(--blur)) saturate(135%); -webkit-backdrop-filter:blur(var(--blur)) saturate(135%);
+    box-shadow:0 1px 0 0 var(--edge-lit) inset, 0 24px 60px -30px rgba(0,0,0,.9);
+    overflow:hidden; opacity:0; transform:translateY(14px); transition:opacity .7s ease, transform .7s cubic-bezier(.2,.8,.2,1);
+  }
+  .pane.on{opacity:1; transform:none}
+  .pane .ph{display:flex; align-items:center; justify-content:space-between; gap:10px;
+            padding:11px 16px; border-bottom:1px solid rgba(255,255,255,.07)}
+  .ph .t{font-family:"Azeret Mono",monospace; font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--dim)}
+  .ph .n{font-family:"Azeret Mono",monospace; font-size:10px; color:var(--faint)}
+  .pbody{padding:12px 16px 16px; max-height:min(40vh,380px); overflow-y:auto}
+  .pbody::-webkit-scrollbar{width:5px} .pbody::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12); border-radius:9px}
+
+  .memline{display:flex; gap:10px; align-items:flex-start; padding:7px 0; border-bottom:1px solid rgba(255,255,255,.05);
+           opacity:0; transform:translateX(-8px); animation:slide .55s cubic-bezier(.2,.8,.2,1) forwards}
+  @keyframes slide{to{opacity:1; transform:none}}
+  .memline:last-child{border-bottom:0}
+  .memline .k{font-family:"Azeret Mono",monospace; font-size:9px; letter-spacing:.14em; text-transform:uppercase;
+              color:var(--cy); flex:none; width:64px; padding-top:3px; opacity:.85}
+  .memline .v{font-size:13.5px; color:var(--ink); min-width:0; word-break:break-word}
+
+  .step{display:grid; grid-template-columns:auto minmax(0,1fr); gap:11px; padding:9px 0;
+        border-bottom:1px solid rgba(255,255,255,.05); opacity:0; transform:translateY(8px);
+        animation:rise .6s cubic-bezier(.2,.8,.2,1) forwards}
+  @keyframes rise{to{opacity:1; transform:none}}
+  .step:last-child{border-bottom:0}
+  .step .when{font-family:"Azeret Mono",monospace; font-size:10px; color:var(--am); letter-spacing:.08em;
+              padding-top:3px; white-space:nowrap}
+  .step .what{font-size:13.5px}
+  .step .why{font-size:11.5px; color:var(--faint); margin-top:2px}
+
+  .goalcard{padding:13px 16px; border-bottom:1px solid rgba(255,255,255,.07)}
+  .goalcard .lab{font-family:"Azeret Mono",monospace; font-size:9px; letter-spacing:.2em;
+                 text-transform:uppercase; color:var(--faint)}
+  .goalcard .g{font-family:Archivo,sans-serif; font-weight:600; font-size:17px; margin-top:3px; text-wrap:balance}
+
+  /* bottom rail */
+  .rail{padding-bottom:calc(16px + env(safe-area-inset-bottom,0px)); padding-top:10px}
+  .railin{max-width:720px; margin:0 auto; display:flex; flex-direction:column; gap:9px}
+  .say{display:flex; gap:9px; align-items:center;
+    background:linear-gradient(160deg, rgba(146,140,214,.12), rgba(146,140,214,.05));
+    border:1px solid var(--edge); border-radius:999px; padding:6px 6px 6px 20px;
+    backdrop-filter:blur(var(--blur)) saturate(140%); -webkit-backdrop-filter:blur(var(--blur)) saturate(140%);
+    box-shadow:0 1px 0 0 var(--edge-lit) inset, 0 20px 50px -26px rgba(0,0,0,.95);
+    transition:border-color .35s, box-shadow .35s}
+  .say:focus-within{border-color:rgba(143,232,255,.45);
+    box-shadow:0 1px 0 0 var(--edge-lit) inset, 0 0 0 4px rgba(143,232,255,.09), 0 20px 50px -26px #000}
+  .say input{flex:1; min-width:0; background:transparent; border:0; outline:none; color:var(--ink);
+             font:inherit; font-size:15.5px; padding:10px 0}
+  .say input::placeholder{color:var(--faint)}
+  .go{flex:none; width:42px; height:42px; border-radius:50%; border:1px solid rgba(143,232,255,.35);
+      background:radial-gradient(circle at 34% 30%, rgba(143,232,255,.32), rgba(143,232,255,.07));
+      color:var(--cy); cursor:pointer; display:grid; place-items:center; transition:transform .2s, box-shadow .25s}
+  .go:hover{transform:scale(1.06); box-shadow:0 0 0 5px rgba(143,232,255,.08)}
+  .go:focus-visible{outline:2px solid var(--cy); outline-offset:3px}
+  .go svg{width:17px; height:17px}
+
+  .hint{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; min-height:28px}
+  .hint button{font:inherit; font-size:12.5px; color:var(--dim); cursor:pointer;
+    background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.09); border-radius:999px;
+    padding:5px 13px; transition:color .2s, border-color .2s, background .2s}
+  .hint button:hover{color:var(--ink); border-color:rgba(255,255,255,.22); background:rgba(255,255,255,.07)}
+  .hint button:focus-visible{outline:2px solid var(--cy); outline-offset:2px}
+  .hint .lead{font-size:12.5px; color:var(--faint); align-self:center; letter-spacing:.02em}
+
+  .cta{display:flex; gap:9px; justify-content:center; flex-wrap:wrap}
+  .cta button{font:inherit; font-size:13.5px; font-weight:500; cursor:pointer; border-radius:999px; padding:9px 20px;
+    border:1px solid; transition:transform .18s, box-shadow .25s}
+  .cta button:hover{transform:translateY(-1px)}
+  .cta button:focus-visible{outline:2px solid var(--cy); outline-offset:3px}
+  .cta .yes{border-color:rgba(94,240,196,.45); color:#06120f;
+    background:linear-gradient(160deg,#7df5d2,#3fd9ad); box-shadow:0 10px 30px -14px rgba(94,240,196,.7)}
+  .cta .no{border-color:rgba(255,255,255,.16); color:var(--dim); background:rgba(255,255,255,.04)}
+
+  .gate{text-align:center; font-size:12.5px; color:var(--rose); min-height:18px}
+  .gate.ok{color:var(--mint)} .gate.warm{color:var(--gold)} .gate.quiet{color:var(--faint)}
+
+  [hidden]{display:none!important}
+  @media (prefers-reduced-motion:reduce){ *{animation-duration:.01ms!important; transition-duration:.01ms!important} }
+</style>

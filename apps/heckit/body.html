@@ -1,0 +1,54 @@
+<canvas id="sky"></canvas>
+<div class="veil"></div>
+
+<div class="app">
+  <div class="topbar">
+    <div class="mark">
+      <h1>Heckit</h1>
+      <span class="sub">aiuic + hepta</span>
+    </div>
+    <div class="status" id="status"><span class="dot"></span><span id="statust">listening</span></div>
+  </div>
+
+  <div class="middle">
+    <section class="pane" id="memPane">
+      <div class="ph"><span class="t">Memory</span><span class="n" id="memCount">0 facts</span></div>
+      <div class="pbody" id="mem"></div>
+    </section>
+
+    <div class="centre">
+      <div class="orbzone">
+        <svg class="ring" viewBox="0 0 240 240" aria-hidden="true">
+          <circle class="trk" cx="120" cy="120" r="116"></circle>
+          <circle class="arc" id="arc" cx="120" cy="120" r="116" stroke-dasharray="728.8" stroke-dashoffset="728.8"></circle>
+        </svg>
+      </div>
+      <div class="speech">
+        <div class="q" id="say">Speak to it.</div>
+        <div class="ms" id="ms"></div>
+      </div>
+    </div>
+
+    <section class="pane" id="planPane">
+      <div class="ph"><span class="t" id="planTitle">Plan</span><span class="n" id="planMeta"></span></div>
+      <div id="goalBox"></div>
+      <div class="pbody" id="plan"></div>
+    </section>
+  </div>
+
+  <div class="rail">
+    <div class="railin">
+      <div class="gate quiet" id="gate">Tell it what you want to change this year.</div>
+      <form class="say" id="form">
+        <input id="input" autocomplete="off" spellcheck="false" aria-label="Speak to Heckit"
+               placeholder="I want to stop being broke by summer">
+        <button class="go" id="go" type="submit" aria-label="Send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+        </button>
+      </form>
+      <div class="hint" id="hint"></div>
+      <div class="cta" id="cta" hidden></div>
+    </div>
+  </div>
+</div>

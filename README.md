@@ -63,3 +63,20 @@ npx esbuild demo/entry.ts --bundle --format=iife --global-name=AIUIC --minify --
 cat demo/page-head.html demo/page-body.html > demo/index.html
 { echo '<script>'; cat demo/aiuic.bundle.js; echo '</script>'; cat demo/app.js; } >> demo/index.html
 ```
+
+## apps/heckit
+
+The MVP surface: speak once, it interviews you, learns, thinks, and builds the year.
+Runs `aiuic-core` + `aiuic-resolve` + `hepta` bundled into one page. Rebuild:
+
+```bash
+npx esbuild apps/heckit/entry.ts --bundle --format=iife --global-name=AIUIC \
+  --target=es2020 --minify --outfile=apps/heckit/aiuic.bundle.js
+cd apps/heckit && { cat head.html body.html; echo '<script>'; cat aiuic.bundle.js; \
+  echo '</script>'; cat app.js; } > index.html
+```
+
+**Mocked, and marked in the source:** the question bank (a real build asks Jev to
+choose the next question from the gaps), the plan text, and speech itself. Everything
+underneath — acts, slots, blast radius, HOLD, the attention gate, the outbox — is the
+real engine.
