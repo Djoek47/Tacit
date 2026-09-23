@@ -42,3 +42,13 @@ npm test
 ```
 
 Everything is tested against an injectable `FakeClock`, so no device and no audio are needed.
+
+## Resolution tiers
+
+| Tier | What | Latency | Network | Fills |
+| --- | --- | --- | --- | --- |
+| 0 | local matcher | ~0 ms | no | names, chips, anything in a declared option list |
+| 1 | Jev (TypeSafe System One) | 70–500 ms | **yes** | which act; which option, with a calibrated distribution |
+| 2 | LLM | seconds | yes | free text, novel intent, escalation |
+
+Jev is a hosted, closed model, so it is tier 1 and never tier 0. `TieredResolver` refuses a non-local tier 0 at construction, and its staged calls hand back the local answer synchronously so nothing paints behind a network call.
