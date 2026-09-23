@@ -94,6 +94,14 @@ export class ActRun {
   result: CommitResult | null = null;
   undoId: string | null = null;
 
+  /**
+   * Speculation. A stage painted from a PARTIAL utterance may show everything
+   * it has worked out, and may not commit any of it: the speaker has not
+   * stopped talking, so there is no silence to read as assent. Clearing this
+   * is the moment the tongue stops turning.
+   */
+  speculative = false;
+
   private holdTimer: TimerId | null = null;
   private holdEndsAt = 0;
   private holdMs = 0;
@@ -326,6 +334,13 @@ export class ActRun {
       return;
     }
 
+    if (this.speculative) {
+      this.status = 'speculating';
+      this.phase = 'show';
+      this.emit({ type: 'stage', state: this.state() });
+      return;
+    }
+
     const gate: GateResult = attentionGate(ctx.attention, this.engaged);
 
     if (radius === 'external' || !gate.pass) {
@@ -372,9 +387,19 @@ export class ActRun {
     return this.holdMs;
   }
 
+  /** Speech settled. The act may now be judged on the contract like any other. */
+  settleSpeculation(): void {
+    if (!this.speculative) return;
+    this.speculative = false;
+    this.evaluate();
+  }
+
   /** Explicit assent: a tap or a yes-word. The only path for `external`. */
   async assent(): Promise<void> {
     this.markEngaged();
+    if (this.speculative) {
+      throw new Error(`[${this.def.name}] cannot assent to a speculative act; settle it first`);
+    }
     if (this.status !== 'explicit' && this.status !== 'hold' && this.status !== 'frozen') {
       throw new Error(`[${this.def.name}] nothing to assent to (status "${this.status}")`);
     }

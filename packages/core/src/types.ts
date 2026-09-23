@@ -177,6 +177,8 @@ export type AssentChannel = 'silence' | 'explicit';
 
 export type ActStatus =
   | 'resolving'
+  /** Painted from a partial utterance. Cannot reach HOLD until speech settles. */
+  | 'speculating'
   | 'hold'
   | 'explicit'
   | 'frozen'

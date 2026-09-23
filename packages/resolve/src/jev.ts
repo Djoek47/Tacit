@@ -76,7 +76,10 @@ export type JevResponse = { answers: JevAnswer[] };
  * request envelope, so treat `JevRequest`/`JevResponse` as the adapter seam:
  * verify against the SDK before the first live call.
  */
-export type JevTransport = (req: JevRequest, signal?: AbortSignal) => Promise<JevResponse>;
+// Declared locally: the core and its siblings compile without DOM or Node libs.
+type Abortable = { readonly aborted: boolean };
+
+export type JevTransport = (req: JevRequest, signal?: Abortable) => Promise<JevResponse>;
 
 // ---------------------------------------------------------------- mapping
 
@@ -234,7 +237,7 @@ export class JevResolver implements Resolver {
 
 type FetchLike = (
   url: string,
-  init: { method: string; headers: Record<string, string>; body: string; signal?: AbortSignal },
+  init: { method: string; headers: Record<string, string>; body: string; signal?: Abortable },
 ) => Promise<{ ok: boolean; status: number; text(): Promise<string>; json(): Promise<unknown> }>;
 
 declare const fetch: FetchLike;
