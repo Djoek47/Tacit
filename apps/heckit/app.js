@@ -143,8 +143,78 @@
   }
 
   /* ================================================================= engine */
-  const mem = [];              // what it has learned
+  /* Durable across reloads, so tomorrow it already knows you. */
+  const store = new A.Memory(new A.BrowserStore('heckit.v1'));
+  const mem = [];              // mirror of what is on screen
   let goalText = '', domain = 'default';
+
+  const brands = new A.Brands();
+  brands.register(
+    { id: 'tangerine', name: 'Tangerine', color: '#FF6600', aliases: ['tangerine'] },
+    { id: 'rbc', name: 'Royal Bank', color: '#0051A5', aliases: ['rbc', 'royal'] },
+    { id: 'ws', name: 'Wealthsimple', color: '#2A2A2A', aliases: ['wealthsimple', 'simple'] },
+  );
+
+  /* Capabilities are registered here, in code, once. A composed act binds to
+     one of these and inherits its cost; it can never invent a cheaper one. */
+  const composer = new A.Composer();
+  composer.register({
+    name: 'draft_plan',
+    describe: 'Write something into the user\u2019s own notes. Reversible, private.',
+    radius: 'self',
+    run: (f) => { built.push(f); return { id: 'b' + built.length }; },
+    undo: () => { built.pop(); },
+    catalogs: {
+      banks: () => brands.options(),
+      cities: () => [
+        { value: 'nrt', label: 'Tokyo' }, { value: 'lis', label: 'Lisbon' },
+        { value: 'cdg', label: 'Paris' }, { value: 'yul', label: 'Montr\u00e9al' },
+      ],
+      shops: () => [
+        { value: 'metro', label: 'Metro' }, { value: 'iga', label: 'IGA' },
+        { value: 'costco', label: 'Costco' },
+      ],
+    },
+  });
+  composer.register({
+    name: 'charge_card',
+    describe: 'Take money from the stored card.',
+    radius: 'external',
+    requires: { amount: 'quantity' },
+    run: () => ({ id: 'charge' }),
+    effects: [{ name: 'settle', run: () => {}, radius: 'external', reversible: false, deferrable: false }],
+  });
+  const built = [];
+
+  /* Stands in for the model. In the real build this is one call returning the
+     same JSON, validated by exactly the same Composer. */
+  function composeFor(text) {
+    const t = A.normalize(text);
+    if (/\b(ticket|tickets|fly|flight|trip|travel|go to)\b/.test(t)) return {
+      name: 'hold_tickets', capability: 'draft_plan', phrases: ['tickets', 'fly'],
+      slots: {
+        destination: { primitive: 'chip', catalog: 'cities', required: true, order: 1 },
+        depart: { primitive: 'when', params: { granularity: 'day' }, required: true, order: 2 },
+        travellers: { primitive: 'quantity', params: { min: 1, max: 9 }, order: 3 },
+      },
+    };
+    if (/\b(grocer|groceries|shopping|fridge|food|dinner)\b/.test(t)) return {
+      name: 'shopping_run', capability: 'draft_plan', phrases: ['groceries', 'shopping'],
+      slots: {
+        shop: { primitive: 'chip', catalog: 'shops', required: true, order: 1 },
+        when: { primitive: 'when', params: { granularity: 'day' }, required: true, order: 2 },
+        budget: { primitive: 'quantity', params: { min: 10, max: 400 }, order: 3 },
+      },
+    };
+    if (/\b(bank|account|transfer|savings|move money)\b/.test(t)) return {
+      name: 'open_savings', capability: 'draft_plan', phrases: ['savings', 'account'],
+      slots: {
+        bank: { primitive: 'chip', catalog: 'banks', required: true, order: 1 },
+        monthly: { primitive: 'quantity', params: { min: 5, max: 2000 }, required: true, order: 2 },
+      },
+    };
+    return null;
+  }
 
   const ctx = () => ({
     actor: { id: 'you', basePauseMs: 850 },
@@ -158,8 +228,8 @@
     name: 'set_goal',
     slots: { goal: { primitive: 'ghostField', fill: 'local', options: noSlots, required: true, order: 1 } },
     radius: 'self',
-    commit: (f) => { goalText = String(f.goal); return { id: 'goal' }; },
-    undo: () => { goalText = ''; },
+    commit: (f) => { goalText = String(f.goal); store.put('goal', goalText); return { id: 'goal' }; },
+    undo: () => { goalText = ''; store.forget('goal'); },
   }));
   ui.defineAct(A.defineAct({
     name: 'record_answer',
@@ -168,8 +238,15 @@
       answer: { primitive: 'ghostField', fill: 'local', options: noSlots, required: true, order: 2 },
     },
     radius: 'self',
-    commit: (f) => { mem.push({ k: f.question.key, v: String(f.answer) }); return { id: 'm' + mem.length }; },
-    undo: () => { mem.pop(); },
+    commit: (f) => {
+      const prev = store.put(f.question.key, String(f.answer));
+      mem.push({ k: f.question.key, v: String(f.answer) });
+      return { id: f.question.key, previous: prev === undefined ? null : prev };
+    },
+    undo: (r) => {
+      mem.pop();
+      if (r.previous === null) store.forget(r.id); else store.put(r.id, String(r.previous));
+    },
   }));
   ui.defineAct(A.defineAct({
     name: 'accept_plan',
@@ -411,17 +488,107 @@
       cta.hidden = true; setStatus('committed', 'done'); addNode('tx');
       setSay('Done. Everything above runs itself now.');
       setGate('That is the whole loop: you spoke once, and nothing you did not agree to happened.', 'ok');
-      $('input').disabled = false; $('input').placeholder = 'say anything else'; stage = 'done';
-      hints(['start over']);
+      $('input').disabled = false; $('input').placeholder = 'ask for anything'; stage = 'done';
+      hints(['book tickets to Tokyo', 'plan the grocery run', 'forget everything']);
     }); };
     const no = document.createElement('button'); no.className = 'no'; no.textContent = 'Not yet';
     no.onclick = () => {
       r.discard(); cta.hidden = true; setStatus('waiting');
       setSay('Left alone.'); setGate('Nothing moved.', 'quiet');
-      $('input').disabled = false; stage = 'done'; hints(['start over']);
+      $('input').disabled = false; stage = 'done';
+      hints(['book tickets to Tokyo', 'plan the grocery run', 'forget everything']);
     };
     cta.append(yes, no);
   }
+
+  /* A screen that did not exist a moment ago — composed, not generated. */
+  function buildFor(text) {
+    const spec = composeFor(text);
+    if (!spec) {
+      setSay('I can build a screen for tickets, groceries, or a savings account.');
+      setGate('Say one of those and watch it appear.', 'quiet');
+      return;
+    }
+    let def;
+    try { def = composer.compose(spec); }
+    catch (err) { setSay('That one did not pass the checks.'); setGate(String(err.message), 'quiet'); return; }
+
+    if (!ui.definitions.some((d) => d.name === def.name)) ui.defineAct(def);
+    const r = ui.start(def.name);
+    run = r;
+    stage = 'composed';
+    composedRun = r;
+
+    const label = def.name.replace(/_/g, ' ');
+    setSay(label.charAt(0).toUpperCase() + label.slice(1) + '. Fill what matters, leave the rest.');
+    setStatus('composed', 'think');
+    setGate('This screen did not exist a second ago. Nothing was generated but JSON.', 'quiet');
+    renderComposed(def, r);
+    for (let i = 0; i < 6; i++) setTimeout(addStreak, i * 90);
+  }
+
+  function renderComposed(def, r) {
+    const box = $('plan');
+    $('planTitle').textContent = def.name.replace(/_/g, ' ');
+    $('planMeta').textContent = Object.keys(def.slots).length + ' slots \u00b7 ' +
+      (typeof def.radius === 'string' ? def.radius : def.radius.max);
+    $('goalBox').innerHTML = '';
+    box.innerHTML = '';
+    const order = Object.entries(def.slots).sort((a, b) => a[1].order - b[1].order);
+    order.forEach(([name, sd], i) => {
+      const row = document.createElement('div');
+      row.className = 'step'; row.style.animationDelay = (i * 80) + 'ms';
+      row.innerHTML = '<span class="when"></span><span><span class="what"></span><span class="slotopts"></span></span>';
+      row.querySelector('.when').textContent = sd.primitive;
+      row.querySelector('.what').textContent = name + (sd.required ? '' : ' (optional)');
+      const opts = sd.options ? sd.options({}, {}) : [];
+      const holder = row.querySelector('.slotopts');
+      holder.className = 'slotopts';
+      opts.slice(0, 6).forEach((o) => {
+        const chip = document.createElement('button');
+        chip.type = 'button'; chip.className = 'ochip';
+        const b = brands.get(String(o.value));
+        if (b) {
+          const st = brands.style(b.id);
+          chip.innerHTML = brands.mark(b.id, 16);
+          chip.append(' ' + o.label);
+          chip.style.borderColor = st.soft.replace(/[\d.]+\)$/, '.55)');
+          chip.style.background = st.soft;
+        } else { chip.textContent = o.label; }
+        chip.onclick = () => {
+          r.setValue(name, o.value, 'touched');
+          chip.parentElement.querySelectorAll('.ochip').forEach((c) => c.classList.remove('sel'));
+          chip.classList.add('sel');
+          reflectComposed(r);
+        };
+        holder.appendChild(chip);
+      });
+      if (!opts.length) {
+        const f = document.createElement('input');
+        f.className = 'ofield'; f.placeholder = sd.primitive === 'quantity' ? 'a number' : 'say it';
+        f.oninput = () => {
+          const v = sd.primitive === 'quantity' ? Number(f.value) : f.value;
+          if (f.value.trim()) r.setValue(name, v, 'touched'); reflectComposed(r);
+        };
+        holder.appendChild(f);
+      }
+      box.appendChild(row);
+    });
+    $('planPane').classList.add('on');
+    reflectComposed(r);
+  }
+
+  function reflectComposed(r) {
+    const st = r.state();
+    if (st.status === 'hold') { armRing(); setStatus('holding', 'hold');
+      setGate('Everything it needs is there. Say nothing and it saves.', 'warm'); }
+    else if (st.status === 'explicit') { setStatus('needs a yes', 'hold');
+      setGate('Bound to a capability that costs money. Silence will not do it.', 'warm'); }
+    else { setStatus('composed', 'think');
+      setGate('Waiting on ' + (st.focus || 'the rest') + '.', 'quiet'); }
+  }
+
+  let composedRun = null;
 
   function begin(text) {
     goalText = text; domain = classify(text); bank = BANKS[domain] || BANKS.default;
@@ -442,15 +609,42 @@
     $('input').value = '';
     if (stage === 'idle') return begin(v);
     if (stage === 'interview') return answer(v);
-    if (stage === 'done') { if (/start over|restart|again/i.test(v)) location.reload(); return; }
+    if (stage === 'done' || stage === 'composed') {
+      if (/forget everything|start over|restart|wipe/i.test(v)) { store.clear(); location.reload(); return; }
+      return buildFor(v);
+    }
   });
 
   $('input').addEventListener('input', () => {
     if (run && run.status === 'hold') { run.freeze('you started talking again'); setStatus('waiting'); }
   });
 
-  hints(['I want to stop being broke by summer', 'get properly fit this year', 'change careers within a year']);
-  setStatus('listening', 'live');
+  /* Tomorrow. It already knows you, so it does not start from nothing. */
+  const known = store.all();
+  if (known.length) {
+    for (const f of known) { mem.push({ k: f.key, v: f.value }); addNode(f.key); }
+    renderMem();
+    goalText = store.get('goal') || '';
+    domain = goalText ? classify(goalText) : 'default';
+    bank = BANKS[domain] || BANKS.default;
+    const missing = store.gaps(bank.map((b) => b[0]));
+    stage = missing.length ? 'interview' : 'done';
+    if (missing.length) {
+      qi = bank.findIndex((b) => b[0] === missing[0]);
+      setSay('Welcome back. ' + (goalText ? '\u201c' + goalText + '\u201d. ' : '') +
+             missing.length + ' thing' + (missing.length === 1 ? '' : 's') + ' still missing.');
+      setGate('Pick up where you stopped, or say something else entirely.', 'quiet');
+      setTimeout(() => askNext(), 2200);
+    } else {
+      setSay('Welcome back. I have everything I need.');
+      setGate('Ask for a screen: tickets, groceries, a savings account.', 'quiet');
+      hints(['book tickets to Tokyo', 'plan the grocery run', 'open a savings account', 'forget everything']);
+    }
+    setStatus('remembering', 'done');
+  } else {
+    hints(['I want to stop being broke by summer', 'get properly fit this year', 'change careers within a year']);
+    setStatus('listening', 'live');
+  }
   size(); requestAnimationFrame(draw);
   setTimeout(size, 120);
 })();

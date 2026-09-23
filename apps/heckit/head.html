@@ -144,6 +144,18 @@
   .gate{text-align:center; font-size:12.5px; color:var(--rose); min-height:18px}
   .gate.ok{color:var(--mint)} .gate.warm{color:var(--gold)} .gate.quiet{color:var(--faint)}
 
+  .slotopts{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; align-items:center}
+  .ochip{font:inherit; font-size:12.5px; color:var(--dim); cursor:pointer; display:inline-flex;
+         align-items:center; gap:6px; background:rgba(255,255,255,.04);
+         border:1px solid rgba(255,255,255,.12); border-radius:9px; padding:4px 10px;
+         transition:color .18s, border-color .18s, background .18s}
+  .ochip svg{border-radius:4px; display:block}
+  .ochip:hover{color:var(--ink); border-color:rgba(255,255,255,.28)}
+  .ochip.sel{color:var(--ink); border-color:rgba(94,240,196,.55); background:rgba(94,240,196,.12)}
+  .ochip:focus-visible{outline:2px solid var(--cy); outline-offset:2px}
+  .ofield{font:inherit; font-size:13px; color:var(--ink); background:rgba(255,255,255,.04);
+          border:1px solid rgba(255,255,255,.12); border-radius:9px; padding:5px 11px; outline:none; max-width:170px}
+  .ofield:focus{border-color:rgba(143,232,255,.5)}
   [hidden]{display:none!important}
   @media (prefers-reduced-motion:reduce){ *{animation-duration:.01ms!important; transition-duration:.01ms!important} }
 </style>
