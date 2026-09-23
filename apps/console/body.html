@@ -1,0 +1,90 @@
+<div class="wrap">
+  <header>
+    <div class="eyebrow">
+      <span class="badge">AIUIC</span><span class="badge">Hepta</span><span class="badge">v0.3 · 142 tests</span>
+    </div>
+    <h1>The AI proposes.<br>Your silence approves.<br>One word corrects it.</h1>
+    <p class="lede">Every framework for AI-driven interfaces answers the same question: <b>how does a model
+      describe a screen safely?</b> None of them answer the one after it — <b>how does the human accept,
+      reject, or correct what it proposed?</b> That is this layer. Below, you can try to break it.</p>
+  </header>
+
+  <section>
+    <div class="sechead"><span class="n">01</span><h2>Two pieces</h2></div>
+    <p class="secsub">One decides what may happen. The other decides when it is allowed to.</p>
+    <div class="two">
+      <div class="card">
+        <h3>AIUIC — the commit contract</h3>
+        <p>An act declares <span class="k">what it costs to be wrong</span>. That, not a hand-maintained
+          list of exceptions, decides how consent is obtained: a quiet moment for something reversible,
+          a spoken yes for something that isn't. Repair rewinds one slot, never the whole sentence.</p>
+      </div>
+      <div class="card am">
+        <h3>Hepta — seven tongues</h3>
+        <p><i>Tourner sept fois sa langue dans sa bouche avant de parler.</i> While you are still talking,
+          <span class="k">seven candidate acts stay alive at once</span>. The leader paints the screen
+          immediately. None of them may commit — a half-finished sentence contains no silence to read.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sechead"><span class="n">02</span><h2>Compose an act</h2></div>
+    <p class="secsub">A model never writes interface code. It emits the JSON on the left, binding to a
+      capability the host registered in advance. Edit it, press Compose, and use what comes out.</p>
+
+    <div class="lab">
+      <div class="pane">
+        <div class="ph"><span class="lbl">ActSpec — what a model may emit</span>
+          <select id="preset" aria-label="Load an example"></select></div>
+        <div class="pb">
+          <textarea id="spec" spellcheck="false" aria-label="Act specification JSON"></textarea>
+          <div class="row">
+            <button class="go" id="compose">Compose</button>
+            <button id="reset">Reset</button>
+            <span class="lbl" id="capnote"></span>
+          </div>
+          <div id="err"></div>
+        </div>
+      </div>
+
+      <div style="display:grid;gap:16px">
+        <div class="pane">
+          <div class="ph"><span class="lbl">The stage it produced</span><span class="lbl" id="status">—</span></div>
+          <div class="pb out" id="out"></div>
+        </div>
+        <div class="pane">
+          <div class="ph"><span class="lbl">Tool schema, generated</span><span class="lbl">never hand-written</span></div>
+          <pre id="tools">—</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sechead"><span class="n">03</span><h2>Try to break it</h2></div>
+    <p class="secsub">Each of these is a real test in the suite. Press one and watch the spec get refused —
+      or, in the last case, accepted and then refused where it matters.</p>
+    <div class="attacks" id="attacks"></div>
+  </section>
+
+  <section>
+    <div class="sechead"><span class="n">04</span><h2>What a host declares</h2></div>
+    <p class="secsub">Capabilities are written in code, once, with their cost. This is the whole trust boundary.</p>
+    <div class="pane"><div class="tw"><table>
+      <thead><tr><th>Capability</th><th>Radius</th><th>Reversible</th><th>What it does</th></tr></thead>
+      <tbody id="caps"></tbody>
+    </table></div></div>
+  </section>
+
+  <section>
+    <div class="sechead"><span class="n">05</span><h2>The whole API</h2></div>
+    <p class="secsub">Nine calls. There are no screens in it.</p>
+    <div class="pane"><pre id="api"></pre></div>
+  </section>
+
+  <footer>
+    AIUIC and Hepta are one repository: seven packages, 142 tests, no dependencies in the core.
+    Everything on this page runs the same engine — the panel on the right is the contract deciding, not a script.
+  </footer>
+</div>

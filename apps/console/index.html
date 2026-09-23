@@ -1,0 +1,547 @@
+<title>AIUIC Console</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Azeret+Mono:wght@300;400;500&family=Instrument+Sans:wght@400;500&display=swap">
+<style>
+  :root{
+    color-scheme:dark;
+    --void:#06050e; --deep:#0a0913;
+    --glass:rgba(146,140,214,.05); --glass2:rgba(146,140,214,.10);
+    --edge:rgba(255,255,255,.10); --lit:rgba(255,255,255,.2);
+    --ink:#eeecf8; --dim:#a29dc4; --faint:#6e6994;
+    --cy:#8fe8ff; --am:#b98cff; --gold:#ffc46b; --mint:#5ef0c4; --rose:#ff7a94;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--void);color:var(--ink);
+       font:15px/1.6 "Instrument Sans",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1160px;margin:0 auto;padding-inline:16px;padding-block:26px 64px}
+  .mono,.lbl,pre,code,.num{font-family:"Azeret Mono",ui-monospace,SFMono-Regular,monospace}
+  h1,h2,h3{font-family:Archivo,system-ui,sans-serif;text-wrap:balance;margin:0}
+  h1{font-size:clamp(28px,4.6vw,44px);font-weight:700;letter-spacing:-.02em;line-height:1.08}
+  h2{font-size:clamp(20px,2.6vw,25px);font-weight:600;letter-spacing:-.01em}
+  h3{font-size:15px;font-weight:600}
+  .lbl{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint)}
+
+  header{padding-block:12px 34px;border-bottom:1px solid rgba(255,255,255,.07);margin-bottom:34px}
+  .eyebrow{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+  .badge{border:1px solid var(--edge);border-radius:999px;padding:4px 11px;font-size:10px;
+         letter-spacing:.18em;text-transform:uppercase;color:var(--dim);font-family:"Azeret Mono",monospace}
+  .lede{color:var(--dim);font-size:17px;max-width:62ch;margin:16px 0 0}
+  .lede b{color:var(--ink);font-weight:500}
+
+  section{margin-bottom:44px}
+  .sechead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  .sechead .n{font-family:"Azeret Mono",monospace;font-size:11px;color:var(--am);letter-spacing:.1em}
+  .secsub{color:var(--dim);max-width:64ch;margin:0 0 18px}
+
+  .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+  .card{background:linear-gradient(160deg,var(--glass2),var(--glass));border:1px solid var(--edge);
+        border-radius:16px;padding:18px 18px 20px;box-shadow:0 1px 0 0 var(--lit) inset}
+  .card h3{margin-bottom:6px}
+  .card p{margin:0;color:var(--dim);font-size:14px}
+  .card .k{color:var(--cy)}
+  .card.am .k{color:var(--am)}
+
+  .pane{background:linear-gradient(160deg,var(--glass2),var(--glass));border:1px solid var(--edge);
+        border-radius:16px;overflow:hidden;box-shadow:0 1px 0 0 var(--lit) inset,0 22px 55px -34px #000}
+  .ph{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 15px;
+      border-bottom:1px solid rgba(255,255,255,.07)}
+  .pb{padding:15px}
+
+  .lab{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:stretch}
+  .lab > .pane{display:flex;flex-direction:column}
+  .lab > .pane > .pb{flex:1;display:flex;flex-direction:column}
+  @media(max-width:900px){.lab{grid-template-columns:1fr}}
+
+  textarea{width:100%;flex:1;min-height:300px;resize:vertical;background:rgba(0,0,0,.28);color:var(--ink);
+    border:1px solid var(--edge);border-radius:11px;padding:13px;outline:none;
+    font:12px/1.65 "Azeret Mono",monospace;tab-size:2}
+  textarea:focus{border-color:rgba(143,232,255,.45)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:11px}
+  button{font:inherit;font-size:13.5px;cursor:pointer;border-radius:999px;padding:8px 17px;
+    border:1px solid var(--edge);background:rgba(255,255,255,.04);color:var(--ink);
+    transition:border-color .18s,background .18s,transform .15s}
+  button:hover{border-color:var(--lit);background:rgba(255,255,255,.07)}
+  button:active{transform:translateY(1px)}
+  button:focus-visible{outline:2px solid var(--cy);outline-offset:2px}
+  button.go{background:linear-gradient(160deg,#7df5d2,#3fd9ad);border-color:transparent;color:#05120f;font-weight:500}
+  button.small{font-size:12px;padding:5px 12px}
+  select{font:inherit;font-size:13px;background:rgba(255,255,255,.05);color:var(--ink);
+    border:1px solid var(--edge);border-radius:999px;padding:7px 13px;outline:none}
+
+  .out{min-height:300px}
+  .slots{display:flex;flex-wrap:wrap;gap:8px}
+  .slot{border:1px solid var(--edge);border-radius:10px;padding:7px 11px;background:rgba(255,255,255,.03);
+        display:flex;flex-direction:column;gap:3px;min-width:0}
+  .slot.empty{border-style:dashed;opacity:.7}
+  .slot.prov{border-color:var(--am);background:rgba(185,140,255,.1)}
+  .slot .k{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-family:"Azeret Mono",monospace}
+  .slot .v{font-size:13.5px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+  .chip{font-size:12px;border:1px solid var(--edge);border-radius:8px;padding:3px 9px;background:rgba(255,255,255,.04);
+        color:var(--dim);cursor:pointer}
+  .chip:hover{color:var(--ink);border-color:var(--lit)}
+  .chip.sel{color:var(--ink);border-color:var(--mint);background:rgba(94,240,196,.13)}
+  .mini{font:inherit;font-size:12.5px;color:var(--ink);background:rgba(255,255,255,.04);
+        border:1px solid var(--edge);border-radius:8px;padding:4px 9px;outline:none;max-width:150px;margin-top:5px}
+
+  .verdict{display:flex;gap:7px;flex-wrap:wrap;margin:14px 0 0;min-height:26px}
+  .pill{font-size:12px;border-radius:999px;padding:3px 11px;border:1px solid}
+  .pill.hold{color:var(--gold);border-color:var(--gold);background:rgba(255,196,107,.12)}
+  .pill.ok{color:var(--mint);border-color:var(--mint);background:rgba(94,240,196,.12)}
+  .pill.stop{color:var(--rose);border-color:var(--rose);background:rgba(255,122,148,.12)}
+  .pill.prov{color:var(--am);border-color:var(--am);background:rgba(185,140,255,.12)}
+  .why{font-size:13px;color:var(--dim);margin-top:9px}
+  .err{color:var(--rose);font:12.5px/1.6 "Azeret Mono",monospace;background:rgba(255,122,148,.08);
+       border:1px solid rgba(255,122,148,.3);border-radius:10px;padding:11px 13px;margin-top:12px;white-space:pre-wrap}
+  .ok-note{color:var(--mint);font-size:12.5px;margin-top:12px;font-family:"Azeret Mono",monospace}
+
+  .ring{width:76px;height:76px;transform:rotate(-90deg);flex:none}
+  .ring circle{fill:none;stroke-width:3;stroke-linecap:round}
+  .ring .trk{stroke:rgba(255,255,255,.07)}
+  .ring .arc{stroke:var(--gold);filter:drop-shadow(0 0 6px rgba(255,196,107,.55))}
+  .holdrow{display:flex;gap:14px;align-items:center;margin-top:14px}
+  .holdrow .t{font-size:13px;color:var(--dim)}
+  .holdrow .t b{color:var(--gold);font-weight:500;font-family:"Azeret Mono",monospace}
+
+  pre{margin:0;padding:13px 15px;overflow:auto;max-height:230px;font-size:11.5px;line-height:1.7;color:var(--dim)}
+  .attacks{display:grid;gap:9px}
+  .attack{display:grid;grid-template-columns:auto minmax(0,1fr);gap:11px;align-items:start;
+          border:1px solid var(--edge);border-radius:12px;padding:11px 13px;background:rgba(255,255,255,.025)}
+  .attack code{font-size:12px;color:var(--rose)}
+  .attack .d{font-size:13px;color:var(--dim)}
+  .attack button{align-self:center}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.07);vertical-align:top}
+  th{font-family:"Azeret Mono",monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:400}
+  td code{font-size:12px;color:var(--cy)}
+  .tw{overflow-x:auto}
+
+  footer{border-top:1px solid rgba(255,255,255,.07);padding-top:20px;color:var(--faint);font-size:13px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">
+      <span class="badge">AIUIC</span><span class="badge">Hepta</span><span class="badge">v0.3 · 142 tests</span>
+    </div>
+    <h1>The AI proposes.<br>Your silence approves.<br>One word corrects it.</h1>
+    <p class="lede">Every framework for AI-driven interfaces answers the same question: <b>how does a model
+      describe a screen safely?</b> None of them answer the one after it — <b>how does the human accept,
+      reject, or correct what it proposed?</b> That is this layer. Below, you can try to break it.</p>
+  </header>
+
+  <section>
+    <div class="sechead"><span class="n">01</span><h2>Two pieces</h2></div>
+    <p class="secsub">One decides what may happen. The other decides when it is allowed to.</p>
+    <div class="two">
+      <div class="card">
+        <h3>AIUIC — the commit contract</h3>
+        <p>An act declares <span class="k">what it costs to be wrong</span>. That, not a hand-maintained
+          list of exceptions, decides how consent is obtained: a quiet moment for something reversible,
+          a spoken yes for something that isn't. Repair rewinds one slot, never the whole sentence.</p>
+      </div>
+      <div class="card am">
+        <h3>Hepta — seven tongues</h3>
+        <p><i>Tourner sept fois sa langue dans sa bouche avant de parler.</i> While you are still talking,
+          <span class="k">seven candidate acts stay alive at once</span>. The leader paints the screen
+          immediately. None of them may commit — a half-finished sentence contains no silence to read.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sechead"><span class="n">02</span><h2>Compose an act</h2></div>
+    <p class="secsub">A model never writes interface code. It emits the JSON on the left, binding to a
+      capability the host registered in advance. Edit it, press Compose, and use what comes out.</p>
+
+    <div class="lab">
+      <div class="pane">
+        <div class="ph"><span class="lbl">ActSpec — what a model may emit</span>
+          <select id="preset" aria-label="Load an example"></select></div>
+        <div class="pb">
+          <textarea id="spec" spellcheck="false" aria-label="Act specification JSON"></textarea>
+          <div class="row">
+            <button class="go" id="compose">Compose</button>
+            <button id="reset">Reset</button>
+            <span class="lbl" id="capnote"></span>
+          </div>
+          <div id="err"></div>
+        </div>
+      </div>
+
+      <div style="display:grid;gap:16px">
+        <div class="pane">
+          <div class="ph"><span class="lbl">The stage it produced</span><span class="lbl" id="status">—</span></div>
+          <div class="pb out" id="out"></div>
+        </div>
+        <div class="pane">
+          <div class="ph"><span class="lbl">Tool schema, generated</span><span class="lbl">never hand-written</span></div>
+          <pre id="tools">—</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sechead"><span class="n">03</span><h2>Try to break it</h2></div>
+    <p class="secsub">Each of these is a real test in the suite. Press one and watch the spec get refused —
+      or, in the last case, accepted and then refused where it matters.</p>
+    <div class="attacks" id="attacks"></div>
+  </section>
+
+  <section>
+    <div class="sechead"><span class="n">04</span><h2>What a host declares</h2></div>
+    <p class="secsub">Capabilities are written in code, once, with their cost. This is the whole trust boundary.</p>
+    <div class="pane"><div class="tw"><table>
+      <thead><tr><th>Capability</th><th>Radius</th><th>Reversible</th><th>What it does</th></tr></thead>
+      <tbody id="caps"></tbody>
+    </table></div></div>
+  </section>
+
+  <section>
+    <div class="sechead"><span class="n">05</span><h2>The whole API</h2></div>
+    <p class="secsub">Nine calls. There are no screens in it.</p>
+    <div class="pane"><pre id="api"></pre></div>
+  </section>
+
+  <footer>
+    AIUIC and Hepta are one repository: seven packages, 142 tests, no dependencies in the core.
+    Everything on this page runs the same engine — the panel on the right is the contract deciding, not a script.
+  </footer>
+</div>
+<script>
+var AIUIC=(()=>{var D=Object.defineProperty;var kt=Object.getOwnPropertyDescriptor;var Rt=Object.getOwnPropertyNames;var Ct=Object.prototype.hasOwnProperty;var At=(r,t,e)=>t in r?D(r,t,{enumerable:!0,configurable:!0,writable:!0,value:e}):r[t]=e;var Dt=(r,t)=>{for(var e in t)D(r,e,{get:t[e],enumerable:!0})},Ot=(r,t,e,n)=>{if(t&&typeof t=="object"||typeof t=="function")for(let s of Rt(t))!Ct.call(r,s)&&s!==e&&D(r,s,{get:()=>t[s],enumerable:!(n=kt(t,s))||n.enumerable});return r};var $t=r=>Ot(D({},"__esModule",{value:!0}),r);var u=(r,t,e)=>At(r,typeof t!="symbol"?t+"":t,e);var Ht={};Dt(Ht,{AIUIC:()=>E,ActDefinitionError:()=>O,ActRun:()=>A,BASE_PAUSE_MS:()=>it,ComposeError:()=>g,Composer:()=>P,DELTA_FILL:()=>lt,FakeClock:()=>U,HOLD_MULTIPLIER:()=>rt,LocalResolver:()=>q,Outbox:()=>C,PRIMITIVES:()=>tt,RADIUS_ORDER:()=>et,Speculator:()=>j,TAU_FILL:()=>at,UNDO_WINDOW_MS:()=>F,UNKNOWN_ATTENTION:()=>ot,actSchema:()=>X,applyToolCall:()=>xt,attentionGate:()=>T,classify:()=>ut,cloneSlots:()=>ct,commitRadius:()=>nt,createAIUIC:()=>Et,defineAct:()=>R,describeAct:()=>Z,effectiveRadius:()=>J,explainRadius:()=>st,holdDurationMs:()=>W,maxRadius:()=>N,pickAct:()=>V,radiusRank:()=>b,realClock:()=>L,requiresModel:()=>H,resolveDuration:()=>gt,resolveQuantity:()=>mt,resolveWhen:()=>ht,slotOrder:()=>$,staticMax:()=>z,toolSchema:()=>yt});var et=["self","shared","other-person","external"];function b(r){return et.indexOf(r)}function N(...r){let t="self";for(let e of r)b(e)>b(t)&&(t=e);return t}var L={now:()=>Date.now(),setTimeout:(r,t)=>setTimeout(r,t),clearTimeout:r=>clearTimeout(r)},U=class{constructor(t=0){u(this,"t");u(this,"seq",1);u(this,"queue",[]);this.t=t}now(){return this.t}setTimeout(t,e){let n=this.seq++;return this.queue.push({id:n,at:this.t+e,fn:t}),n}clearTimeout(t){this.queue=this.queue.filter(e=>e.id!==t)}advance(t){let e=this.t+t;for(;;){let n=this.queue.filter(s=>s.at<=e).sort((s,i)=>s.at-i.at||s.id-i.id)[0];if(!n)break;this.queue=this.queue.filter(s=>s.id!==n.id),this.t=n.at,n.fn()}this.t=e}get pending(){return this.queue.length}};function z(r){return typeof r=="string"?r:r.max}function nt(r,t,e){return typeof r.radius=="string"?r.radius:r.radius.of(t,e)}function st(r,t,e){let n=nt(r,t,e),s=e.reachLimit??1,i=[],a=n;return(r.effects??[]).forEach((o,l)=>{let d=o.name??`effect[${l}]`;if(o.when&&!o.when(t,e)){i.push({name:d,radius:"self",why:"skipped by when()"});return}let c=o.radius,f;if(!o.reversible&&b(c)<b("external")&&(c="external",f="effect is irreversible"),o.reach){let m=o.reach(t,e);m>s&&(c="external",f=`reach ${m} exceeds reachLimit ${s}`)}i.push(f?{name:d,radius:c,why:f}:{name:d,radius:c}),a=N(a,c)}),{radius:a,commit:n,effects:i}}function J(r,t,e){return st(r,t,e).radius}var rt={self:1,shared:1,"other-person":1.6,external:0},it=850;function W(r,t){let e=t.actor.basePauseMs??it;return Math.round(e*rt[r])}var O=class extends Error{constructor(e,n){super(`[${e}] ${n}`);u(this,"act");this.name="ActDefinitionError",this.act=e}},Tt=b("external");function R(r){let t=a=>{throw new O(r.name,a)};r.name||t("act needs a name"),r.commit||t("act needs a commit function"),typeof r.radius!="string"&&((!r.radius||typeof r.radius.of!="function")&&t("a function-valued radius needs { max, of }"),r.radius.max||t("a function-valued radius must declare a static max, or it cannot be checked here"));let e=z(r.radius),n=b(e)<Tt,s=Object.entries(r.slots??{});s.length===0&&t("act needs at least one slot");let i=new Set;for(let[a,o]of s){let l=o;l.primitive||t(`slot "${a}" needs a primitive`),typeof l.order!="number"&&t(`slot "${a}" needs an order`),i.has(l.order)&&t(`slot "${a}" reuses order ${l.order}`),i.add(l.order),!l.options&&!l.resolve&&!l.default&&t(`slot "${a}" needs options, resolve, or default \u2014 nothing can fill it`),l.fill==="model"&&l.required}n&&!r.undo&&t(`radius max "${e}" is below "external" but no undo() is declared; silence-assent requires a reversal`);for(let[a,o]of(r.effects??[]).entries()){let l=o.name??`effect[${a}]`;typeof o.run!="function"&&t(`${l} needs run()`),o.radius||t(`${l} needs a radius`),typeof o.reversible!="boolean"&&t(`${l} needs reversible`),typeof o.deferrable!="boolean"&&t(`${l} needs deferrable`),!o.deferrable&&n&&t(`${l} is not deferrable, so it fires before undo is possible; declare radius max "external"`),!o.reversible&&n&&t(`${l} is irreversible; declare radius max "external"`),b(o.radius)>b(e)&&t(`${l} declares radius "${o.radius}" above the act's max "${e}"`)}return r}function H(r){return Object.values(r.slots).some(t=>t.required===!0&&t.fill==="model")}function $(r){return Object.entries(r.slots).sort(([,t],[,e])=>t.order-e.order).map(([t])=>t)}var ot={foreground:!1,unlocked:!1,proximityClear:!1,listening:!1};function T(r,t){let e=r??ot,n=[];return e.foreground||n.push("app not in foreground"),e.unlocked||n.push("device locked"),e.proximityClear||n.push("proximity sensor covered"),e.listening||n.push("not listening, so a veto could not be heard"),t||n.push("user has not touched or spoken during this act"),{pass:n.length===0,failures:n}}var F=5e3,C=class{constructor(t,e,n={}){u(this,"clock",t);u(this,"ctx",e);u(this,"events",n);u(this,"entries",new Map);u(this,"seq",1)}get size(){return this.entries.size}has(t){return this.entries.has(t)}add(t,e,n,s){let i=`ob_${this.seq++}`,a=this.clock.now()+s,o=n.map((d,c)=>d.name??`effect[${c}]`),l={id:i,act:t,result:e,deadlineAt:a,effectNames:o,effects:n,timer:null};return l.timer=this.clock.setTimeout(()=>{this.fire(i)},s),this.entries.set(i,l),i}cancel(t){let e=this.entries.get(t);return e?(e.timer!==null&&this.clock.clearTimeout(e.timer),this.entries.delete(t),!0):!1}async fire(t){let e=this.entries.get(t);if(!e)return;this.entries.delete(t);let n=this.ctx();for(let s of e.effects)try{await s.run(e.result,n)}catch(i){this.events.onEffectError?.(e,s,i)}this.events.onFire?.(e)}serialize(){return[...this.entries.values()].map(({id:t,act:e,result:n,deadlineAt:s,effectNames:i})=>({id:t,act:e,result:n,deadlineAt:s,effectNames:i}))}restore(t,e){for(let n of t){let s=Math.max(0,n.deadlineAt-this.clock.now()),i={...n,effects:e(n.act,n.effectNames),timer:null};i.timer=this.clock.setTimeout(()=>{this.fire(n.id)},s),this.entries.set(n.id,i)}}};var at=.85,lt=.15;function ct(r){let t={};for(let[e,n]of Object.entries(r))t[e]=n.candidates?{...n,candidates:n.candidates.map(s=>({...s}))}:{...n};return t}function ut(r,t=at,e=lt){let n=[...r].sort((l,d)=>d.score-l.score),s=n[0];if(!s)return{outcome:"empty",provisional:!1,ranked:n};let i=n[1],a=s.score-(i?.score??0),o=s.calibrated!==!1;return s.score>=t&&a>=e?{outcome:"filled",value:s.value,provisional:!o,ranked:n}:i&&a<e?{outcome:"narrowed",provisional:!0,ranked:n}:{outcome:"filled",value:s.value,provisional:!0,ranked:n}}var A=class{constructor(t,e,n,s,i){u(this,"clock",e);u(this,"ctxOf",n);u(this,"outbox",s);u(this,"emit",i);u(this,"def");u(this,"status","resolving");u(this,"phase","show");u(this,"slots",{});u(this,"result",null);u(this,"undoId",null);u(this,"speculative",!1);u(this,"holdTimer",null);u(this,"holdEndsAt",0);u(this,"holdMs",0);u(this,"engaged",!1);this.def=t;for(let a of Object.keys(t.slots))this.slots[a]={status:"empty",provisional:!1};this.applyDefaults()}get filled(){let t={};for(let[e,n]of Object.entries(this.slots))n.status==="filled"&&(t[e]=n.value);return t}get radius(){return J(this.def,this.filled,this.ctxOf())}get requiredNames(){return $(this.def).filter(t=>this.def.slots[t]?.required===!0)}get missingRequired(){return this.requiredNames.filter(t=>this.slots[t]?.status!=="filled")}state(){let t=this.status!=="settled"&&this.status!=="discarded",e=T(this.ctxOf().attention,this.engaged),n=t?this.radius:null,s=this.missingRequired[0],i={act:this.def.name,status:this.status,phase:this.phase,slots:ct(this.slots),radius:n,assent:this.status==="hold"?"silence":this.status==="explicit"?"explicit":null,visible:this.status==="resolving"&&s?[s]:$(this.def),outbox:this.outbox.size};return this.status==="hold"&&(i.holdRemainingMs=Math.max(0,this.holdEndsAt-this.clock.now())),s&&(i.focus=s),e.pass||(i.gateFailures=e.failures),i}applyDefaults(){let t=this.ctxOf();for(let[e,n]of Object.entries(this.def.slots)){if(!n.default)continue;let s=this.slots[e];if(!s||s.status!=="empty")continue;let i=n.default(t,this.filled);i!==void 0&&(this.slots[e]={status:"filled",value:i,source:"default",provisional:!1})}}markEngaged(){this.engaged=!0}setValue(t,e,n){if(!this.def.slots[t])throw new Error(`[${this.def.name}] unknown slot "${t}"`);(n==="spoken"||n==="touched")&&this.markEngaged();let s=this.status==="hold",i=this.slots[t],a=i?.status!=="filled"||i.value!==e;this.slots[t]={status:"filled",value:e,source:n,provisional:!1,...n==="model"&&s&&a?{corrected:!0}:{}},this.status==="frozen"&&(n==="touched"||n==="spoken")&&(this.status="resolving"),s&&a&&this.cancelHold("slot changed under a running HOLD"),this.evaluate()}offer(t,e,n){if(!this.def.slots[t])throw new Error(`[${this.def.name}] unknown slot "${t}"`);(n==="spoken"||n==="touched")&&this.markEngaged();let s=this.status==="hold",i=ut(e);i.outcome==="empty"?this.slots[t]={status:"empty",provisional:!1}:i.outcome==="narrowed"?this.slots[t]={status:"narrowed",candidates:i.ranked,provisional:!0,source:n}:this.slots[t]={status:"filled",value:i.value,source:n,provisional:i.provisional,candidates:i.ranked.length>1?i.ranked:void 0},this.status==="frozen"&&(n==="touched"||n==="spoken")&&(this.status="resolving"),s&&this.cancelHold("slot changed under a running HOLD"),this.evaluate()}markStale(t){let e=this.slots[t];e&&(this.slots[t]={...e,stale:!0},this.status==="hold"&&this.cancelHold("a filled value went stale"),this.evaluate())}freeze(t="bare negation"){this.status==="settled"||this.status==="discarded"||(this.markEngaged(),this.cancelHold(t),this.status="frozen",this.phase="frozen",this.emit({type:"frozen",act:this.def.name,reason:t}),this.emit({type:"stage",state:this.state()}))}discard(){this.cancelHold("vetoed"),this.status="discarded",this.emit({type:"discarded",act:this.def.name})}pause(){this.status==="hold"&&this.cancelHold("paused"),this.status!=="settled"&&this.status!=="discarded"&&(this.status="frozen")}resume(){this.status==="frozen"&&(this.status="resolving",this.evaluate())}evaluate(){if(["committing","settled","discarded","failed"].includes(this.status))return;if(this.status==="frozen"){this.emit({type:"stage",state:this.state()});return}let t=this.ctxOf(),e=this.missingRequired;if(e.length>0){this.status="resolving";let o=e[0],l=this.slots[o];this.phase=l.status==="narrowed"?"narrow":"unfold",this.emit({type:"stage",state:this.state()});return}let n=Object.entries(this.slots).find(([,o])=>o.stale);if(n){this.status="resolving",this.phase="show",this.emit({type:"blocked",act:this.def.name,reason:`slot "${n[0]}" is stale`}),this.emit({type:"stage",state:this.state()});return}let s=this.radius,i=this.requiredNames.filter(o=>this.slots[o]?.provisional);if(i.length>0&&b(s)>=b("other-person")){this.status="resolving",this.phase="show",this.emit({type:"blocked",act:this.def.name,reason:`provisional ${i.join(", ")} at radius "${s}"`}),this.emit({type:"stage",state:this.state()});return}if(this.speculative){this.status="speculating",this.phase="show",this.emit({type:"stage",state:this.state()});return}let a=T(t.attention,this.engaged);if(s==="external"||!a.pass){this.status="explicit",this.phase="explicit",this.emit({type:"blocked",act:this.def.name,reason:s==="external"?"radius is external":"attention gate failed",...a.pass?{}:{failures:a.failures}}),this.emit({type:"stage",state:this.state()});return}this.startHold(s)}startHold(t){let e=W(t,this.ctxOf());this.cancelHold("restart",!0),this.status="hold",this.phase="hold",this.holdMs=e,this.holdEndsAt=this.clock.now()+e,this.holdTimer=this.clock.setTimeout(()=>{this.holdTimer=null,this.commit("silence")},e),this.emit({type:"hold-start",act:this.def.name,ms:e,radius:t}),this.emit({type:"stage",state:this.state()})}cancelHold(t,e=!1){this.holdTimer!==null&&(this.clock.clearTimeout(this.holdTimer),this.holdTimer=null,e||this.emit({type:"hold-cancel",act:this.def.name,reason:t})),this.holdEndsAt=0}get holdDurationMsValue(){return this.holdMs}settleSpeculation(){this.speculative&&(this.speculative=!1,this.evaluate())}async assent(){if(this.markEngaged(),this.speculative)throw new Error(`[${this.def.name}] cannot assent to a speculative act; settle it first`);if(this.status!=="explicit"&&this.status!=="hold"&&this.status!=="frozen")throw new Error(`[${this.def.name}] nothing to assent to (status "${this.status}")`);if(this.missingRequired.length>0)throw new Error(`[${this.def.name}] required slots unfilled: ${this.missingRequired.join(", ")}`);this.cancelHold("explicit assent",!0),await this.commit("explicit")}async commit(t){if(this.status==="committing"||this.status==="settled")return;this.status="committing";let e=this.ctxOf(),n=this.filled;try{let s=await this.def.commit(n,e);this.result=s,this.status="settled",this.phase="settle";let i=(this.def.effects??[]).filter(l=>!l.when||l.when(n,e)),a=i.filter(l=>l.deferrable),o=i.filter(l=>!l.deferrable);if(a.length>0){let l=e.undoWindowMs??5e3;this.undoId=this.outbox.add(this.def.name,s,a,l)}else this.def.undo&&(this.undoId=this.outbox.add(this.def.name,s,[],e.undoWindowMs??5e3));for(let l of o)t==="explicit"&&await l.run(s,e);this.emit({type:"commit",act:this.def.name,result:s,undoId:this.undoId}),this.emit({type:"stage",state:this.state()})}catch(s){this.status="failed",this.emit({type:"failed",act:this.def.name,error:s}),this.emit({type:"stage",state:this.state()})}}async undo(){return this.status!=="settled"||!this.result||!this.undoId||!this.outbox.has(this.undoId)?!1:(this.outbox.cancel(this.undoId),this.undoId=null,await this.def.undo?.(this.result,this.ctxOf()),this.emit({type:"undo",act:this.def.name,result:this.result}),!0)}get undoAvailable(){return this.status==="settled"&&!!this.undoId&&this.outbox.has(this.undoId)}};var Ft={act:null,status:"resolving",phase:"idle",slots:{},radius:null,assent:null,visible:[],outbox:0},E=class{constructor(t){u(this,"config",t);u(this,"acts",new Map);u(this,"listeners",new Set);u(this,"current",null);u(this,"clock");u(this,"outbox");u(this,"emit",t=>{for(let e of this.listeners)e(t)});this.clock=t.clock??L,this.outbox=new C(this.clock,()=>this.ctx())}ctx(){return{...this.config.ctx(),now:new Date(this.clock.now())}}on(t){return this.listeners.add(t),()=>this.listeners.delete(t)}defineAct(t){let e=R(t);return this.acts.set(e.name,e),e}get definitions(){return[...this.acts.values()]}needsModel(t){let e=this.acts.get(t);if(!e)throw new Error(`unknown act "${t}"`);return H(e)}start(t){let e=this.acts.get(t);if(!e)throw new Error(`unknown act "${t}"`);this.current&&["resolving","hold","explicit","frozen"].includes(this.current.status)&&this.current.discard();let n=new A(e,this.clock,()=>this.ctx(),this.outbox,this.emit);return this.current=n,n.evaluate(),n}get act(){return this.current}state(){return this.current?this.current.state():{...Ft,outbox:this.outbox.size}}serializeOutbox(){return this.outbox.serialize()}restoreOutbox(t){this.outbox.restore(t,(e,n)=>(this.acts.get(e)?.effects??[]).filter((i,a)=>n.includes(i.name??`effect[${a}]`)))}};function Et(r){return new E(r)}var qt=/[.,!?;:'"`()[\]{}<>/\\|@#$%^&*_+=~]/g;function x(r){return r.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(qt," ").replace(/\s+/g," ").trim()}function Q(r){let t=[],e=/[^\s.,!?;:'"`()[\]{}<>/\\|@#$%^&*_+=~]+/g,n;for(;(n=e.exec(r))!==null;){let s=n[0],i=x(s);i&&t.push({raw:s,norm:i,start:n.index,end:n.index+s.length})}return t}function It(r,t){if(r===t)return 0;if(r.length===0)return t.length;if(t.length===0)return r.length;let e=Array.from({length:t.length+1},(s,i)=>i),n=new Array(t.length+1);for(let s=1;s<=r.length;s++){n[0]=s;for(let i=1;i<=t.length;i++){let a=r[s-1]===t[i-1]?0:1;n[i]=Math.min(n[i-1]+1,e[i]+1,e[i-1]+a)}[e,n]=[n,e]}return e[t.length]}function _t(r,t){return!r||!t?0:r===t?1:1-It(r,t)/Math.max(r.length,t.length)}var Mt=.72;function G(r,t){let e=x(t).split(" ").filter(Boolean);if(e.length===0||r.length<e.length)return null;let n=null;for(let s=0;s+e.length<=r.length;s++){let i=0;for(let o=0;o<e.length;o++){let l=_t(r[s+o].norm,e[o]);i+=l>=Mt?l:0}let a=i/e.length;a>0&&(!n||a>n.score)&&(n={score:a,span:[r[s].start,r[s+e.length-1].end]})}return n}var y={tauAct:.5,deltaAct:.15,tauFill:.85,phraseWeight:.4,coverageWeight:.6};function dt(r,t){let e=[];for(let n of t){let s=[n.label,...n.aliases??[]],i=null;for(let a of s){let o=G(r,a);o&&(!i||o.score>i.score)&&(i=o)}i&&i.score>0&&e.push({value:n.value,label:n.label,...i})}return e.sort((n,s)=>s.score-n.score)}function jt(r){let t=[];for(let[s,i]of Object.entries(r))i.forEach((a,o)=>{a.span&&t.push({slot:s,index:o,span:a.span,score:a.score})});let e=new Set;for(let s=0;s<t.length;s++)for(let i=s+1;i<t.length;i++){let a=t[s],o=t[i];if(a.slot===o.slot||!(a.span[0]<o.span[1]&&o.span[0]<a.span[1]))continue;let d=a.span[1]-a.span[0],c=o.span[1]-o.span[0],f=d!==c?d<c?a:o:a.score<o.score?a:o;e.add(`${f.slot}:${f.index}`)}let n={};for(let[s,i]of Object.entries(r)){let a=i.filter((o,l)=>!e.has(`${s}:${l}`));a.length>0&&(n[s]=a)}return n}var q=class{constructor(t=y){u(this,"routing",t);u(this,"name","local");u(this,"local",!0);u(this,"calibrated",!0)}async score(t,e,n,s){return this.scoreSync(t,e,n,s)}async fill(t,e,n,s,i){return this.fillSync(t,e,n,s,i)}scoreSync(t,e,n,s){let i=Q(t),a=[];for(let o of e){let l=0;for(let m of o.phrases??[]){let p=G(i,m);p&&p.score>l&&(l=p.score)}let d=Object.entries(o.slots).filter(([m,p])=>p.required&&(p.resolve||s(o,m).length>0)),c=0;for(let[m,p]of d)((p.resolve?p.resolve(t,n,{}):dt(i,s(o,m)))[0]?.score??0)>=this.routing.tauFill&&c++;if(d.length===0){a.push({act:o.name,phraseMatch:l,requiredCoverage:0,score:l});continue}let f=c/d.length;a.push({act:o.name,phraseMatch:l,requiredCoverage:f,score:this.routing.phraseWeight*l+this.routing.coverageWeight*f})}return a.sort((o,l)=>l.score-o.score)}fillSync(t,e,n,s,i){let a=Q(t),o={};for(let[l,d]of Object.entries(e.slots)){if(l in n||d.fill==="model")continue;if(d.resolve){let f=d.resolve(t,s,n);f.length>0&&(o[l]=[...f].sort((m,p)=>p.score-m.score));continue}let c=dt(a,i(e,l));c.length>0&&(o[l]=c)}return jt(o)}};function V(r,t=y){let e=[...r].sort((i,a)=>a.score-i.score),n=e[0];if(!n||n.score<t.tauAct)return{kind:"none",scores:e};let s=e.filter(i=>i.score>=t.tauAct&&n.score-i.score<t.deltaAct);return s.length>1?{kind:"narrow",acts:s.map(i=>i.act),scores:e}:{kind:"start",act:n.act,scores:e}}var S={zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19},K={twenty:20,thirty:30,forty:40,fourty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90},B=["sunday","monday","tuesday","wednesday","thursday","friday","saturday"],I=["january","february","march","april","may","june","july","august","september","october","november","december"],ft={dollar:"USD",dollars:"USD",buck:"USD",bucks:"USD",usd:"USD",euro:"EUR",euros:"EUR",eur:"EUR",pound:"GBP",pounds:"GBP",quid:"GBP",gbp:"GBP"};function M(r){let t=null;for(let e=0;e<r.length;e++){let n=r[e];if(K[n]!==void 0){let s=K[n],i=r[e+1];i&&S[i]!==void 0&&S[i]<10&&(s+=S[i],e++),t=(t??0)+s}else if(S[n]!==void 0)t=(t??0)+S[n];else if(n==="hundred"&&t!==null)t*=100;else if(n==="a"||n==="an")r[e+1]==="hundred"&&(t=100,e++);else if(t!==null)break}return t}function v(r,t){let e=t==="EUR"?"\u20AC":t==="GBP"?"\xA3":"$",n=Number.isInteger(r)?String(r):r.toFixed(2);return t?e+n:n}function mt(r,t){let e=x(r),n=e.split(" "),s=/(?:^|\s)([$€£])\s?(\d+(?:[.,]\d{1,2})?)/.exec(r);if(s){let a=parseFloat(s[2].replace(",",".")),o=s[1]==="\u20AC"?"EUR":s[1]==="\xA3"?"GBP":"USD";return[{value:{n:a,label:v(a,o),unit:o},label:v(a,o),score:1,calibrated:!0}]}let i=/(?:^|\s)(\d+(?:[.,]\d{1,2})?)(?:\s|$)/.exec(" "+e+" ");if(i){let a=parseFloat(i[1].replace(",",".")),o=n[n.indexOf(i[1].replace(".","."))+1],l=o?ft[o]:void 0;return[{value:{n:a,label:v(a,l),...l?{unit:l}:{}},label:v(a,l),score:1,calibrated:!0}]}for(let a=0;a<n.length;a++)if(S[n[a]]!==void 0||K[n[a]]!==void 0){let o=M(n.slice(a));if(o===null)continue;let l;for(let d=a;d<Math.min(n.length,a+4);d++){let c=ft[n[d]];if(c){l=c;break}}return[{value:{n:o,label:v(o,l),...l?{unit:l}:{}},label:v(o,l),score:1,calibrated:!0}]}return[]}var _=864e5;function w(r,t,e){let n=new Date(r.getTime());return n.setHours(9,0,0,0),n.setDate(n.getDate()+t),{at:n.getTime(),label:e,granularity:"day"}}function Pt(r,t,e){let n=r.getDay(),s=(t-n+7)%7;return s===0&&(s=7),e&&s<7&&(s+=0),s}var pt=r=>r.charAt(0).toUpperCase()+r.slice(1);function Y(r,t,e){let n=(t%24+24)%24,s=new Date(r.getTime());s.setHours(n,e,0,0),s.getTime()<=r.getTime()&&s.setDate(s.getDate()+1);let i=(n%12===0?12:n%12)+(e?":"+String(e).padStart(2,"0"):"")+(n>=12?"pm":"am");return{at:s.getTime(),label:i,granularity:"minute"}}function ht(r,t){let e=t?.now??new Date,n=x(r),s=[],i=(c,f=1)=>s.push({value:c,label:c.label,score:f,calibrated:!0});if(/\btoday\b/.test(n)&&i(w(e,0,"today")),/\btomorrow\b/.test(n)&&i(w(e,1,"tomorrow")),/\bday after tomorrow\b/.test(n)&&i(w(e,2,"the day after tomorrow")),/\byesterday\b/.test(n)&&i(w(e,-1,"yesterday")),/\btonight\b/.test(n)){let c=new Date(e.getTime());c.setHours(20,0,0,0),i({at:c.getTime(),label:"tonight",granularity:"minute"})}/\bnow\b/.test(n)&&i({at:e.getTime()+6e4,label:"right now",granularity:"minute"});for(let c=0;c<B.length;c++){let m=new RegExp("\\b(next\\s+)?"+B[c]+"\\b").exec(n);if(m){let p=Pt(e,c,!!m[1]);i(w(e,p,(m[1]?"next ":"")+pt(B[c])))}}let a=/\bin (\d+|[a-z]+) (day|days|week|weeks)\b/.exec(n);if(a){let c=/^\d+$/.test(a[1])?Number(a[1]):M([a[1]]);if(c!==null){let f=a[2].startsWith("week")?7:1;i(w(e,c*f,"in "+c+" "+a[2]))}}for(let c=0;c<I.length;c++){let f=new RegExp("\\b"+I[c]+"\\s+(\\d{1,2})\\b").exec(n)||new RegExp("\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+of\\s+"+I[c]+"\\b").exec(n);if(f){let m=Number(f[1]),p=new Date(e.getTime());p.setMonth(c,m),p.setHours(9,0,0,0),p.getTime()<e.getTime()&&p.setFullYear(p.getFullYear()+1),i({at:p.getTime(),label:pt(I[c])+" "+m,granularity:"day"})}}let o=/\b(\d{4})-(\d{2})-(\d{2})\b/.exec(n);if(o){let c=new Date(Number(o[1]),Number(o[2])-1,Number(o[3]),9,0,0,0);i({at:c.getTime(),label:o[0],granularity:"day"})}let l=r.toLowerCase(),d=/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/.exec(l);if(d){let c=Number(d[1]),f=d[2]?Number(d[2]):0;d[3]==="pm"&&c<12&&(c+=12),d[3]==="am"&&c===12&&(c=0),i(Y(e,c,f))}else{let c=/\b(?:at|to|around)\s+(\d{1,2})(?::(\d{2}))?\b/.exec(l),f=/\b(?:at|to|around)\s+([a-z]+)\b/.exec(l),m=null,p=0;if(c)m=Number(c[1]),p=c[2]?Number(c[2]):0;else if(f){let h=M([f[1]]);h!==null&&h>=1&&h<=12&&(m=h)}m!==null&&m>=1&&m<=12&&(i(Y(e,m,p),.5),i(Y(e,m+12,p),.5))}return s.sort((c,f)=>f.score-c.score)}var Nt={second:1e3,seconds:1e3,minute:6e4,minutes:6e4,min:6e4,mins:6e4,hour:36e5,hours:36e5,day:_,days:_,week:_*7,weeks:_*7};function gt(r,t){let e=x(r);if(/\bhalf an hour\b/.test(e))return[{value:{ms:18e5,label:"half an hour"},label:"half an hour",score:1,calibrated:!0}];let n=/\b(\d+|[a-z]+(?: [a-z]+)?)\s+(seconds?|minutes?|mins?|hours?|days?|weeks?)\b/.exec(e);if(!n)return[];let s=/^\d+$/.test(n[1])?Number(n[1]):M(n[1].split(" "));if(s===null)return[];let i=Nt[n[2]];return i?[{value:{ms:s*i,label:s+" "+n[2]},label:s+" "+n[2],score:1,calibrated:!0}]:[]}var Ut=7,Lt=.2,zt=.25,j=class{constructor(t,e,n,s={}){u(this,"ui",t);u(this,"local",e);u(this,"optionsFor",n);u(this,"tongues");u(this,"switchMargin");u(this,"floor");u(this,"routing");u(this,"run",null);u(this,"leader",null);u(this,"alive",[]);this.tongues=s.tongues??Ut,this.switchMargin=s.switchMargin??Lt,this.floor=s.floor??zt,this.routing=s.routing??y}get currentRun(){return this.run}get leaderName(){return this.leader}reset(){this.run&&this.run.status!=="settled"&&this.run.discard(),this.run=null,this.leader=null,this.alive=[]}feed(t,e){let n=t.text.trim(),s=this.ui.definitions;if(!n){let h=this.alive;return this.alive=[],{text:n,final:t.final,tracks:[],leader:null,switched:!1,pruned:h,run:null}}let o=this.local.scoreSync(n,s,e,this.optionsFor).filter(h=>h.score>=this.floor).slice(0,this.tongues).map(h=>({act:h.act,score:h.score,coverage:h.requiredCoverage,slots:this.local.fillSync(n,s.find(k=>k.name===h.act),{},e,this.optionsFor),leading:!1})),l=this.alive.filter(h=>!o.some(k=>k.act===h));this.alive=o.map(h=>h.act);let d=o[0],c=!1;if(!d)return this.stopLeading(),{text:n,final:t.final,tracks:o,leader:null,switched:!1,pruned:l,run:null};let f=o.find(h=>h.act===this.leader);(!f||d.score-f.score>=this.switchMargin)&&d.act!==this.leader?(c=!0,this.leadWith(d,s,e)):this.run&&f&&this.paint(f,e);let p=o.find(h=>h.act===this.leader);return p&&(p.leading=!0),t.final&&this.run&&this.run.settleSpeculation(),{text:n,final:t.final,tracks:o,leader:this.leader,switched:c,pruned:l,run:t.final?this.run:null}}stopLeading(){this.run&&this.run.status==="speculating"&&this.run.discard(),this.run=null,this.leader=null}leadWith(t,e,n){this.stopLeading(),this.leader=t.act,this.run=this.ui.start(t.act),this.run.speculative=!0,this.run.evaluate(),this.paint(t,n)}paint(t,e){let n=this.run;if(!(!n||n.status==="settled"||n.status==="discarded"))for(let s of Object.keys(t.slots)){let i=t.slots[s];i&&i.length>0&&n.offer(s,i,"spoken")}}};function bt(r,t){return r.label||String(r.value??t)}function Jt(r,t){let e=r.primitive;if(e==="peek"||e==="holdRing"||e==="resultMark")return null;if(e==="quantity"){let n=r.params??{},s={type:"number"};typeof n.min=="number"&&(s.minimum=n.min),typeof n.max=="number"&&(s.maximum=n.max);let i=n.unit?.code??n.unit?.kind;return s.description=i?`A number in ${i}.`:"A number.",s}return e==="when"?{type:"string",description:((r.params??{}).granularity??"day")==="minute"?'A time, as the user said it ("nine", "tonight") or ISO 8601.':'A date, as the user said it ("Friday", "tomorrow") or ISO 8601 (YYYY-MM-DD).'}:e==="ghostField"?{type:"string",description:"Free text."}:t.length>0&&t.length<=50?{type:"string",enum:t.map(bt),description:"One of the listed options, exactly as written."}:{type:"string"}}function X(r,t){let e={},n=[],s=Object.entries(r.slots).sort(([,a],[,o])=>a.order-o.order);for(let[a,o]of s){let l=Jt(o,t(r,a));l&&(e[a]=l,o.required&&n.push(a))}let i={type:"object",properties:e,additionalProperties:!1};return n.length&&(i.required=n),i}function Z(r){let t=typeof r.radius=="string"?r.radius:r.radius.max,e=t==="external"?"Irreversible or costly: the user must explicitly agree before it runs.":t==="other-person"?"Touches somebody else.":t==="shared"?"Changes shared state. Reversible.":"Affects only the user. Reversible.",n=r.phrases?.length?` Said like: ${r.phrases.join(", ")}.`:"";return`${r.name.replace(/_/g," ")}. ${e}${n}`}function yt(r,t,e="openai"){return r.map(n=>{let s=X(n,t),i=Z(n);return e==="anthropic"?{name:n.name,description:i,input_schema:s}:e==="openai-realtime"?{type:"function",name:n.name,description:i,parameters:s}:e==="json-schema"?{name:n.name,description:i,schema:s}:{type:"function",function:{name:n.name,description:i,parameters:s}}})}function xt(r,t,e,n){let s=typeof t.arguments=="string"?JSON.parse(t.arguments):t.arguments,i=r.definitions.find(d=>d.name===t.name);if(!i)throw new Error(`unknown act "${t.name}"`);let a=r.start(t.name),o=[],l=[];for(let[d,c]of Object.entries(s??{})){if(!i.slots[d]){o.push(d);continue}let m=e(i,d);if(m.length>0){let p=m.find((h,k)=>bt(h,k)===c||h.value===c||String(h.value)===String(c));if(!p){l.push(d);continue}a.setValue(d,p.value,"model")}else a.setValue(d,c,"model")}return{run:a,unknownSlots:o,unmatched:l}}var tt=["face","chip","when","quantity","ghostField","objectCard","peek"],vt=8,wt=40,g=class extends Error{constructor(t){super(t),this.name="ComposeError"}},Wt=["radius","commit","undo","effects","preview","reversible"];function St(r,t){if(typeof r=="function")throw new g(`${t}: functions are not allowed in a spec`);if(r&&typeof r=="object")for(let[e,n]of Object.entries(r))St(n,`${t}.${e}`)}var P=class{constructor(){u(this,"caps",new Map)}register(t){if(!t.name)throw new g("a capability needs a name");if(typeof t.run!="function")throw new g(`${t.name}: capability needs run()`);this.caps.set(t.name,t)}get capabilities(){return[...this.caps.values()]}menu(){return this.capabilities.map(t=>({capability:t.name,describe:t.describe,requires:t.requires??{},catalogs:Object.keys(t.catalogs??{})}))}compose(t){if(!t||typeof t!="object")throw new g("spec must be an object");St(t,"spec");for(let a of Wt)if(a in t)throw new g(`spec may not set "${a}" \u2014 that belongs to the capability`);if(!t.name||!/^[a-z][a-z0-9_]{1,48}$/.test(t.name))throw new g(`"${String(t.name)}" is not a valid act name`);let e=this.caps.get(t.capability);if(!e)throw new g(`unknown capability "${t.capability}" \u2014 a composed act can only bind to one the host registered`);let n=Object.entries(t.slots??{});if(n.length===0)throw new g(`${t.name}: needs at least one slot`);if(n.length>vt)throw new g(`${t.name}: at most ${vt} slots`);let s={};for(let[a,o]of n){if(!/^[a-zA-Z][a-zA-Z0-9_]{0,32}$/.test(a))throw new g(`${t.name}: "${a}" is not a valid slot name`);if(!tt.includes(o.primitive))throw new g(`${t.name}.${a}: "${o.primitive}" is not in the primitive set \u2014 the set is closed`);if(typeof o.order!="number")throw new g(`${t.name}.${a}: needs an order`);if(o.options&&o.catalog)throw new g(`${t.name}.${a}: give options or a catalog, not both`);let l;if(o.catalog){let c=e.catalogs?.[o.catalog];if(!c)throw new g(`${t.name}.${a}: unknown catalog "${o.catalog}" on capability "${e.name}"`);l=()=>c()}else if(o.options){if(o.options.length>wt)throw new g(`${t.name}.${a}: at most ${wt} options`);let c=o.options.map(f=>({...f}));l=()=>c}else l=()=>[];let d={primitive:o.primitive,order:o.order,options:l};o.required&&(d.required=!0),o.params&&(d.params=o.params),s[a]=d}for(let[a,o]of Object.entries(e.requires??{})){let l=s[a];if(!l)throw new g(`${t.name}: capability "${e.name}" requires a "${a}" slot`);if(l.primitive!==o)throw new g(`${t.name}.${a}: capability "${e.name}" requires primitive "${o}", got "${l.primitive}"`);l.required=!0}let i={name:t.name,slots:s,radius:e.radius,commit:(a,o)=>e.run(a,o)};return t.phrases&&(i.phrases=t.phrases.slice(0,12).map(String)),e.undo&&(i.undo=(a,o)=>e.undo(a,o)),e.effects&&(i.effects=e.effects),R(i)}composeJson(t){let e;try{e=JSON.parse(t)}catch{throw new g("spec is not valid JSON")}return this.compose(e)}};return $t(Ht);})();
+
+</script>
+<script>
+(function () {
+  const A = window.AIUIC, $ = (id) => document.getElementById(id);
+
+  /* ---------------------------------------------------------- the host side
+     Written in code, once, with the cost declared. A composed act binds to one
+     of these and inherits what it costs; it can never invent a cheaper one. */
+  const log = [];
+  const CITIES = [
+    { value: 'nrt', label: 'Tokyo' }, { value: 'lis', label: 'Lisbon' },
+    { value: 'cdg', label: 'Paris' }, { value: 'yul', label: 'Montréal' },
+  ];
+  const PEOPLE = [
+    { value: { id: 'me', label: 'me' }, label: 'me' },
+    { value: { id: 'sam', label: 'Sam' }, label: 'Sam' },
+    { value: { id: 'maya', label: 'Maya' }, label: 'Maya' },
+  ];
+
+  const CAPS = [
+    {
+      name: 'draft_plan',
+      describe: 'Write something into the user’s own notes.',
+      radius: 'self',
+      run: (f) => { log.push(f); return { id: 'd' + log.length }; },
+      undo: () => { log.pop(); },
+      catalogs: { cities: () => CITIES, people: () => PEOPLE },
+    },
+    {
+      name: 'ask_someone',
+      describe: 'Send a request to another person.',
+      radius: { max: 'other-person', of: () => 'other-person' },
+      requires: { who: 'face' },
+      run: (f) => { log.push(f); return { id: 'a' + log.length }; },
+      undo: () => { log.pop(); },
+      catalogs: { people: () => PEOPLE },
+      effects: [{ name: 'notify', run: () => {}, radius: 'other-person',
+                  reversible: true, deferrable: true, reach: () => 1 }],
+    },
+    {
+      name: 'charge_card',
+      describe: 'Take money from the stored card.',
+      radius: 'external',
+      requires: { amount: 'quantity' },
+      run: () => ({ id: 'charge' }),
+      effects: [{ name: 'settle', run: () => {}, radius: 'external',
+                  reversible: false, deferrable: false }],
+    },
+  ];
+
+  const composer = new A.Composer();
+  for (const c of CAPS) composer.register(c);
+
+  const state = { engaged: false };
+  const ctx = () => ({
+    actor: { id: 'me', basePauseMs: 850 },
+    attention: { foreground: true, unlocked: true, proximityClear: true, listening: true },
+    reachLimit: 1, undoWindowMs: 5000,
+  });
+  const ui = A.createAIUIC({ ctx });
+
+  const OPTION_CACHE = new Map();
+  const optionsFor = (act, slot) => {
+    const sd = act.slots[slot];
+    if (!sd || !sd.options) return [];
+    const key = act.name + '.' + slot;
+    if (!OPTION_CACHE.has(key)) OPTION_CACHE.set(key, sd.options(ctx(), {}));
+    return OPTION_CACHE.get(key);
+  };
+
+  /* ------------------------------------------------------------- the specs */
+  const PRESETS = {
+    'Hold tickets — self': {
+      name: 'hold_tickets', capability: 'draft_plan', phrases: ['tickets', 'fly'],
+      slots: {
+        destination: { primitive: 'chip', catalog: 'cities', required: true, order: 1 },
+        depart: { primitive: 'when', params: { granularity: 'day' }, required: true, order: 2 },
+        travellers: { primitive: 'quantity', params: { min: 1, max: 9 }, order: 3 },
+      },
+    },
+    'Ask a favour — other-person': {
+      name: 'ask_favour', capability: 'ask_someone', phrases: ['ask', 'can someone'],
+      slots: {
+        who: { primitive: 'face', catalog: 'people', required: true, order: 1 },
+        favour: { primitive: 'ghostField', required: true, order: 2 },
+      },
+    },
+    'Buy it — external': {
+      name: 'buy_it', capability: 'charge_card', phrases: ['buy', 'order'],
+      slots: {
+        amount: { primitive: 'quantity', params: { min: 1, max: 5000 }, order: 1 },
+        note: { primitive: 'ghostField', order: 2 },
+      },
+    },
+  };
+
+  const ATTACKS = [
+    ['Bind to a capability nobody registered',
+      (s) => ({ ...s, capability: 'transfer_everything' })],
+    ['Declare its own radius',
+      (s) => ({ ...s, radius: 'self' })],
+    ['Smuggle in a function',
+      (s) => ({ ...s, slots: { ...s.slots, evil: { primitive: 'chip', order: 9, params: { onTap: () => 1 } } } })],
+    ['Invent a primitive',
+      (s) => ({ ...s, slots: { ...s.slots, frame: { primitive: 'iframe', order: 9 } } })],
+    ['Ship 200 options',
+      (s) => ({ ...s, slots: { ...s.slots, many: { primitive: 'chip', order: 9,
+        options: Array.from({ length: 200 }, (_, i) => ({ value: i, label: 'o' + i })) } } })],
+    ['Dress a charge up as something small',
+      () => ({ name: 'just_a_little_one', capability: 'charge_card',
+        slots: { amount: { primitive: 'quantity', order: 1 } } }),
+      { amount: 4000 }],
+  ];
+
+  /* ------------------------------------------------------------------ view */
+  let run = null, raf = 0;
+  const CIRC = 226.2;
+
+  const setStatus = (t) => { $('status').textContent = t; };
+
+  function fmt(v) {
+    if (v === null || v === undefined) return '—';
+    if (typeof v === 'object') return v.label ?? JSON.stringify(v);
+    return String(v);
+  }
+
+  function showError(msg) {
+    $('err').innerHTML = '';
+    if (!msg) return;
+    const d = document.createElement('div'); d.className = 'err'; d.textContent = msg;
+    $('err').appendChild(d);
+  }
+
+  function showAccepted(name) {
+    $('err').innerHTML = '';
+    const d = document.createElement('div'); d.className = 'ok-note';
+    d.textContent = 'accepted → ' + name + ' — now check what it costs on the right';
+    $('err').appendChild(d);
+  }
+
+  function render() {
+    const out = $('out');
+    if (!run) { out.innerHTML = '<p class="why">Compose something and it appears here.</p>'; setStatus('—'); return; }
+    const s = run.state();
+    setStatus(s.status);
+    out.innerHTML = '';
+
+    const slots = document.createElement('div'); slots.className = 'slots';
+    const ordered = Object.entries(run.def.slots).sort((a, b) => a[1].order - b[1].order);
+    for (const [name, sd] of ordered) {
+      const sl = s.slots[name];
+      const d = document.createElement('div');
+      d.className = 'slot' + (sl.status === 'filled' ? '' : ' empty') + (sl.provisional ? ' prov' : '');
+      const k = document.createElement('span'); k.className = 'k';
+      k.textContent = name + ' · ' + sd.primitive + (sd.required ? '' : ' (opt)');
+      const v = document.createElement('span'); v.className = 'v';
+      v.textContent = sl.status === 'filled' ? fmt(sl.value) : '—';
+      d.append(k, v);
+
+      const opts = optionsFor(run.def, name);
+      if (opts.length) {
+        const box = document.createElement('div'); box.className = 'chips';
+        opts.slice(0, 8).forEach((o) => {
+          const c = document.createElement('button'); c.type = 'button'; c.className = 'chip';
+          c.textContent = o.label;
+          if (sl.status === 'filled' && sl.value === o.value) c.classList.add('sel');
+          c.onclick = () => { run.setValue(name, o.value, 'touched'); render(); };
+          box.appendChild(c);
+        });
+        d.appendChild(box);
+      } else {
+        const f = document.createElement('input'); f.className = 'mini';
+        f.placeholder = sd.primitive === 'quantity' ? 'a number' : sd.primitive === 'when' ? 'friday' : 'type it';
+        f.oninput = () => {
+          const t = f.value.trim();
+          if (!t) return;
+          if (sd.primitive === 'quantity') {
+            const c = A.resolveQuantity(t);
+            if (c[0]) run.setValue(name, c[0].value, 'touched');
+          } else if (sd.primitive === 'when') {
+            const c = A.resolveWhen(t, { ...ctx(), now: new Date() });
+            if (c[0]) run.setValue(name, c[0].value, 'touched');
+          } else {
+            run.setValue(name, t, 'touched');
+          }
+          render();
+        };
+        d.appendChild(f);
+      }
+      slots.appendChild(d);
+    }
+    out.appendChild(slots);
+
+    const v = document.createElement('div');
+    v.className = 'verdict';
+    const pill = (cls, txt) => { const p = document.createElement('span'); p.className = 'pill ' + cls; p.textContent = txt; v.appendChild(p); };
+    if (s.radius) pill(s.radius === 'external' ? 'stop' : s.radius === 'self' ? 'ok' : 'hold', s.radius);
+    if (s.status === 'hold') pill('hold', 'silence commits');
+    if (s.status === 'explicit') pill('stop', 'needs an explicit yes');
+    if (s.status === 'settled') pill('ok', 'committed');
+    if (s.status === 'frozen') pill('prov', 'frozen');
+    out.appendChild(v);
+
+    if (s.status === 'hold') {
+      const row = document.createElement('div'); row.className = 'holdrow';
+      row.innerHTML =
+        '<svg class="ring" viewBox="0 0 80 80"><circle class="trk" cx="40" cy="40" r="36"></circle>' +
+        '<circle class="arc" id="arc" cx="40" cy="40" r="36" stroke-dasharray="226.2" stroke-dashoffset="226.2"></circle></svg>' +
+        '<span class="t">Say nothing for <b id="msleft"></b> and it writes. Touch anything and the clock restarts.</span>';
+      out.appendChild(row);
+      const f = Math.max(0, Math.min(1, (s.holdRemainingMs || 0) / run.holdDurationMsValue));
+      const arc = row.querySelector('#arc');
+      if (arc) arc.setAttribute('stroke-dashoffset', String(CIRC * (1 - f)));
+      const left = row.querySelector('#msleft');
+      if (left) left.textContent = Math.round(s.holdRemainingMs || 0) + 'ms';
+      if (!raf) raf = requestAnimationFrame(() => { raf = 0; render(); });
+    }
+
+    const why = document.createElement('div'); why.className = 'why';
+    if (s.status === 'explicit') {
+      why.textContent = s.radius === 'external'
+        ? 'The capability behind this cannot be taken back, so silence will never commit it — whatever the spec called the act.'
+        : 'The attention gate did not pass: ' + (s.gateFailures || []).join('; ') + '.';
+      out.appendChild(why);
+      const row = document.createElement('div'); row.className = 'row';
+      const yes = document.createElement('button'); yes.className = 'go'; yes.textContent = 'Yes, do it';
+      yes.onclick = () => run.assent().then(render);
+      const no = document.createElement('button'); no.textContent = 'Cancel';
+      no.onclick = () => { run.discard(); render(); };
+      row.append(yes, no); out.appendChild(row);
+    } else if (s.status === 'resolving' && s.focus) {
+      why.textContent = 'Waiting on “' + s.focus + '”. It cannot hold until every required slot is filled.';
+      out.appendChild(why);
+    } else if (s.status === 'settled') {
+      why.textContent = 'Written. ' + (run.undoAvailable ? 'Undo is live for a few seconds.' : 'The undo window has closed.');
+      out.appendChild(why);
+      if (run.undoAvailable) {
+        const row = document.createElement('div'); row.className = 'row';
+        const u = document.createElement('button'); u.textContent = 'Undo';
+        u.onclick = () => run.undo().then(render);
+        row.appendChild(u); out.appendChild(row);
+      }
+    }
+  }
+
+  function compose(spec, note, prefill) {
+    OPTION_CACHE.clear();
+    try {
+      const def = composer.compose(spec);
+      // Always redefine: editing a spec without renaming it must take effect,
+      // and the registry overwrites by name.
+      ui.defineAct(def);
+      run = ui.start(def.name);
+      run.markEngaged();
+      if (prefill) for (const [k, v] of Object.entries(prefill)) {
+        if (def.slots[k]) run.setValue(k, v, 'touched');
+      }
+      run.evaluate();
+      $('tools').textContent = JSON.stringify(A.toolSchema([def], optionsFor, 'openai'), null, 2);
+      if (note) showAccepted(def.name); else showError('');
+      render();
+    } catch (err) {
+      run = null;
+      $('tools').textContent = '—';
+      showError(err.name === 'ComposeError' || err.name === 'ActDefinitionError'
+        ? 'REFUSED — ' + err.message
+        : String(err));
+      render();
+    }
+  }
+
+  /* ------------------------------------------------------------------ wire */
+  const sel = $('preset');
+  Object.keys(PRESETS).forEach((k) => {
+    const o = document.createElement('option'); o.value = k; o.textContent = k; sel.appendChild(o);
+  });
+  const load = (k) => { $('spec').value = JSON.stringify(PRESETS[k], null, 2); showError(''); };
+  sel.onchange = () => { load(sel.value); compose(PRESETS[sel.value]); };
+
+  $('compose').onclick = () => {
+    try { compose(JSON.parse($('spec').value)); }
+    catch { showError('REFUSED — spec is not valid JSON'); }
+  };
+  $('reset').onclick = () => { load(sel.value); compose(PRESETS[sel.value]); };
+
+  const box = $('attacks');
+  ATTACKS.forEach(([label, mutate, prefill]) => {
+    const d = document.createElement('div'); d.className = 'attack';
+    const b = document.createElement('button'); b.className = 'small'; b.textContent = 'Try it';
+    const t = document.createElement('div');
+    t.innerHTML = '<div class="d"></div>';
+    t.querySelector('.d').textContent = label;
+    b.onclick = () => {
+      let base;
+      try { base = JSON.parse($('spec').value); } catch { base = PRESETS[sel.value]; }
+      const next = mutate(base);
+      $('spec').value = JSON.stringify(next, (k, v) => (typeof v === 'function' ? '<<function>>' : v), 2);
+      compose(next, label.startsWith('Dress'), prefill);
+      document.querySelector('.lab').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+    d.append(b, t); box.appendChild(d);
+  });
+
+  const caps = $('caps');
+  for (const c of CAPS) {
+    const tr = document.createElement('tr');
+    const r = typeof c.radius === 'string' ? c.radius : c.radius.max;
+    tr.innerHTML = '<td><code></code></td><td></td><td></td><td></td>';
+    tr.children[0].firstChild.textContent = c.name;
+    tr.children[1].textContent = r;
+    tr.children[2].textContent = c.undo ? 'yes' : 'no';
+    tr.children[3].textContent = c.describe;
+    caps.appendChild(tr);
+  }
+
+  $('capnote').textContent = CAPS.length + ' capabilities registered';
+  $('api').textContent = [
+    "const ui = createAIUIC({ presenter, attention, ctx });",
+    "",
+    "ui.defineAct(actDef);            // validated at definition time",
+    "ui.hear(text);                   // route, resolve, paint",
+    "ui.touch(slot, value);           // a decision now",
+    "ui.apply(toolCall);              // the model confirms or corrects",
+    "ui.toolSchema('anthropic');      // generated, never hand-written",
+    "ui.state();                      // what is on screen, for the model",
+    "ui.pause(); ui.resume();         // covering sheets, hangup",
+    "ui.on('commit' | 'undo' | 'failed', handler);",
+  ].join('\n');
+
+  load(sel.value);
+  compose(PRESETS[sel.value]);
+})();
+</script>
