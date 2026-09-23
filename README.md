@@ -52,3 +52,14 @@ Everything is tested against an injectable `FakeClock`, so no device and no audi
 | 2 | LLM | seconds | yes | free text, novel intent, escalation |
 
 Jev is a hosted, closed model, so it is tier 1 and never tier 0. `TieredResolver` refuses a non-local tier 0 at construction, and its staged calls hand back the local answer synchronously so nothing paints behind a network call.
+
+## Demo
+
+`demo/index.html` bundles `aiuic-core` + `aiuic-resolve` into one self-contained page — the real
+engine, not a mockup. Four acts, one per blast radius. Rebuild after a core change:
+
+```bash
+npx esbuild demo/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=demo/aiuic.bundle.js
+cat demo/page-head.html demo/page-body.html > demo/index.html
+{ echo '<script>'; cat demo/aiuic.bundle.js; echo '</script>'; cat demo/app.js; } >> demo/index.html
+```

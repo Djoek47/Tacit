@@ -1,0 +1,60 @@
+<div class="wrap">
+  <header>
+    <h1>Silence Commits</h1>
+    <span class="tag">AIUIC core · live</span>
+  </header>
+  <p class="sub">Say something. Say nothing. It happens. This runs the real engine — the same
+    <code>aiuic-core</code> that passes the test suite — so the panel on the right is the actual
+    decision, not a script.</p>
+
+  <div class="cols">
+    <section class="panel">
+      <div class="head"><span class="lbl">Stage</span><span class="lbl" id="phase">idle</span></div>
+      <div class="stage">
+        <div class="orbwrap">
+          <svg class="ring" viewBox="0 0 132 132" aria-hidden="true">
+            <circle class="track" cx="66" cy="66" r="62"></circle>
+            <circle class="arc" id="arc" cx="66" cy="66" r="62" stroke-dasharray="389.6" stroke-dashoffset="389.6"></circle>
+          </svg>
+          <div class="orb" id="orb"></div>
+          <div class="ms" id="ms"></div>
+        </div>
+        <div class="utter" id="utter"><span class="none">nothing said yet</span></div>
+        <div class="slots" id="slots"></div>
+        <div class="verdict" id="verdict"></div>
+        <div class="act-row" id="actions"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="head"><span class="lbl">Engine</span><span class="lbl">commit contract</span></div>
+      <div class="rd" id="readout"></div>
+      <div class="head" style="border-top:1px solid var(--line-soft)"><span class="lbl">Events</span>
+        <button class="ghost" id="clearlog" style="font-size:11px;padding:3px 9px">clear</button></div>
+      <div class="log" id="log"></div>
+    </section>
+  </div>
+
+  <section class="panel controls">
+    <div class="head"><span class="lbl">Say something</span><span class="lbl">4 acts · 4 blast radii</span></div>
+    <div class="cbody">
+      <form class="say" id="sayform">
+        <input id="input" placeholder="add milk" autocomplete="off" aria-label="What you say">
+        <button class="primary" type="submit">Say it</button>
+        <button class="ghost" type="button" id="sayno">Say “no”</button>
+      </form>
+      <div class="chips" id="chips"></div>
+      <div class="toggles">
+        <label class="tg" id="tg-model"><input type="checkbox" id="model" checked> Model reachable</label>
+        <label class="tg" id="tg-look"><input type="checkbox" id="looking" checked> Looking at the screen</label>
+        <label class="tg" id="tg-review"><input type="checkbox" id="slow"> Slow speaker (1300ms pause)</label>
+      </div>
+    </div>
+  </section>
+
+  <p class="note"><b>What to watch.</b> Turn off <b>Model reachable</b> and say “add milk” — it still
+    commits, because the slot was filled on device. Turn off <b>Looking at the screen</b> and the ring
+    never starts: silence from someone who isn’t looking is absence, not agreement. Say “pay Sam back
+    twenty dollars” and there is no ring at all — money leaves, so it takes an explicit yes. Say “no”
+    mid-hold and nothing changes; the preview just freezes so you can point at the wrong part.</p>
+</div>

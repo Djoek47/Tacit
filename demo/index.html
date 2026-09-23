@@ -1,0 +1,592 @@
+<title>Silence Commits</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#eef0f3; --surface:#fff; --sunk:#e4e7ec; --line:#d3d8df; --line-soft:#e6e9ee;
+    --ink:#13171d; --dim:#5b636e; --faint:#8b939e;
+    --hold:#b0740f; --hold-soft:#f3e3c4;
+    --ok:#0d7565; --ok-soft:#cfe9e4;
+    --stop:#a32d3c; --stop-soft:#f4d7da;
+    --prov:#6b4fa8; --prov-soft:#e3daf5;
+    --shadow:0 1px 2px rgba(18,22,28,.07),0 8px 24px -12px rgba(18,22,28,.18);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --ground:#0d1015; --surface:#161b22; --sunk:#10141a; --line:#272e39; --line-soft:#1d232c;
+      --ink:#e7eaef; --dim:#99a2af; --faint:#6c7784;
+      --hold:#e8ad48; --hold-soft:#3a2d12;
+      --ok:#44cfb8; --ok-soft:#10332e;
+      --stop:#f4737f; --stop-soft:#3a1a1f;
+      --prov:#b49af0; --prov-soft:#241d38;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --ground:#0d1015; --surface:#161b22; --sunk:#10141a; --line:#272e39; --line-soft:#1d232c;
+    --ink:#e7eaef; --dim:#99a2af; --faint:#6c7784;
+    --hold:#e8ad48; --hold-soft:#3a2d12;
+    --ok:#44cfb8; --ok-soft:#10332e;
+    --stop:#f4737f; --stop-soft:#3a1a1f;
+    --prov:#b49af0; --prov-soft:#241d38;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    background:var(--ground); color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,sans-serif;
+    font-size:15px; line-height:1.5; margin:0;
+  }
+  .wrap{max-width:1140px; margin:0 auto; padding-inline:16px; padding-block:28px 56px;}
+  h1,h2,h3,.lbl{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;}
+  code,.mono,.rd{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;}
+
+  header{display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 14px; margin-bottom:6px}
+  h1{font-size:26px; font-weight:600; letter-spacing:-.01em; margin:0; text-wrap:balance}
+  .tag{font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--faint);
+       border:1px solid var(--line); border-radius:999px; padding:3px 9px}
+  .sub{color:var(--dim); max-width:66ch; margin:0 0 22px}
+
+  .cols{display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr); gap:18px; align-items:start}
+  @media (max-width:860px){ .cols{grid-template-columns:1fr} }
+
+  .panel{background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow)}
+  .panel > .head{display:flex; justify-content:space-between; align-items:center; gap:10px;
+       padding:11px 16px; border-bottom:1px solid var(--line-soft)}
+  .lbl{font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--faint); font-weight:600}
+
+  /* stage */
+  .stage{padding:22px 16px 18px; min-height:330px; display:flex; flex-direction:column; align-items:center; gap:16px}
+  .orbwrap{position:relative; width:132px; height:132px; flex:none}
+  .orb{position:absolute; inset:18px; border-radius:50%;
+       background:radial-gradient(circle at 34% 30%, var(--surface), var(--sunk) 62%, var(--line) 100%);
+       border:1px solid var(--line); transition:box-shadow .3s, border-color .3s}
+  .orb.listening{border-color:var(--prov); box-shadow:0 0 0 4px var(--prov-soft)}
+  .orb.holding{border-color:var(--hold); box-shadow:0 0 0 4px var(--hold-soft)}
+  .orb.done{border-color:var(--ok); box-shadow:0 0 0 4px var(--ok-soft)}
+  .orb.blocked{border-color:var(--stop); box-shadow:0 0 0 4px var(--stop-soft)}
+  .ring{position:absolute; inset:0; transform:rotate(-90deg)}
+  .ring circle{fill:none; stroke-width:5; stroke-linecap:round}
+  .ring .track{stroke:var(--line-soft)}
+  .ring .arc{stroke:var(--hold); transition:stroke .2s}
+  .ms{position:absolute; inset:0; display:grid; place-items:center; font-size:13px; font-weight:500;
+      color:var(--dim); letter-spacing:.02em; font-variant-numeric:tabular-nums}
+
+  .utter{font-size:17px; text-align:center; min-height:26px; color:var(--ink); max-width:46ch}
+  .utter .none{color:var(--faint)}
+
+  .slots{display:flex; flex-wrap:wrap; gap:9px; justify-content:center; min-height:44px}
+  .slot{display:flex; flex-direction:column; gap:3px; align-items:flex-start;
+        border:1px solid var(--line); border-radius:10px; padding:7px 11px; background:var(--sunk)}
+  .slot .k{font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint)}
+  .slot .v{font-size:14px; font-weight:500}
+  .slot.empty{border-style:dashed; opacity:.75}
+  .slot.empty .v{color:var(--faint)}
+  .slot.prov{border-color:var(--prov); background:var(--prov-soft)}
+  .slot.prov .k{color:var(--prov)}
+  .slot.focus{outline:2px solid var(--prov); outline-offset:1px}
+
+  .verdict{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; align-items:center; text-align:center}
+  .pill{font-size:12px; font-weight:500; border-radius:999px; padding:4px 11px; border:1px solid transparent}
+  .pill.hold{background:var(--hold-soft); color:var(--hold); border-color:var(--hold)}
+  .pill.ok{background:var(--ok-soft); color:var(--ok); border-color:var(--ok)}
+  .pill.stop{background:var(--stop-soft); color:var(--stop); border-color:var(--stop)}
+  .pill.prov{background:var(--prov-soft); color:var(--prov); border-color:var(--prov)}
+  .why{font-size:13px; color:var(--dim); max-width:48ch}
+
+  .act-row{display:flex; gap:9px; flex-wrap:wrap; justify-content:center}
+  button{font:inherit; cursor:pointer; border-radius:9px; border:1px solid var(--line);
+         background:var(--surface); color:var(--ink); padding:8px 13px; transition:border-color .15s, background .15s}
+  button:hover{border-color:var(--faint)}
+  button:focus-visible{outline:2px solid var(--prov); outline-offset:2px}
+  button.primary{background:var(--ok); border-color:var(--ok); color:#fff; font-weight:500}
+  button.danger{background:var(--stop); border-color:var(--stop); color:#fff; font-weight:500}
+  button.ghost{background:transparent}
+  button[disabled]{opacity:.42; cursor:not-allowed}
+
+  /* readout */
+  .rd{padding:14px 16px; font-size:12.5px; line-height:1.75; overflow-x:auto}
+  .rd .row{display:grid; grid-template-columns:118px minmax(0,1fr); gap:10px; align-items:baseline}
+  .rd .key{color:var(--faint)}
+  .rd .val{color:var(--ink); word-break:break-word}
+  .rd .val.hold{color:var(--hold)} .rd .val.ok{color:var(--ok)}
+  .rd .val.stop{color:var(--stop)} .rd .val.prov{color:var(--prov)}
+  .rd hr{border:0; border-top:1px solid var(--line-soft); margin:10px 0}
+  .rd .fail{color:var(--stop)}
+
+  .log{padding:8px 16px 16px; max-height:190px; overflow-y:auto; font-size:12px}
+  .log div{display:grid; grid-template-columns:52px minmax(0,1fr); gap:9px; padding:2.5px 0; border-bottom:1px solid var(--line-soft)}
+  .log .t{color:var(--faint); font-variant-numeric:tabular-nums}
+  .log .m{color:var(--dim)}
+  .log .m b{color:var(--ink); font-weight:500}
+
+  /* controls */
+  .controls{margin-top:18px}
+  .cbody{padding:14px 16px; display:flex; flex-direction:column; gap:13px}
+  .say{display:flex; gap:8px; flex-wrap:wrap}
+  .say input{flex:1 1 220px; min-width:0; font:inherit; padding:9px 12px; border-radius:9px;
+             border:1px solid var(--line); background:var(--sunk); color:var(--ink)}
+  .say input:focus-visible{outline:2px solid var(--prov); outline-offset:1px}
+  .chips{display:flex; gap:8px; flex-wrap:wrap}
+  .chips button{font-size:13px; padding:7px 11px}
+  .chips button .r{font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--faint); margin-left:7px}
+  .toggles{display:flex; gap:9px; flex-wrap:wrap; border-top:1px solid var(--line-soft); padding-top:13px}
+  .tg{display:flex; align-items:center; gap:7px; font-size:13px; border:1px solid var(--line);
+      border-radius:999px; padding:5px 12px 5px 9px; cursor:pointer; background:var(--surface)}
+  .tg input{accent-color:var(--prov); margin:0}
+  .tg.off{color:var(--dim)}
+
+  .note{margin-top:22px; font-size:13px; color:var(--dim); max-width:72ch}
+  .note b{color:var(--ink); font-weight:500}
+  .note code{background:var(--sunk); border:1px solid var(--line-soft); border-radius:5px; padding:1px 5px; font-size:12px}
+  @media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+</style>
+<div class="wrap">
+  <header>
+    <h1>Silence Commits</h1>
+    <span class="tag">AIUIC core · live</span>
+  </header>
+  <p class="sub">Say something. Say nothing. It happens. This runs the real engine — the same
+    <code>aiuic-core</code> that passes the test suite — so the panel on the right is the actual
+    decision, not a script.</p>
+
+  <div class="cols">
+    <section class="panel">
+      <div class="head"><span class="lbl">Stage</span><span class="lbl" id="phase">idle</span></div>
+      <div class="stage">
+        <div class="orbwrap">
+          <svg class="ring" viewBox="0 0 132 132" aria-hidden="true">
+            <circle class="track" cx="66" cy="66" r="62"></circle>
+            <circle class="arc" id="arc" cx="66" cy="66" r="62" stroke-dasharray="389.6" stroke-dashoffset="389.6"></circle>
+          </svg>
+          <div class="orb" id="orb"></div>
+          <div class="ms" id="ms"></div>
+        </div>
+        <div class="utter" id="utter"><span class="none">nothing said yet</span></div>
+        <div class="slots" id="slots"></div>
+        <div class="verdict" id="verdict"></div>
+        <div class="act-row" id="actions"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="head"><span class="lbl">Engine</span><span class="lbl">commit contract</span></div>
+      <div class="rd" id="readout"></div>
+      <div class="head" style="border-top:1px solid var(--line-soft)"><span class="lbl">Events</span>
+        <button class="ghost" id="clearlog" style="font-size:11px;padding:3px 9px">clear</button></div>
+      <div class="log" id="log"></div>
+    </section>
+  </div>
+
+  <section class="panel controls">
+    <div class="head"><span class="lbl">Say something</span><span class="lbl">4 acts · 4 blast radii</span></div>
+    <div class="cbody">
+      <form class="say" id="sayform">
+        <input id="input" placeholder="add milk" autocomplete="off" aria-label="What you say">
+        <button class="primary" type="submit">Say it</button>
+        <button class="ghost" type="button" id="sayno">Say “no”</button>
+      </form>
+      <div class="chips" id="chips"></div>
+      <div class="toggles">
+        <label class="tg" id="tg-model"><input type="checkbox" id="model" checked> Model reachable</label>
+        <label class="tg" id="tg-look"><input type="checkbox" id="looking" checked> Looking at the screen</label>
+        <label class="tg" id="tg-review"><input type="checkbox" id="slow"> Slow speaker (1300ms pause)</label>
+      </div>
+    </div>
+  </section>
+
+  <p class="note"><b>What to watch.</b> Turn off <b>Model reachable</b> and say “add milk” — it still
+    commits, because the slot was filled on device. Turn off <b>Looking at the screen</b> and the ring
+    never starts: silence from someone who isn’t looking is absence, not agreement. Say “pay Sam back
+    twenty dollars” and there is no ring at all — money leaves, so it takes an explicit yes. Say “no”
+    mid-hold and nothing changes; the preview just freezes so you can point at the wrong part.</p>
+</div>
+<script>
+var AIUIC=(()=>{var k=Object.defineProperty;var Q=Object.getOwnPropertyDescriptor;var Y=Object.getOwnPropertyNames;var Z=Object.prototype.hasOwnProperty;var tt=(r,t,e)=>t in r?k(r,t,{enumerable:!0,configurable:!0,writable:!0,value:e}):r[t]=e;var et=(r,t)=>{for(var e in t)k(r,e,{get:t[e],enumerable:!0})},st=(r,t,e,s)=>{if(t&&typeof t=="object"||typeof t=="function")for(let i of Y(t))!Z.call(r,i)&&i!==e&&k(r,i,{get:()=>t[i],enumerable:!(s=Q(t,i))||s.enumerable});return r};var it=r=>st(k({},"__esModule",{value:!0}),r);var c=(r,t,e)=>tt(r,typeof t!="symbol"?t+"":t,e);var ut={};et(ut,{AIUIC:()=>S,ActDefinitionError:()=>R,ActRun:()=>v,BASE_PAUSE_MS:()=>W,DEFAULT_ROUTING:()=>g,DELTA_FILL:()=>B,FakeClock:()=>T,HOLD_MULTIPLIER:()=>U,LocalResolver:()=>D,Outbox:()=>x,RADIUS_ORDER:()=>j,TAU_FILL:()=>G,UNDO_WINDOW_MS:()=>A,UNKNOWN_ATTENTION:()=>H,arbitrateSpans:()=>P,attentionGate:()=>C,classify:()=>V,cloneSlots:()=>K,commitRadius:()=>N,createAIUIC:()=>nt,defineAct:()=>q,effectiveRadius:()=>$,explainRadius:()=>_,holdDurationMs:()=>M,matchPhrase:()=>y,maxRadius:()=>E,normalize:()=>O,pickAct:()=>J,radiusRank:()=>f,realClock:()=>F,requiresModel:()=>z,similarity:()=>L,slotOrder:()=>w,staticMax:()=>I,tokenize:()=>b});var j=["self","shared","other-person","external"];function f(r){return j.indexOf(r)}function E(...r){let t="self";for(let e of r)f(e)>f(t)&&(t=e);return t}var F={now:()=>Date.now(),setTimeout:(r,t)=>setTimeout(r,t),clearTimeout:r=>clearTimeout(r)},T=class{constructor(t=0){c(this,"t");c(this,"seq",1);c(this,"queue",[]);this.t=t}now(){return this.t}setTimeout(t,e){let s=this.seq++;return this.queue.push({id:s,at:this.t+e,fn:t}),s}clearTimeout(t){this.queue=this.queue.filter(e=>e.id!==t)}advance(t){let e=this.t+t;for(;;){let s=this.queue.filter(i=>i.at<=e).sort((i,o)=>i.at-o.at||i.id-o.id)[0];if(!s)break;this.queue=this.queue.filter(i=>i.id!==s.id),this.t=s.at,s.fn()}this.t=e}get pending(){return this.queue.length}};function I(r){return typeof r=="string"?r:r.max}function N(r,t,e){return typeof r.radius=="string"?r.radius:r.radius.of(t,e)}function _(r,t,e){let s=N(r,t,e),i=e.reachLimit??1,o=[],a=s;return(r.effects??[]).forEach((n,l)=>{let u=n.name??`effect[${l}]`;if(n.when&&!n.when(t,e)){o.push({name:u,radius:"self",why:"skipped by when()"});return}let d=n.radius,h;if(!n.reversible&&f(d)<f("external")&&(d="external",h="effect is irreversible"),n.reach){let m=n.reach(t,e);m>i&&(d="external",h=`reach ${m} exceeds reachLimit ${i}`)}o.push(h?{name:u,radius:d,why:h}:{name:u,radius:d}),a=E(a,d)}),{radius:a,commit:s,effects:o}}function $(r,t,e){return _(r,t,e).radius}var U={self:1,shared:1,"other-person":1.6,external:0},W=850;function M(r,t){let e=t.actor.basePauseMs??W;return Math.round(e*U[r])}var R=class extends Error{constructor(e,s){super(`[${e}] ${s}`);c(this,"act");this.name="ActDefinitionError",this.act=e}},ot=f("external");function q(r){let t=a=>{throw new R(r.name,a)};r.name||t("act needs a name"),r.commit||t("act needs a commit function"),typeof r.radius!="string"&&((!r.radius||typeof r.radius.of!="function")&&t("a function-valued radius needs { max, of }"),r.radius.max||t("a function-valued radius must declare a static max, or it cannot be checked here"));let e=I(r.radius),s=f(e)<ot,i=Object.entries(r.slots??{});i.length===0&&t("act needs at least one slot");let o=new Set;for(let[a,n]of i){let l=n;l.primitive||t(`slot "${a}" needs a primitive`),typeof l.order!="number"&&t(`slot "${a}" needs an order`),o.has(l.order)&&t(`slot "${a}" reuses order ${l.order}`),o.add(l.order),!l.options&&!l.resolve&&!l.default&&t(`slot "${a}" needs options, resolve, or default \u2014 nothing can fill it`),l.fill==="model"&&l.required}s&&!r.undo&&t(`radius max "${e}" is below "external" but no undo() is declared; silence-assent requires a reversal`);for(let[a,n]of(r.effects??[]).entries()){let l=n.name??`effect[${a}]`;typeof n.run!="function"&&t(`${l} needs run()`),n.radius||t(`${l} needs a radius`),typeof n.reversible!="boolean"&&t(`${l} needs reversible`),typeof n.deferrable!="boolean"&&t(`${l} needs deferrable`),!n.deferrable&&s&&t(`${l} is not deferrable, so it fires before undo is possible; declare radius max "external"`),!n.reversible&&s&&t(`${l} is irreversible; declare radius max "external"`),f(n.radius)>f(e)&&t(`${l} declares radius "${n.radius}" above the act's max "${e}"`)}return r}function z(r){return Object.values(r.slots).some(t=>t.required===!0&&t.fill==="model")}function w(r){return Object.entries(r.slots).sort(([,t],[,e])=>t.order-e.order).map(([t])=>t)}var H={foreground:!1,unlocked:!1,proximityClear:!1,listening:!1};function C(r,t){let e=r??H,s=[];return e.foreground||s.push("app not in foreground"),e.unlocked||s.push("device locked"),e.proximityClear||s.push("proximity sensor covered"),e.listening||s.push("not listening, so a veto could not be heard"),t||s.push("user has not touched or spoken during this act"),{pass:s.length===0,failures:s}}var A=5e3,x=class{constructor(t,e,s={}){c(this,"clock",t);c(this,"ctx",e);c(this,"events",s);c(this,"entries",new Map);c(this,"seq",1)}get size(){return this.entries.size}has(t){return this.entries.has(t)}add(t,e,s,i){let o=`ob_${this.seq++}`,a=this.clock.now()+i,n=s.map((u,d)=>u.name??`effect[${d}]`),l={id:o,act:t,result:e,deadlineAt:a,effectNames:n,effects:s,timer:null};return l.timer=this.clock.setTimeout(()=>{this.fire(o)},i),this.entries.set(o,l),o}cancel(t){let e=this.entries.get(t);return e?(e.timer!==null&&this.clock.clearTimeout(e.timer),this.entries.delete(t),!0):!1}async fire(t){let e=this.entries.get(t);if(!e)return;this.entries.delete(t);let s=this.ctx();for(let i of e.effects)try{await i.run(e.result,s)}catch(o){this.events.onEffectError?.(e,i,o)}this.events.onFire?.(e)}serialize(){return[...this.entries.values()].map(({id:t,act:e,result:s,deadlineAt:i,effectNames:o})=>({id:t,act:e,result:s,deadlineAt:i,effectNames:o}))}restore(t,e){for(let s of t){let i=Math.max(0,s.deadlineAt-this.clock.now()),o={...s,effects:e(s.act,s.effectNames),timer:null};o.timer=this.clock.setTimeout(()=>{this.fire(s.id)},i),this.entries.set(s.id,o)}}};var G=.85,B=.15;function K(r){let t={};for(let[e,s]of Object.entries(r))t[e]=s.candidates?{...s,candidates:s.candidates.map(i=>({...i}))}:{...s};return t}function V(r,t=G,e=B){let s=[...r].sort((l,u)=>u.score-l.score),i=s[0];if(!i)return{outcome:"empty",provisional:!1,ranked:s};let o=s[1],a=i.score-(o?.score??0),n=i.calibrated!==!1;return i.score>=t&&a>=e?{outcome:"filled",value:i.value,provisional:!n,ranked:s}:o&&a<e?{outcome:"narrowed",provisional:!0,ranked:s}:{outcome:"filled",value:i.value,provisional:!0,ranked:s}}var v=class{constructor(t,e,s,i,o){c(this,"clock",e);c(this,"ctxOf",s);c(this,"outbox",i);c(this,"emit",o);c(this,"def");c(this,"status","resolving");c(this,"phase","show");c(this,"slots",{});c(this,"result",null);c(this,"undoId",null);c(this,"holdTimer",null);c(this,"holdEndsAt",0);c(this,"holdMs",0);c(this,"engaged",!1);this.def=t;for(let a of Object.keys(t.slots))this.slots[a]={status:"empty",provisional:!1};this.applyDefaults()}get filled(){let t={};for(let[e,s]of Object.entries(this.slots))s.status==="filled"&&(t[e]=s.value);return t}get radius(){return $(this.def,this.filled,this.ctxOf())}get requiredNames(){return w(this.def).filter(t=>this.def.slots[t]?.required===!0)}get missingRequired(){return this.requiredNames.filter(t=>this.slots[t]?.status!=="filled")}state(){let t=this.status!=="settled"&&this.status!=="discarded",e=C(this.ctxOf().attention,this.engaged),s=t?this.radius:null,i=this.missingRequired[0],o={act:this.def.name,status:this.status,phase:this.phase,slots:K(this.slots),radius:s,assent:this.status==="hold"?"silence":this.status==="explicit"?"explicit":null,visible:this.status==="resolving"&&i?[i]:w(this.def),outbox:this.outbox.size};return this.status==="hold"&&(o.holdRemainingMs=Math.max(0,this.holdEndsAt-this.clock.now())),i&&(o.focus=i),e.pass||(o.gateFailures=e.failures),o}applyDefaults(){let t=this.ctxOf();for(let[e,s]of Object.entries(this.def.slots)){if(!s.default)continue;let i=this.slots[e];if(!i||i.status!=="empty")continue;let o=s.default(t,this.filled);o!==void 0&&(this.slots[e]={status:"filled",value:o,source:"default",provisional:!1})}}markEngaged(){this.engaged=!0}setValue(t,e,s){if(!this.def.slots[t])throw new Error(`[${this.def.name}] unknown slot "${t}"`);(s==="spoken"||s==="touched")&&this.markEngaged();let i=this.status==="hold",o=this.slots[t],a=o?.status!=="filled"||o.value!==e;this.slots[t]={status:"filled",value:e,source:s,provisional:!1,...s==="model"&&i&&a?{corrected:!0}:{}},this.status==="frozen"&&(s==="touched"||s==="spoken")&&(this.status="resolving"),i&&a&&this.cancelHold("slot changed under a running HOLD"),this.evaluate()}offer(t,e,s){if(!this.def.slots[t])throw new Error(`[${this.def.name}] unknown slot "${t}"`);(s==="spoken"||s==="touched")&&this.markEngaged();let i=this.status==="hold",o=V(e);o.outcome==="empty"?this.slots[t]={status:"empty",provisional:!1}:o.outcome==="narrowed"?this.slots[t]={status:"narrowed",candidates:o.ranked,provisional:!0,source:s}:this.slots[t]={status:"filled",value:o.value,source:s,provisional:o.provisional,candidates:o.ranked.length>1?o.ranked:void 0},this.status==="frozen"&&(s==="touched"||s==="spoken")&&(this.status="resolving"),i&&this.cancelHold("slot changed under a running HOLD"),this.evaluate()}markStale(t){let e=this.slots[t];e&&(this.slots[t]={...e,stale:!0},this.status==="hold"&&this.cancelHold("a filled value went stale"),this.evaluate())}freeze(t="bare negation"){this.status==="settled"||this.status==="discarded"||(this.markEngaged(),this.cancelHold(t),this.status="frozen",this.phase="frozen",this.emit({type:"frozen",act:this.def.name,reason:t}),this.emit({type:"stage",state:this.state()}))}discard(){this.cancelHold("vetoed"),this.status="discarded",this.emit({type:"discarded",act:this.def.name})}pause(){this.status==="hold"&&this.cancelHold("paused"),this.status!=="settled"&&this.status!=="discarded"&&(this.status="frozen")}resume(){this.status==="frozen"&&(this.status="resolving",this.evaluate())}evaluate(){if(["committing","settled","discarded","failed"].includes(this.status))return;if(this.status==="frozen"){this.emit({type:"stage",state:this.state()});return}let t=this.ctxOf(),e=this.missingRequired;if(e.length>0){this.status="resolving";let n=e[0],l=this.slots[n];this.phase=l.status==="narrowed"?"narrow":"unfold",this.emit({type:"stage",state:this.state()});return}let s=Object.entries(this.slots).find(([,n])=>n.stale);if(s){this.status="resolving",this.phase="show",this.emit({type:"blocked",act:this.def.name,reason:`slot "${s[0]}" is stale`}),this.emit({type:"stage",state:this.state()});return}let i=this.radius,o=this.requiredNames.filter(n=>this.slots[n]?.provisional);if(o.length>0&&f(i)>=f("other-person")){this.status="resolving",this.phase="show",this.emit({type:"blocked",act:this.def.name,reason:`provisional ${o.join(", ")} at radius "${i}"`}),this.emit({type:"stage",state:this.state()});return}let a=C(t.attention,this.engaged);if(i==="external"||!a.pass){this.status="explicit",this.phase="explicit",this.emit({type:"blocked",act:this.def.name,reason:i==="external"?"radius is external":"attention gate failed",...a.pass?{}:{failures:a.failures}}),this.emit({type:"stage",state:this.state()});return}this.startHold(i)}startHold(t){let e=M(t,this.ctxOf());this.cancelHold("restart",!0),this.status="hold",this.phase="hold",this.holdMs=e,this.holdEndsAt=this.clock.now()+e,this.holdTimer=this.clock.setTimeout(()=>{this.holdTimer=null,this.commit("silence")},e),this.emit({type:"hold-start",act:this.def.name,ms:e,radius:t}),this.emit({type:"stage",state:this.state()})}cancelHold(t,e=!1){this.holdTimer!==null&&(this.clock.clearTimeout(this.holdTimer),this.holdTimer=null,e||this.emit({type:"hold-cancel",act:this.def.name,reason:t})),this.holdEndsAt=0}get holdDurationMsValue(){return this.holdMs}async assent(){if(this.markEngaged(),this.status!=="explicit"&&this.status!=="hold"&&this.status!=="frozen")throw new Error(`[${this.def.name}] nothing to assent to (status "${this.status}")`);if(this.missingRequired.length>0)throw new Error(`[${this.def.name}] required slots unfilled: ${this.missingRequired.join(", ")}`);this.cancelHold("explicit assent",!0),await this.commit("explicit")}async commit(t){if(this.status==="committing"||this.status==="settled")return;this.status="committing";let e=this.ctxOf(),s=this.filled;try{let i=await this.def.commit(s,e);this.result=i,this.status="settled",this.phase="settle";let o=(this.def.effects??[]).filter(l=>!l.when||l.when(s,e)),a=o.filter(l=>l.deferrable),n=o.filter(l=>!l.deferrable);if(a.length>0){let l=e.undoWindowMs??5e3;this.undoId=this.outbox.add(this.def.name,i,a,l)}else this.def.undo&&(this.undoId=this.outbox.add(this.def.name,i,[],e.undoWindowMs??5e3));for(let l of n)t==="explicit"&&await l.run(i,e);this.emit({type:"commit",act:this.def.name,result:i,undoId:this.undoId}),this.emit({type:"stage",state:this.state()})}catch(i){this.status="failed",this.emit({type:"failed",act:this.def.name,error:i}),this.emit({type:"stage",state:this.state()})}}async undo(){return this.status!=="settled"||!this.result||!this.undoId||!this.outbox.has(this.undoId)?!1:(this.outbox.cancel(this.undoId),this.undoId=null,await this.def.undo?.(this.result,this.ctxOf()),this.emit({type:"undo",act:this.def.name,result:this.result}),!0)}get undoAvailable(){return this.status==="settled"&&!!this.undoId&&this.outbox.has(this.undoId)}};var rt={act:null,status:"resolving",phase:"idle",slots:{},radius:null,assent:null,visible:[],outbox:0},S=class{constructor(t){c(this,"config",t);c(this,"acts",new Map);c(this,"listeners",new Set);c(this,"current",null);c(this,"clock");c(this,"outbox");c(this,"emit",t=>{for(let e of this.listeners)e(t)});this.clock=t.clock??F,this.outbox=new x(this.clock,()=>this.ctx())}ctx(){return{...this.config.ctx(),now:new Date(this.clock.now())}}on(t){return this.listeners.add(t),()=>this.listeners.delete(t)}defineAct(t){let e=q(t);return this.acts.set(e.name,e),e}get definitions(){return[...this.acts.values()]}needsModel(t){let e=this.acts.get(t);if(!e)throw new Error(`unknown act "${t}"`);return z(e)}start(t){let e=this.acts.get(t);if(!e)throw new Error(`unknown act "${t}"`);this.current&&["resolving","hold","explicit","frozen"].includes(this.current.status)&&this.current.discard();let s=new v(e,this.clock,()=>this.ctx(),this.outbox,this.emit);return this.current=s,s.evaluate(),s}get act(){return this.current}state(){return this.current?this.current.state():{...rt,outbox:this.outbox.size}}serializeOutbox(){return this.outbox.serialize()}restoreOutbox(t){this.outbox.restore(t,(e,s)=>(this.acts.get(e)?.effects??[]).filter((o,a)=>s.includes(o.name??`effect[${a}]`)))}};function nt(r){return new S(r)}var at=/[.,!?;:'"`()[\]{}<>/\\|@#$%^&*_+=~]/g;function O(r){return r.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(at," ").replace(/\s+/g," ").trim()}function b(r){let t=[],e=/[^\s.,!?;:'"`()[\]{}<>/\\|@#$%^&*_+=~]+/g,s;for(;(s=e.exec(r))!==null;){let i=s[0],o=O(i);o&&t.push({raw:i,norm:o,start:s.index,end:s.index+i.length})}return t}function lt(r,t){if(r===t)return 0;if(r.length===0)return t.length;if(t.length===0)return r.length;let e=Array.from({length:t.length+1},(i,o)=>o),s=new Array(t.length+1);for(let i=1;i<=r.length;i++){s[0]=i;for(let o=1;o<=t.length;o++){let a=r[i-1]===t[o-1]?0:1;s[o]=Math.min(s[o-1]+1,e[o]+1,e[o-1]+a)}[e,s]=[s,e]}return e[t.length]}function L(r,t){return!r||!t?0:r===t?1:1-lt(r,t)/Math.max(r.length,t.length)}var ct=.72;function y(r,t){let e=O(t).split(" ").filter(Boolean);if(e.length===0||r.length<e.length)return null;let s=null;for(let i=0;i+e.length<=r.length;i++){let o=0;for(let n=0;n<e.length;n++){let l=L(r[i+n].norm,e[n]);o+=l>=ct?l:0}let a=o/e.length;a>0&&(!s||a>s.score)&&(s={score:a,span:[r[i].start,r[i+e.length-1].end]})}return s}var g={tauAct:.5,deltaAct:.15,tauFill:.85,phraseWeight:.4,coverageWeight:.6};function X(r,t){let e=[];for(let s of t){let i=[s.label,...s.aliases??[]],o=null;for(let a of i){let n=y(r,a);n&&(!o||n.score>o.score)&&(o=n)}o&&o.score>0&&e.push({value:s.value,label:s.label,...o})}return e.sort((s,i)=>i.score-s.score)}function P(r){let t=[];for(let[i,o]of Object.entries(r))o.forEach((a,n)=>{a.span&&t.push({slot:i,index:n,span:a.span,score:a.score})});let e=new Set;for(let i=0;i<t.length;i++)for(let o=i+1;o<t.length;o++){let a=t[i],n=t[o];if(a.slot===n.slot||!(a.span[0]<n.span[1]&&n.span[0]<a.span[1]))continue;let u=a.span[1]-a.span[0],d=n.span[1]-n.span[0],h=u!==d?u<d?a:n:a.score<n.score?a:n;e.add(`${h.slot}:${h.index}`)}let s={};for(let[i,o]of Object.entries(r)){let a=o.filter((n,l)=>!e.has(`${i}:${l}`));a.length>0&&(s[i]=a)}return s}var D=class{constructor(t=g){c(this,"routing",t);c(this,"name","local");c(this,"local",!0);c(this,"calibrated",!0)}async score(t,e,s,i){return this.scoreSync(t,e,s,i)}async fill(t,e,s,i,o){return this.fillSync(t,e,s,i,o)}scoreSync(t,e,s,i){let o=b(t),a=[];for(let n of e){let l=0;for(let m of n.phrases??[]){let p=y(o,m);p&&p.score>l&&(l=p.score)}let u=Object.entries(n.slots).filter(([m,p])=>p.required&&(p.resolve||i(n,m).length>0)),d=0;for(let[m,p]of u)((p.resolve?p.resolve(t,s,{}):X(o,i(n,m)))[0]?.score??0)>=this.routing.tauFill&&d++;if(u.length===0){a.push({act:n.name,phraseMatch:l,requiredCoverage:0,score:l});continue}let h=d/u.length;a.push({act:n.name,phraseMatch:l,requiredCoverage:h,score:this.routing.phraseWeight*l+this.routing.coverageWeight*h})}return a.sort((n,l)=>l.score-n.score)}fillSync(t,e,s,i,o){let a=b(t),n={};for(let[l,u]of Object.entries(e.slots)){if(l in s||u.fill==="model")continue;if(u.resolve){let h=u.resolve(t,i,s);h.length>0&&(n[l]=[...h].sort((m,p)=>p.score-m.score));continue}let d=X(a,o(e,l));d.length>0&&(n[l]=d)}return P(n)}};function J(r,t=g){let e=[...r].sort((o,a)=>a.score-o.score),s=e[0];if(!s||s.score<t.tauAct)return{kind:"none",scores:e};let i=e.filter(o=>o.score>=t.tauAct&&s.score-o.score<t.deltaAct);return i.length>1?{kind:"narrow",acts:i.map(o=>o.act),scores:e}:{kind:"start",act:s.act,scores:e}}return it(ut);})();
+
+</script>
+<script>
+(function () {
+  const A = window.AIUIC;
+  const $ = (id) => document.getElementById(id);
+
+  /* ---------------------------------------------------------- host data */
+  const ME   = { id: 'me',  label: 'me' };
+  const SAM  = { id: 'sam', label: 'Sam' };
+  const MAYA = { id: 'maya',label: 'Maya' };
+
+  const PEOPLE = [
+    { value: ME,   label: 'me',   aliases: ['myself', 'I'] },
+    { value: SAM,  label: 'Sam' },
+    { value: MAYA, label: 'Maya' },
+  ];
+  const ITEMS = [
+    { value: 'milk', label: 'milk' }, { value: 'bread', label: 'bread' },
+    { value: 'coffee', label: 'coffee' }, { value: 'batteries', label: 'batteries' },
+  ];
+  const ERRANDS = [
+    { value: 'parcel', label: 'the parcel', aliases: ['parcel', 'package'] },
+    { value: 'recycling', label: 'the recycling', aliases: ['recycling', 'bins'] },
+  ];
+
+  const db = { list: [], errands: [], queue: { pharmacy: { at: Date.now() + 36e5, label: 'the pharmacy run' } }, paid: [] };
+  const QUEUE = [{ value: 'pharmacy', label: 'the pharmacy run', aliases: ['pharmacy', 'pharmacy run'] }];
+
+  /* ------------------------------------------------- host slot resolvers */
+  const DAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+  const ONES = {zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,
+    eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19};
+  const TENS = {twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90};
+
+  function nextWeekday(idx) {
+    const d = new Date();
+    d.setHours(9, 0, 0, 0);
+    let delta = (idx - d.getDay() + 7) % 7;
+    if (delta === 0) delta = 7;
+    d.setDate(d.getDate() + delta);
+    return d.getTime();
+  }
+
+  /* Values carry their own label so the stage shows the word that was said,
+     not a timestamp the speaker never uttered. */
+  function resolveWhen(text) {
+    const t = A.normalize(text);
+    const out = [];
+    const now = Date.now();
+    const push = (at, label) => out.push({ value: { at, label }, label, score: 1, calibrated: true });
+    if (/\btonight\b/.test(t)) push(now + 6 * 36e5, 'tonight');
+    if (/\btomorrow\b/.test(t)) push(now + 24 * 36e5, 'tomorrow');
+    if (/\bnow\b/.test(t)) push(now + 6e4, 'right now');
+    for (let i = 0; i < DAYS.length; i++) {
+      if (new RegExp('\\b' + DAYS[i] + '\\b').test(t)) {
+        push(nextWeekday(i), DAYS[i][0].toUpperCase() + DAYS[i].slice(1));
+      }
+    }
+    return out;
+  }
+
+  function resolveAmount(text) {
+    const t = A.normalize(text);
+    const digits = t.match(/\b(\d+(?:\.\d{1,2})?)\b/);
+    if (digits) return [{ value: parseFloat(digits[1]), label: '$' + digits[1], score: 1, calibrated: true }];
+    const words = t.split(' ');
+    for (let i = 0; i < words.length; i++) {
+      if (ONES[words[i]] !== undefined) {
+        return [{ value: ONES[words[i]], label: '$' + ONES[words[i]], score: 1, calibrated: true }];
+      }
+      if (TENS[words[i]] !== undefined) {
+        let n = TENS[words[i]];
+        if (ONES[words[i + 1]] !== undefined && ONES[words[i + 1]] < 10) n += ONES[words[i + 1]];
+        return [{ value: n, label: '$' + n, score: 1, calibrated: true }];
+      }
+    }
+    return [];
+  }
+
+  const OPTIONS = {
+    item: ITEMS, assignee: PEOPLE, payee: PEOPLE, errand: ERRANDS, target: QUEUE,
+  };
+  const optionsFor = (act, slot) => OPTIONS[slot] || [];
+
+  /* ------------------------------------------------------------- context */
+  const state = { model: true, looking: true, slow: false };
+  const ctx = () => ({
+    actor: { id: 'me', basePauseMs: state.slow ? 1300 : 850 },
+    attention: state.looking
+      ? { foreground: true, unlocked: true, proximityClear: true, listening: true }
+      : { foreground: true, unlocked: false, proximityClear: false, listening: true },
+    reachLimit: 1,
+    undoWindowMs: 5000,
+  });
+
+  const ui = A.createAIUIC({ ctx });
+  const local = new A.LocalResolver();
+
+  /* --------------------------------------------------------------- acts */
+  ui.defineAct(A.defineAct({
+    name: 'add_item', phrases: ['add', 'put on the list'],
+    slots: { item: { primitive: 'chip', options: () => ITEMS, required: true, order: 1 } },
+    radius: 'self',
+    commit: (f) => { db.list.push(f.item); return { id: 'i' + db.list.length }; },
+    undo: () => { db.list.pop(); },
+  }));
+
+  ui.defineAct(A.defineAct({
+    name: 'assign_errand', phrases: ['picks up', 'assign', 'grabs'],
+    slots: {
+      assignee: { primitive: 'face', options: () => PEOPLE, required: true, order: 1 },
+      errand:   { primitive: 'chip', options: () => ERRANDS, required: true, order: 2 },
+      due:      { primitive: 'when', resolve: resolveWhen, order: 3 },
+    },
+    radius: { max: 'other-person', of: (f, c) => (f.assignee && f.assignee.id === c.actor.id ? 'self' : 'other-person') },
+    commit: (f) => { db.errands.push(f); return { id: 'e' + db.errands.length }; },
+    undo: () => { db.errands.pop(); },
+    effects: [{
+      name: 'notify',
+      when: (f, c) => !!f.assignee && f.assignee.id !== c.actor.id,
+      run: () => { log('notification sent', 'effect'); },
+      radius: 'other-person', reversible: true, deferrable: true, reach: () => 1,
+    }],
+  }));
+
+  ui.defineAct(A.defineAct({
+    name: 'reschedule_errand', phrases: ['move', 'reschedule', 'push'],
+    slots: {
+      target: { primitive: 'objectCard', options: () => QUEUE, required: true, order: 1 },
+      when:   { primitive: 'when', resolve: resolveWhen, required: true, order: 2 },
+    },
+    radius: {
+      max: 'external',
+      of: (f, c) => (f.when && (f.when.at - c.now.getTime()) / 6e4 < 7 ? 'external' : 'shared'),
+    },
+    commit: (f) => {
+      const prev = db.queue[f.target].at;
+      db.queue[f.target].at = f.when.at;
+      return { id: f.target, previous: prev };
+    },
+    undo: (r) => { db.queue[r.id].at = r.previous; },
+  }));
+
+  ui.defineAct(A.defineAct({
+    name: 'settle_up', phrases: ['pay', 'send', 'settle up', 'pay back'],
+    slots: {
+      payee:  { primitive: 'face', options: () => PEOPLE, required: true, order: 1 },
+      amount: { primitive: 'quantity', resolve: resolveAmount, required: true, order: 2 },
+    },
+    radius: 'external',
+    commit: (f) => { db.paid.push(f); return { id: 'p' + db.paid.length }; },
+    effects: [{
+      name: 'transfer', run: () => { log('money moved — irreversible', 'effect'); },
+      radius: 'external', reversible: false, deferrable: false,
+    }],
+  }));
+
+  /* --------------------------------------------------------------- view */
+  const CIRC = 389.6;
+  let run = null, said = '', pending = null;
+
+  function log(msg, kind) {
+    const el = document.createElement('div');
+    const t = new Date();
+    el.innerHTML = '<span class="t">' + String(t.getMinutes()).padStart(2, '0') + ':' +
+      String(t.getSeconds()).padStart(2, '0') + '</span><span class="m">' +
+      (kind ? '<b>' + kind + '</b> ' : '') + msg + '</span>';
+    const box = $('log');
+    box.prepend(el);
+    while (box.children.length > 60) box.lastChild.remove();
+  }
+
+  function fmt(v) {
+    if (v === null || v === undefined) return '—';
+    if (typeof v === 'object' && v.label) return v.label;
+    if (typeof v === 'number') return String(v);
+    return String(v);
+  }
+
+  function render() {
+    const s = run ? run.state() : null;
+    const orb = $('orb'), arc = $('arc');
+
+    $('phase').textContent = s ? s.status : 'idle';
+    $('utter').innerHTML = said ? said.replace(/</g, '&lt;') : '<span class="none">nothing said yet</span>';
+
+    orb.className = 'orb';
+    if (s) {
+      if (s.status === 'hold') orb.classList.add('holding');
+      else if (s.status === 'settled') orb.classList.add('done');
+      else if (s.status === 'explicit' || s.status === 'frozen') orb.classList.add('blocked');
+      else orb.classList.add('listening');
+    }
+
+    if (s && s.status === 'hold' && run.holdDurationMsValue > 0) {
+      const frac = Math.max(0, Math.min(1, (s.holdRemainingMs || 0) / run.holdDurationMsValue));
+      arc.setAttribute('stroke-dashoffset', String(CIRC * (1 - frac)));
+      arc.style.stroke = 'var(--hold)';
+      $('ms').textContent = Math.round(s.holdRemainingMs || 0) + 'ms';
+    } else if (s && s.status === 'settled') {
+      arc.setAttribute('stroke-dashoffset', '0'); arc.style.stroke = 'var(--ok)'; $('ms').textContent = '';
+    } else {
+      arc.setAttribute('stroke-dashoffset', String(CIRC)); $('ms').textContent = '';
+    }
+
+    /* slots */
+    const box = $('slots'); box.innerHTML = '';
+    if (s) {
+      for (const name of s.visible) {
+        const sl = s.slots[name]; if (!sl) continue;
+        const d = document.createElement('div');
+        d.className = 'slot' + (sl.status === 'filled' ? '' : ' empty') + (sl.provisional ? ' prov' : '') +
+          (s.focus === name ? ' focus' : '');
+        d.innerHTML = '<span class="k">' + name + (sl.provisional ? ' · unsure' : '') + '</span><span class="v">' +
+          (sl.status === 'filled' ? fmt(sl.value) : '—') + '</span>';
+        box.appendChild(d);
+      }
+    }
+
+    /* verdict */
+    const v = $('verdict'); v.innerHTML = '';
+    if (s) {
+      const add = (cls, txt) => { const p = document.createElement('span'); p.className = 'pill ' + cls; p.textContent = txt; v.appendChild(p); };
+      if (s.radius) add(s.radius === 'external' ? 'stop' : s.radius === 'self' ? 'ok' : 'hold', s.radius);
+      if (s.status === 'hold') add('hold', 'silence will commit');
+      if (s.status === 'explicit') add('stop', 'needs an explicit yes');
+      if (s.status === 'settled') add('ok', 'committed');
+      if (s.status === 'frozen') add('prov', 'frozen — nothing changed');
+      const why = document.createElement('div'); why.className = 'why';
+      if (s.status === 'explicit') {
+        why.textContent = s.radius === 'external'
+          ? 'External radius: nothing here can be taken back once it happens, so silence can never commit it.'
+          : 'Attention gate failed — ' + (s.gateFailures || []).join('; ') + '.';
+        v.appendChild(why);
+      } else if (s.status === 'resolving' && s.focus) {
+        why.textContent = 'Waiting on “' + s.focus + '”.';
+        v.appendChild(why);
+      }
+    }
+
+    /* actions */
+    const a = $('actions'); a.innerHTML = '';
+    if (s && s.status === 'explicit') {
+      const b = document.createElement('button'); b.className = 'danger'; b.textContent = 'Yes, do it';
+      b.onclick = () => { run.assent().then(render); }; a.appendChild(b);
+      const c = document.createElement('button'); c.className = 'ghost'; c.textContent = 'Cancel';
+      c.onclick = () => { run.discard(); render(); }; a.appendChild(c);
+    }
+    if (s && run && run.undoAvailable) {
+      const b = document.createElement('button'); b.textContent = 'Undo';
+      b.onclick = () => { run.undo().then(render); }; a.appendChild(b);
+    }
+    if (s && s.status === 'frozen') {
+      const b = document.createElement('button'); b.className = 'ghost'; b.textContent = 'Resume';
+      b.onclick = () => { run.resume(); render(); }; a.appendChild(b);
+    }
+
+    renderReadout(s);
+  }
+
+  function renderReadout(s) {
+    const r = $('readout');
+    if (!s) { r.innerHTML = '<div class="row"><span class="key">act</span><span class="val">— idle —</span></div>'; return; }
+    const cls = s.status === 'hold' ? 'hold' : s.status === 'settled' ? 'ok'
+      : (s.status === 'explicit' || s.status === 'frozen') ? 'stop' : 'prov';
+    let h = '';
+    const row = (k, val, c) => { h += '<div class="row"><span class="key">' + k + '</span><span class="val ' + (c || '') + '">' + val + '</span></div>'; };
+    row('act', s.act || '—');
+    row('status', s.status, cls);
+    row('phase', s.phase);
+    row('radius', s.radius || '—', s.radius === 'external' ? 'stop' : '');
+    row('assent', s.assent || 'none', s.assent === 'silence' ? 'hold' : s.assent ? 'stop' : '');
+    if (s.status === 'hold') row('hold', Math.round(s.holdRemainingMs || 0) + ' / ' + run.holdDurationMsValue + 'ms', 'hold');
+    row('outbox', String(s.outbox));
+    h += '<hr>';
+    for (const name of Object.keys(s.slots)) {
+      const sl = s.slots[name];
+      const val = sl.status === 'filled' ? fmt(sl.value) : sl.status;
+      const meta = sl.status === 'filled'
+        ? ' <span class="key">· ' + (sl.source || '?') + (sl.provisional ? ' · provisional' : ' · confirmed') + '</span>'
+        : '';
+      row(name, val + meta, sl.provisional ? 'prov' : '');
+    }
+    if (s.gateFailures && s.gateFailures.length) {
+      h += '<hr><div class="row"><span class="key">gate</span><span class="val fail">' +
+        s.gateFailures.join('<br>') + '</span></div>';
+    }
+    r.innerHTML = h;
+  }
+
+  /* ------------------------------------------------------------- engine */
+  ui.on((e) => {
+    if (e.type === 'hold-start') log('HOLD ' + e.ms + 'ms at ' + e.radius, 'hold');
+    else if (e.type === 'hold-cancel') log(e.reason, 'cancel');
+    else if (e.type === 'commit') log('committed ' + e.act, 'commit');
+    else if (e.type === 'undo') log('undone — outbox discarded', 'undo');
+    else if (e.type === 'frozen') log(e.reason + ' — preview frozen', 'freeze');
+    else if (e.type === 'blocked') log(e.reason, 'blocked');
+    else if (e.type === 'discarded') log('discarded', 'veto');
+  });
+
+  function hear(text) {
+    said = text;
+    if (pending) { clearTimeout(pending); pending = null; }
+    const acts = ui.definitions;
+    const d = A.pickAct(local.scoreSync(text, acts, ctx(), optionsFor));
+
+    if (d.kind === 'none') { run = null; log('no act matched “' + text + '”', 'route'); render(); return; }
+    if (d.kind === 'narrow') { log('tie between ' + d.acts.join(' / ') + ' — would NARROW over acts', 'route'); }
+
+    const name = d.kind === 'start' ? d.act : d.acts[0];
+    log('routed to ' + name + ' (' + d.scores[0].score.toFixed(2) + ')', 'route');
+
+    run = ui.start(name);
+    const def = ui.definitions.find((x) => x.name === name);
+    const fills = local.fillSync(text, def, {}, ctx(), optionsFor);
+    for (const slot of Object.keys(fills)) run.offer(slot, fills[slot], 'spoken');
+
+    /* Tier 1 stand-in: a calibrated model confirming an unsure local fill. */
+    const st = run.state();
+    const unsure = Object.keys(st.slots).filter((k) => st.slots[k].provisional);
+    if (state.model && unsure.length) {
+      log('asking the model about ' + unsure.join(', '), 'tier 1');
+      pending = setTimeout(() => {
+        pending = null;
+        if (!run || run.status === 'settled' || run.status === 'discarded') return;
+        for (const k of unsure) {
+          const c = run.slots[k] && run.slots[k].candidates;
+          if (c && c[0]) run.setValue(k, c[0].value, 'model');
+        }
+        log('model confirmed', 'tier 1');
+        render();
+      }, 450);
+    } else if (unsure.length) {
+      log('model unreachable — staying provisional', 'degraded');
+    }
+    render();
+  }
+
+  /* --------------------------------------------------------------- wire */
+  const SCRIPT = [
+    ['add milk', 'self'],
+    ['Sam picks up the parcel Friday', 'other'],
+    ['move the pharmacy run to Saturday', 'shared'],
+    ['pay Sam back twenty dollars', 'external'],
+    ['Sammy picks up the parcel', 'unsure name'],
+    ['move the pharmacy run to now', 'time flips it'],
+  ];
+  const chips = $('chips');
+  SCRIPT.forEach(([text, tag]) => {
+    const b = document.createElement('button');
+    b.innerHTML = '“' + text + '”<span class="r">' + tag + '</span>';
+    b.onclick = () => { $('input').value = text; hear(text); };
+    chips.appendChild(b);
+  });
+
+  $('sayform').addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const t = $('input').value.trim();
+    if (t) hear(t);
+  });
+  $('sayno').onclick = () => {
+    if (run && ['hold', 'resolving', 'explicit'].indexOf(run.status) >= 0) { run.freeze('bare negation'); render(); }
+  };
+  $('clearlog').onclick = () => { $('log').innerHTML = ''; };
+
+  function bindToggle(id, key, wrapId) {
+    const el = $(id);
+    el.addEventListener('change', () => {
+      state[key] = el.checked;
+      $(wrapId).classList.toggle('off', !el.checked);
+      if (run && run.status !== 'settled' && run.status !== 'discarded') { run.evaluate(); render(); }
+    });
+  }
+  bindToggle('model', 'model', 'tg-model');
+  bindToggle('looking', 'looking', 'tg-look');
+  $('slow').addEventListener('change', () => { state.slow = $('slow').checked; $('tg-review').classList.toggle('off', !$('slow').checked); });
+
+  (function loop() { if (run && (run.status === 'hold' || run.undoAvailable)) render(); requestAnimationFrame(loop); })();
+
+  log('engine ready — 4 acts registered', 'boot');
+  render();
+})();
+</script>
