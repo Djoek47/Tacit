@@ -28,6 +28,14 @@ export interface Resolver {
   readonly name: string;
   /** True only if it runs on device with no network. */
   readonly local: boolean;
+  /**
+   * Whether this tier's scores are calibrated probabilities. False for anything
+   * that reads a softmax over option tokens out of a general model: that number
+   * looks like confidence and is not. An uncalibrated tier may fill a slot, but
+   * the fill stays provisional, so it can never silence-commit at
+   * 'other-person' or above.
+   */
+  readonly calibrated: boolean;
   score(text: string, acts: ActDef[], ctx: Ctx, optionsFor: OptionsFor): Promise<ActScore[]>;
   fill(
     text: string,

@@ -69,6 +69,8 @@ export function arbitrateSpans(slots: SlotCandidates): SlotCandidates {
 export class LocalResolver implements Resolver {
   readonly name = 'local';
   readonly local = true;
+  /** An exact string match is right by construction, so its 1.0 means 1.0. */
+  readonly calibrated = true;
 
   constructor(private readonly routing: RoutingConfig = DEFAULT_ROUTING) {}
 

@@ -150,6 +150,8 @@ export class JevResolver implements Resolver {
   readonly name = 'jev';
   /** Hosted only. There is no on-device Jev. */
   readonly local = false;
+  /** Calibration is the product claim. Verify it on your own acts before trusting it. */
+  readonly calibrated = true;
 
   constructor(private readonly config: JevConfig) {}
 

@@ -40,8 +40,21 @@ export type SlotSource = 'spoken' | 'touched' | 'remembered' | 'default' | 'mode
 export type Candidate = {
   value: unknown;
   label?: string;
-  /** 0..1, produced by the LOCAL matcher only. Models never supply a score. */
+  /** 0..1. See `calibrated`: a high score is not the same as a trustworthy one. */
   score: number;
+  /**
+   * Whether `score` is a CALIBRATED probability — one where 0.9 means right
+   * about nine times out of ten.
+   *
+   * An exact string match is calibrated by construction. A softmax over option
+   * tokens read out of a general model is not: it is confidently shaped and
+   * means nothing in particular. Defaults to true; a producer that cannot make
+   * the promise must set it false, and an uncalibrated fill is always
+   * provisional however high it scores.
+   */
+  calibrated?: boolean;
+  /** Which tier produced it, for the stage report and for debugging. */
+  source?: string;
   /** Character span of the utterance this matched, for overlap arbitration. */
   span?: [start: number, end: number];
 };

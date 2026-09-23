@@ -57,8 +57,13 @@ export function classify(
   const second = ranked[1];
   const lead = best.score - (second?.score ?? 0);
 
+  // An uncalibrated score can never confirm a slot. It may fill it, so the
+  // stage paints and the user can correct it, but it stays provisional — which
+  // means it cannot silence-commit anything at 'other-person' or above.
+  const trustworthy = best.calibrated !== false;
+
   if (best.score >= tau && lead >= delta) {
-    return { outcome: 'filled', value: best.value, provisional: false, ranked };
+    return { outcome: 'filled', value: best.value, provisional: !trustworthy, ranked };
   }
   if (second && lead < delta) {
     // Two live candidates: that is a narrowed slot, not a filled one.

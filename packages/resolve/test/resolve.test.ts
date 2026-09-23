@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { classify } from '@intermenu/aiuic-core';
 import { LocalResolver, arbitrateSpans } from '../src/local.js';
+import { OnDeviceResolver } from '../src/ondevice.js';
 import { pickAct } from '../src/route.js';
 import { JevResolver, optionKey, routingQuestion, slotQuestion, type JevTransport } from '../src/jev.js';
 import { TieredResolver } from '../src/tiered.js';
@@ -217,5 +219,95 @@ describe('tiering', () => {
     const tiered = new TieredResolver(local, []);
     expect(tiered.modelOnlySlots(massDm)).toEqual(['message']);
     expect(tiered.modelOnlySlots(assignChore)).toEqual([]);
+  });
+});
+
+describe('calibration', () => {
+  it('an on-device scorer fills the slot but can never confirm it', async () => {
+    const { OnDeviceResolver } = await import('../src/ondevice.js');
+    const { classify } = await import('@intermenu/aiuic-core');
+
+    const semif = new OnDeviceResolver({
+      name: 'semif',
+      scorer: async ({ options }) => options.map((o) => (o === 'Drako' ? 0.96 : 0.02)),
+    });
+    expect(semif.local).toBe(true);
+    expect(semif.calibrated).toBe(false);
+
+    const out = await semif.fill('dishes for Draco', assignChore, {}, ctx(), optionsFor);
+    const best = out.assignee?.[0];
+    expect(best?.value).toBe(DRAKO);
+    expect(best?.score).toBe(0.96);
+
+    // 0.96 clears tau_fill, but the score is not calibrated, so the core
+    // refuses to treat it as confirmed.
+    const c = classify(out.assignee!);
+    expect(c.outcome).toBe('filled');
+    expect(c.provisional).toBe(true);
+  });
+
+  it('a calibrated tier at the same score does confirm', async () => {
+    const { classify } = await import('@intermenu/aiuic-core');
+    const c = classify([
+      { value: DRAKO, score: 0.96 },
+      { value: MAYA, score: 0.02 },
+    ]);
+    expect(c.provisional).toBe(false);
+  });
+
+  it('keeps working offline: the on-device tier needs no network', async () => {
+    const { OnDeviceResolver } = await import('../src/ondevice.js');
+    const semif = new OnDeviceResolver({ scorer: async () => [] });
+    expect(semif.local).toBe(true);
+    const tiered = new TieredResolver(local, []);
+    expect(tiered.local.calibrated).toBe(true);
+    expect(semif.calibrated).toBe(false);
+  });
+});
+
+describe('calibration', () => {
+  // SemIf's own docs: the direct readout is "a softmax over only the displayed
+  // option tokens. They are not calibrated confidence."
+  const semif = new OnDeviceResolver({
+    name: 'semif',
+    scorer: async ({ options }) => options.map((o) => (o === 'Drako' ? 0.96 : 0.02)),
+  });
+
+  it('sits at tier 0 because it is offline, and admits it is uncalibrated', () => {
+    expect(semif.local).toBe(true);
+    expect(semif.calibrated).toBe(false);
+    expect(local.calibrated).toBe(true);
+  });
+
+  it('fills the slot so the stage paints, but can never confirm it', async () => {
+    const out = await semif.fill('dishes for Draco', assignChore, {}, ctx(), optionsFor);
+    const best = out.assignee?.[0];
+    expect(best?.value).toBe(DRAKO);
+    expect(best?.score).toBe(0.96);
+
+    // 0.96 clears tau_fill by a mile, and it still cannot confirm.
+    const c = classify(out.assignee!);
+    expect(c.outcome).toBe('filled');
+    expect(c.provisional).toBe(true);
+  });
+
+  it('confirms at the same score when the producer is calibrated', () => {
+    const c = classify([
+      { value: DRAKO, score: 0.96 },
+      { value: MAYA, score: 0.02 },
+    ]);
+    expect(c.provisional).toBe(false);
+  });
+
+  it('never asks the on-device tier for a quantity or a date', async () => {
+    const asked: string[] = [];
+    const spy = new OnDeviceResolver({
+      scorer: async ({ question, options }) => {
+        asked.push(question);
+        return options.map(() => 0.5);
+      },
+    });
+    await spy.fill('blast the expiring subs at twelve dollars', massDm, {}, ctx(), optionsFor);
+    expect(asked).toEqual(['Which "audience" does the user mean?']);
   });
 });
