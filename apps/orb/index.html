@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Orb — AIUIC voice</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600&family=Azeret+Mono:wght@300;400&family=Instrument+Sans:wght@400;500&display=swap">
+<style>
+  :root{color-scheme:dark;
+    --void:#06050e; --glass:rgba(146,140,214,.06); --glass2:rgba(146,140,214,.11);
+    --edge:rgba(255,255,255,.10); --lit:rgba(255,255,255,.2);
+    --ink:#eeecf8; --dim:#a29dc4; --faint:#6e6994;
+    --cy:#8fe8ff; --am:#b98cff; --gold:#ffc46b; --mint:#5ef0c4; --rose:#ff7a94;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--void);color:var(--ink);font:15px/1.5 "Instrument Sans",system-ui,sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:22px 48px}
+  h1{font-family:Archivo,sans-serif;font-size:15px;font-weight:600;letter-spacing:.3em;text-transform:uppercase;margin:0}
+  .top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  .sub{color:var(--dim);max-width:70ch;margin:0 0 20px;font-size:14px}
+  .mono,.rd,.log,.lbl,.status{font-family:"Azeret Mono",ui-monospace,monospace}
+  .lbl{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+  .status{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);display:flex;align-items:center;gap:8px}
+  .status .dot{width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor}
+  .status.live{color:var(--cy)} .status.think{color:var(--am)} .status.stop{color:var(--rose)}
+  .cols{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:16px;align-items:start}
+  @media(max-width:880px){.cols{grid-template-columns:1fr}}
+  .pane{background:linear-gradient(160deg,var(--glass2),var(--glass));border:1px solid var(--edge);
+    border-radius:16px;box-shadow:0 1px 0 0 var(--lit) inset,0 20px 50px -30px #000;overflow:hidden}
+  .ph{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 15px;
+      border-bottom:1px solid rgba(255,255,255,.07)}
+  .pb{padding:14px 15px}
+  .orbwrap{position:relative;width:180px;aspect-ratio:1;margin:4px auto 14px}
+  .ring{position:absolute;inset:0;transform:rotate(-90deg)}
+  .ring circle{fill:none;stroke-width:3;stroke-linecap:round}
+  .trk{stroke:rgba(255,255,255,.06)} .arc{stroke:var(--gold);filter:drop-shadow(0 0 6px rgba(255,196,107,.6))}
+  .bead{position:absolute;inset:16%;border-radius:50%;
+    background:radial-gradient(circle at 34% 30%,rgba(255,255,255,.95),rgba(136,196,255,.45) 40%,rgba(120,100,220,.2) 75%,transparent);
+    border:1px solid rgba(200,225,255,.25)}
+  .ms{position:absolute;inset:0;display:grid;place-items:center;font:11px "Azeret Mono",monospace;color:var(--gold)}
+  .heard{text-align:center;min-height:24px;font-size:16px;color:var(--ink);margin-bottom:12px;text-wrap:balance}
+  .slots{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;min-height:40px}
+  .slot{border:1px solid var(--edge);border-radius:10px;padding:6px 11px;background:rgba(255,255,255,.03);
+        display:flex;flex-direction:column;gap:2px}
+  .slot.empty{border-style:dashed;opacity:.65} .slot.prov{border-color:var(--am);background:rgba(185,140,255,.1)}
+  .slot .k{font:9px "Azeret Mono",monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .slot .v{font-size:13.5px}
+  .verdict{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin-top:12px;min-height:26px}
+  .pill{font-size:12px;border-radius:999px;padding:3px 11px;border:1px solid}
+  .pill.hold{color:var(--gold);border-color:var(--gold);background:rgba(255,196,107,.12)}
+  .pill.ok{color:var(--mint);border-color:var(--mint);background:rgba(94,240,196,.12)}
+  .pill.stop{color:var(--rose);border-color:var(--rose);background:rgba(255,122,148,.12)}
+  .pill.prov{color:var(--am);border-color:var(--am);background:rgba(185,140,255,.12)}
+  .cta{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+  button{font:inherit;font-size:13.5px;cursor:pointer;border-radius:999px;padding:8px 18px;border:1px solid var(--edge);
+    background:rgba(255,255,255,.04);color:var(--ink);transition:border-color .2s,background .2s}
+  button:hover{border-color:var(--lit)} button:focus-visible{outline:2px solid var(--cy);outline-offset:2px}
+  button.yes{background:linear-gradient(160deg,#7df5d2,#3fd9ad);border-color:transparent;color:#06120f;font-weight:500}
+  .track{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);
+         font-size:13px;color:var(--dim)}
+  .track:last-child{border-bottom:0} .track.lead{color:var(--ink)}
+  .track.lead .n::before{content:'▸ ';color:var(--am)}
+  .track .s{font-family:"Azeret Mono",monospace;font-size:12px;color:var(--faint)}
+  .log{padding:6px 15px 14px;max-height:220px;overflow-y:auto;font-size:12px}
+  .log div{display:grid;grid-template-columns:48px minmax(0,1fr);gap:9px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+  .log .t{color:var(--faint)} .log .m{color:var(--dim)} .log .m b{color:var(--ink);font-weight:500}
+  .say{display:flex;gap:8px;margin-top:14px}
+  .say input{flex:1;min-width:0;background:rgba(255,255,255,.04);border:1px solid var(--edge);border-radius:999px;
+    padding:10px 18px;color:var(--ink);font:inherit;outline:none}
+  .say input:focus{border-color:rgba(143,232,255,.45)}
+  pre{margin:0;padding:12px 15px;max-height:260px;overflow:auto;font:11px/1.6 "Azeret Mono",monospace;color:var(--dim)}
+  .note{margin-top:20px;font-size:13px;color:var(--dim)}
+  .note code{background:rgba(255,255,255,.06);border-radius:5px;padding:1px 6px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>Orb</h1>
+    <div class="status" id="status"><span class="dot"></span><span id="statust">idle</span></div>
+  </div>
+  <p class="sub">Voice wired to the commit contract. Speak, and the stage fills while you are still
+    talking — but nothing commits until you stop. Type instead if you would rather not grant the mic.</p>
+
+  <div class="cols">
+    <section class="pane">
+      <div class="ph"><span class="lbl">Stage</span><span class="lbl" id="miclbl">webrtc · realtime</span></div>
+      <div class="pb">
+        <div class="orbwrap">
+          <svg class="ring" viewBox="0 0 240 240" aria-hidden="true">
+            <circle class="trk" cx="120" cy="120" r="116"></circle>
+            <circle class="arc" id="arc" cx="120" cy="120" r="116" stroke-dasharray="728.8" stroke-dashoffset="728.8"></circle>
+          </svg>
+          <div class="bead"></div>
+          <div class="ms" id="ms"></div>
+        </div>
+        <div class="heard" id="heard">say something</div>
+        <div class="slots" id="slots"></div>
+        <div class="verdict" id="verdict"></div>
+        <div class="cta" id="cta"></div>
+        <form class="say" id="form">
+          <input id="input" placeholder="or type it — same path as speech" autocomplete="off">
+          <button type="submit">Send</button>
+          <button type="button" id="mic">Start listening</button>
+        </form>
+      </div>
+    </section>
+
+    <div style="display:grid;gap:16px">
+      <section class="pane">
+        <div class="ph"><span class="lbl">Hepta</span><span class="lbl" id="trackCount">0 of 7 alive</span></div>
+        <div class="pb" id="tracks"></div>
+      </section>
+      <section class="pane">
+        <div class="ph"><span class="lbl">Events</span></div>
+        <div class="log" id="log"></div>
+      </section>
+      <section class="pane">
+        <div class="ph"><span class="lbl">Tools</span><span class="lbl">generated from acts</span></div>
+        <pre id="tools"></pre>
+      </section>
+    </div>
+  </div>
+
+  <p class="note"><b>To run it:</b> <code>OPENAI_API_KEY=sk-... node apps/orb/server.mjs</code>, then open
+    <code>localhost:8787</code>. The key stays in the server; the browser only ever sees an SDP answer.</p>
+</div>
+<script src="./aiuic.bundle.js"></script>
+<script type="module" src="./orb.js"></script>
+</body>
+</html>
