@@ -10,7 +10,7 @@ None of them answers the one after it: **how does the human accept, reject, or c
 proposed?** No commit model, no repair grammar, no notion of what a mutation costs if it is wrong.
 That is this layer.
 
-Spec **v0.3**. Ten packages, **183 tests**, four apps. `aiuic-core` has no dependencies.
+Spec **v0.3**. Eleven packages, **220 tests**, five apps. `aiuic-core` has no dependencies.
 
 ---
 
@@ -27,6 +27,7 @@ Spec **v0.3**. Ten packages, **183 tests**, four apps. `aiuic-core` has no depen
 | `aiuic-brand` | brand colour, measured legibility, initials marks | 7 |
 | `aiuic-devtools` | why an act is not committing; recorder, timeline, linter | 14 |
 | `aiuic-present` | the renderer boundary: one view, a text presenter and a DOM one | 15 |
+| `aiuic-eui` | the visual language: tokens, domain rules as lint, the seven beats, one card | 34 |
 | `aiuic-eval` | labelled suites, the false-confirm rate, reliability curves, threshold sweeps | 12 |
 
 `aiuic-core` imports nothing from the others. That is how the boundary gets tested.
@@ -67,11 +68,17 @@ is real.
 | `apps/console/` | the concept page: compose an act from JSON, use it, then try six ways to break it |
 | `apps/heckit/` | the product: speak once, it interviews, remembers, plans, composes |
 | `apps/orb/` | voice: WebRTC to a realtime model, transcripts into Hepta, tools into the contract |
+| `apps/stage/` | the visual language: say something, break a design rule, read the material |
 | `demo/` | the commit contract with its workings exposed — four acts, four radii |
 
 ```bash
 OPENAI_API_KEY=sk-... node apps/orb/server.mjs     # → localhost:8787
 ```
+
+The orb needs neither the key nor a microphone to exercise. Typing replays a
+sentence word by word at speaking rate, down the same path a transcript takes,
+so speculation is visible without granting anything — `window.speak(text, wpm)`
+drives it from the console.
 
 Everything else is a static page. Rebuild any of them after a core change:
 
@@ -105,6 +112,59 @@ That last clause does more work than it looks. An act filled entirely from defau
 engagement, so a profile never finalizes itself because someone went quiet. Neither does a
 system-initiated act — "you're late", "you're near that shop" — because silence from someone who
 did not start the exchange is absence, not agreement.
+
+## The design language is lint
+
+`aiuic-eui` is the Ultramax EUI visual language as a package: one mint, three
+springs, four type roles, and the seven beats every act plays. The part worth
+having is not the colours.
+
+A domain says what an act in that part of the app is *allowed to be*, so
+sentences from a design board become checks against act definitions:
+
+```
+groceries + a face slot          → error   "items only, never a person"
+allowance below external         → error   "money always confirms"
+a reward that settles on silence → error   "a child's claim waits for an adult"
+teaching that writes anything    → error   "teaching never costs an action"
+```
+
+That needed one opaque field on `ActDef`. The core never reads `domain` and
+ships no list of values — a presentation layer owns the meaning. Without it the
+rules could only be checked against rendered output, which is to say not
+checked.
+
+Board 13's ALWAYS and NEVER are tests rather than advice: one card at a time,
+their words above it, a way out in every state, the count before it happens,
+44px targets; never a nested card, never a spinner, never a failure line over a
+finished act, and never a personal accent repainting a domain — `resolveColours()`
+takes the accent so that it can visibly not use it.
+
+## Speculation, measured
+
+`npm run hepta` replays partial speech through the seven tongues. Recognizers
+revise, so the generator revises: "my a" becomes "Maya" two words later.
+
+```
+cases              8
+ended on the act   8/8  (100.0%)
+EARLY COMMITS      0      <- must be 0
+
+card right by      59.9% of the way in
+time bought        1257ms before the sentence ended
+stage switches     1.13 per sentence
+peak tracks        2 of 7 tongues
+```
+
+`EARLY COMMITS` must be zero. Not low. A commit on a partial utterance is a
+write the person never finished asking for. Everything else is tuning.
+
+It found one thing worth keeping: a sentence that changes its mind could not
+recover. "pay Maya no actually give Maya the laundry" kept the payment act to
+the last word, because the switch margin held the leader and the early words
+kept feeding its score. That margin exists to stop the stage flickering while
+someone is looking at it — a mid-sentence cost, which stops existing when the
+sentence does. It is dropped on the final transcript now.
 
 ## Resolution tiers
 
@@ -141,5 +201,9 @@ So an act called `just_a_little_one`, bound to `charge_card`, for four thousand 
 - `apps/heckit/app.js` → the interview question bank, the plan copy, and `composeFor` (which stands
   in for a model emitting an `ActSpec`).
 - Speech itself. `ui.hear(text)` takes a string; STT and TTS stay outside the SDK.
-- `apps/orb/realtime.js` → the realtime event names were written against May 2026 knowledge. They
-  are all in one `EVENTS` block. **Check them before the first live run.**
+- `apps/orb/realtime.js` → the event names have been checked against the GA reference and the
+  wiring rebuilt for it (ephemeral client secrets, `/v1/realtime/calls`, the `type: "realtime"`
+  session discriminator, `audio.input.turn_detection`). Two things stay unverified and are marked
+  in the code: whether input transcription must be explicitly enabled in a speech-to-speech
+  session, and whether `response.function_call_arguments.done` still exists — the tool call is
+  driven off `response.done` either way.
