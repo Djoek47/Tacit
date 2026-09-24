@@ -22,6 +22,7 @@ import type {
   PrimitiveName,
   Radius,
   ActStatus,
+  SlotSource,
 } from '@intermenu/aiuic-core';
 import { slotOrder } from '@intermenu/aiuic-core';
 
@@ -36,6 +37,13 @@ export type SlotView = {
   value?: unknown;
   /** The value as a person reads it — the word they said, never a timestamp. */
   display: string;
+  /**
+   * Where the value came from. Renderers draw this: a slot the person spoke is
+   * settled and never re-asked, a default is a suggestion, and a model fill is
+   * a guess that a spoken value outranks. Dropping it here forced every host to
+   * ask the run directly, which is the boundary leaking.
+   */
+  source: SlotSource | null;
   provisional: boolean;
   stale: boolean;
   required: boolean;
@@ -48,6 +56,8 @@ export type SlotView = {
 
 export type StageView = {
   act: string | null;
+  /** The act's `domain` tag, passed through untouched. */
+  domain: string | null;
   status: ActStatus | 'idle';
   phase: Phase;
   radius: Radius | null;
@@ -96,7 +106,7 @@ export function display(v: unknown): string {
 }
 
 export const IDLE_VIEW: StageView = {
-  act: null, status: 'idle', phase: 'idle', radius: null, assent: null,
+  act: null, domain: null, status: 'idle', phase: 'idle', radius: null, assent: null,
   holdRemainingMs: null, holdTotalMs: null, slots: [], preview: '',
   gateFailures: [], canAssent: false, canUndo: false, canResume: false,
 };
@@ -116,6 +126,7 @@ export function toView(run: ActRun | null, optionsFor: OptionsFor, _ctx?: Ctx): 
       status: st.status,
       ...(st.value !== undefined ? { value: st.value } : {}),
       display: st.status === 'filled' ? display(st.value) : '',
+      source: st.source ?? null,
       provisional: st.provisional,
       stale: st.stale === true,
       required: sd.required === true,
@@ -129,6 +140,7 @@ export function toView(run: ActRun | null, optionsFor: OptionsFor, _ctx?: Ctx): 
 
   return {
     act: def.name,
+    domain: def.domain ?? null,
     status: s.status,
     phase: s.phase,
     radius: s.radius,

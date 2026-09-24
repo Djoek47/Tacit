@@ -164,6 +164,16 @@ export type ActDef = {
   name: string;
   /** Routing triggers. §3 */
   phrases?: string[];
+  /**
+   * Which part of the host app this act belongs to. Opaque here: the core
+   * never reads it, never branches on it, and ships no list of valid values.
+   *
+   * It exists so a design system can hold rules against act definitions rather
+   * than against rendered output — "groceries has no assignee", "money always
+   * confirms" — and have them fail a lint instead of a review. A presentation
+   * layer owns the meaning; this is only the tag it hangs on.
+   */
+  domain?: string;
   slots: Record<string, SlotDef>;
   radius: RadiusSpec;
   commit: (filled: Filled, ctx: Ctx) => CommitResult | Promise<CommitResult>;
