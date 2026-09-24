@@ -203,7 +203,26 @@ export class Recorder {
 
 // ------------------------------------------------------------------ linting
 
-export type Lint = { act: string; level: 'warn' | 'note'; message: string };
+export type Lint = { act: string; level: 'error' | 'warn' | 'note'; message: string };
+
+/**
+ * One report out of several audits.
+ *
+ * The contract audit below and a design-language audit are deliberately
+ * separate functions: a contract smell is a warning about something that will
+ * surprise you, while a language violation is an error about something that
+ * makes a colour a lie. Merging the two would flatten that. Concatenating
+ * their output should still be one readable list, so the formatting lives
+ * here and both feed it.
+ */
+export function formatLints(lints: Lint[]): string {
+  if (lints.length === 0) return 'clean';
+  const rank = { error: 0, warn: 1, note: 2 } as const;
+  return [...lints]
+    .sort((a, b) => rank[a.level] - rank[b.level] || a.act.localeCompare(b.act))
+    .map((l) => `${l.level.padEnd(5)} ${l.act}: ${l.message}`)
+    .join('\n');
+}
 
 /**
  * Definition-time checks in `defineAct` are the ones that must fail loudly.

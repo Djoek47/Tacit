@@ -1,0 +1,55 @@
+<div class="wrap">
+<header>
+  <div class="lbl">aiuic-eui · the visual language</div>
+  <h1 style="margin-top:14px">A design system that can fail a build</h1>
+  <p class="lede">A design language written on boards is read once and then drifts. This one is a
+  package: <b>one mint</b>, three springs, seven beats, and a set of rules about what an act in each
+  part of an app is allowed to be. Those rules are lint, not advice — <b>"groceries: items only,
+  never a person"</b> is a sentence on a board and an error against an act definition.</p>
+</header>
+
+<section>
+  <div class="shead"><h2>Say something</h2><span class="lbl">the card follows the sentence</span></div>
+  <p class="note">Type as if you were speaking. The card lands, fills in the order you said things,
+  holds, and commits on silence — drawn in the language rather than in whatever the renderer felt
+  like. Switch the domain and watch the colour follow the meaning, never the theme.</p>
+  <div class="grid two">
+    <div>
+      <div class="rowbtns" id="domains"></div>
+      <input class="t" id="say" placeholder="dishes for Maya tomorrow" autocomplete="off">
+      <div class="rowbtns" style="margin-top:12px" id="scenes"></div>
+      <div class="beats" id="beats"></div>
+      <div class="meta" id="meta"></div>
+    </div>
+    <div class="stagewrap"><div id="stage"></div></div>
+  </div>
+</section>
+
+<section>
+  <div class="shead"><h2>Break the language</h2><span class="lbl">board 12, as lint</span></div>
+  <p class="note">Edit the act below. It is composed against the closed capability registry — a model
+  cannot lower blast radius — and then checked against the domain it claims. Give a grocery an
+  assignee, or let an allowance settle on silence, and the check fails before anything is drawn.</p>
+  <div class="grid two">
+    <div><textarea class="t" id="spec" spellcheck="false"></textarea>
+      <div class="rowbtns" style="margin-top:12px" id="breaks"></div></div>
+    <div class="panel"><div class="lbl" style="margin-bottom:10px">the audit</div>
+      <p class="lint" id="lint"></p></div>
+  </div>
+</section>
+
+<section>
+  <div class="shead"><h2>The material</h2><span class="lbl">board 13</span></div>
+  <p class="note">Fixed domain colours, emitted from one place. A member's accent pack never
+  repaints them: <code>resolveColours()</code> takes the accent so that it can visibly not use it.</p>
+  <div class="swatches" id="swatches"></div>
+</section>
+
+<section>
+  <div class="shead"><h2>The budget</h2><span class="lbl">board 10</span></div>
+  <p class="note">"Miss these and it stops feeling like a reflex." Measured on the clock, so a
+  regression that adds 90 ms between the words ending and the card landing fails a test instead of
+  being noticed in six months by someone who says the app feels heavier than it used to.</p>
+  <div class="panel"><pre id="budget"></pre></div>
+</section>
+</div>

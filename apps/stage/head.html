@@ -1,0 +1,55 @@
+<title>The EUI Stage</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Azeret+Mono:wght@300;400;500&display=swap">
+<style>
+  :root{
+    color-scheme:dark;
+    --void:#0B1220; --deep:#111827; --up:#1B2434;
+    --edge:rgba(255,255,255,.09); --ink:#E9EEF7; --dim:#9aa6bb; --faint:#6c7689;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--void);color:var(--ink);
+    font:15px/1.6 "Bricolage Grotesque",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1120px;margin:0 auto;padding:26px 16px 80px}
+  .mono,.lbl,pre,code{font-family:"Azeret Mono",ui-monospace,monospace}
+  h1{font-size:clamp(28px,4.6vw,44px);font-weight:700;letter-spacing:-.025em;line-height:1.06;margin:0}
+  h2{font-size:clamp(19px,2.4vw,24px);font-weight:600;letter-spacing:-.01em;margin:0}
+  .lbl{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint)}
+  .lede{color:var(--dim);font-size:17px;max-width:64ch;margin:16px 0 0}
+  .lede b{color:var(--ink);font-weight:600}
+  header{padding-bottom:30px;border-bottom:1px solid var(--edge);margin-bottom:34px}
+  section{margin-bottom:52px}
+  .shead{display:flex;align-items:baseline;gap:12px;margin-bottom:6px;flex-wrap:wrap}
+  .note{color:var(--dim);max-width:66ch;margin:8px 0 20px}
+  .grid{display:grid;gap:18px}
+  @media(min-width:900px){.two{grid-template-columns:minmax(360px,1fr) minmax(0,1fr)}}
+  .panel{background:var(--deep);border:1px solid var(--edge);border-radius:20px;padding:18px}
+  .panel.tight{padding:14px}
+  .rowbtns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  button.b{background:transparent;border:1px solid var(--edge);color:var(--ink);
+    border-radius:999px;padding:9px 15px;font:inherit;font-size:13px;cursor:pointer;min-height:40px}
+  button.b:hover{background:rgba(255,255,255,.05)}
+  button.b[aria-pressed="true"]{border-color:currentColor}
+  input.t,textarea.t{width:100%;background:#0d1524;border:1px solid var(--edge);color:var(--ink);
+    border-radius:12px;padding:11px 13px;font:inherit;font-size:14px}
+  textarea.t{font-family:"Azeret Mono",monospace;font-size:12.5px;line-height:1.55;min-height:230px}
+  pre{background:#0d1524;border:1px solid var(--edge);border-radius:12px;padding:13px;
+    overflow:auto;font-size:12px;line-height:1.6;margin:0;color:var(--dim)}
+  .beats{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
+  .beat{font-size:10px;letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--edge);
+    border-radius:999px;padding:4px 10px;color:var(--faint)}
+  .beat[data-on="true"]{color:var(--ink);border-color:currentColor}
+  .swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px}
+  .sw{border:1px solid var(--edge);border-radius:14px;padding:12px;background:var(--deep)}
+  .sw i{display:block;height:28px;border-radius:8px;margin-bottom:9px}
+  .sw b{display:block;font-size:12px;font-weight:600}
+  .sw span{font-size:11px;color:var(--faint);font-family:"Azeret Mono",monospace}
+  .lint{font-size:12.5px;line-height:1.7;font-family:"Azeret Mono",monospace;white-space:pre-wrap;margin:0}
+  .lint .error{color:#F87171} .lint .warn{color:#FB923C} .lint .note{color:var(--faint)}
+  .ok{color:#34D399}
+  .stagewrap{min-height:260px;display:flex;flex-direction:column;justify-content:center;
+    background:var(--void);border:1px solid var(--edge);border-radius:24px;padding:20px}
+  .meta{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--faint);
+    font-family:"Azeret Mono",monospace;margin-top:12px}
+  .meta b{color:var(--dim);font-weight:400}
+</style>
