@@ -55,15 +55,16 @@ const ctx = () => ({
 const ui = A.createAIUIC({ ctx });
 
 ui.defineAct(A.defineAct({
-  name: 'add_item', phrases: ['add', 'put on the list', 'we need'],
+  name: 'add_item', domain: 'groceries', phrases: ['add', 'put on the list', 'we need'],
   slots: { item: { primitive: 'chip', options: () => ITEMS, required: true, order: 1 } },
   radius: 'self',
   commit: (f) => { db.list.push(f.item); return { id: 'i' + db.list.length }; },
   undo: () => { db.list.pop(); },
+  preview: (f) => [(f.item ? (f.item.label ?? f.item) : 'An item') + ' on the list'],
 }));
 
 ui.defineAct(A.defineAct({
-  name: 'assign_errand', phrases: ['picks up', 'can you ask', 'assign', 'grabs'],
+  name: 'assign_errand', domain: 'chores', phrases: ['picks up', 'can you ask', 'assign', 'grabs'],
   slots: {
     assignee: { primitive: 'face', options: () => PEOPLE, required: true, order: 1 },
     errand: { primitive: 'chip', options: () => ERRANDS, required: true, order: 2 },
@@ -72,6 +73,9 @@ ui.defineAct(A.defineAct({
   radius: { max: 'other-person', of: (f, c) => (f.assignee?.id === c.actor.id ? 'self' : 'other-person') },
   commit: (f) => { db.errands.push(f); return { id: 'e' + db.errands.length }; },
   undo: () => { db.errands.pop(); },
+  preview: (f) => [[f.errand ? (f.errand.label ?? f.errand) : 'An errand',
+                    f.assignee ? 'for ' + (f.assignee.label ?? f.assignee) : null,
+                    f.due ? (f.due.label ?? f.due) : null].filter(Boolean).join(' ')],
   effects: [{
     name: 'notify',
     when: (f, c) => !!f.assignee && f.assignee.id !== c.actor.id,
@@ -81,13 +85,15 @@ ui.defineAct(A.defineAct({
 }));
 
 ui.defineAct(A.defineAct({
-  name: 'settle_up', phrases: ['pay', 'pay back', 'send money', 'settle up'],
+  name: 'settle_up', domain: 'allowance', phrases: ['pay', 'pay back', 'send money', 'settle up'],
   slots: {
     payee: { primitive: 'face', options: () => PEOPLE, required: true, order: 1 },
     amount: { primitive: 'quantity', resolve: A.resolveQuantity, required: true, order: 2 },
   },
   radius: 'external',
   commit: (f) => { db.paid.push(f); return { id: 'p' + db.paid.length }; },
+  preview: (f) => [[f.amount ? (f.amount.label ?? f.amount) : 'Money',
+                    f.payee ? 'to ' + (f.payee.label ?? f.payee) : null].filter(Boolean).join(' ')],
   effects: [{
     name: 'transfer', run: () => log('money moved — irreversible', 'effect'),
     radius: 'external', reversible: false, deferrable: false,
@@ -117,6 +123,10 @@ const INSTRUCTIONS = [
   'Speak in short sentences. Never read a list back. Never narrate what you are about to do.',
 ].join('\n');
 
+const euiSheet = document.createElement('style');
+euiSheet.textContent = A.stylesheet();
+document.head.appendChild(euiSheet);
+
 let voice = null;
 let lastReport = 0;
 
@@ -133,6 +143,7 @@ function reportState() {
 
 /* --------------------------------------------------------------- the loop */
 function onTranscript(text, final) {
+  if (!$('heard').textContent || final) { budget.reset(); budget.mark('heard'); }
   $('heard').textContent = text;
   const s = spec.feed({ text, final }, { ...ctx(), now: new Date() });
   renderTracks(s);
@@ -167,6 +178,14 @@ function onSpeechStop() {
   setStatus('thinking', 'think');
 }
 
+// The orb's tint is its state, and 'thinking' has to end somewhere. Board 14:
+// done is the orb itself, not a second circle.
+ui.on((e) => {
+  if (e.type === 'commit' || e.type === 'discarded' || e.type === 'failed') {
+    setStatus(state.listening ? 'listening' : 'idle', state.listening ? 'live' : '');
+  }
+});
+
 /* ------------------------------------------------------------------ view */
 const CIRC = 728.8;
 let raf = 0;
@@ -184,12 +203,6 @@ function log(msg, kind) {
 
 function setStatus(txt, cls) { $('statust').textContent = txt; $('status').className = 'status ' + (cls || ''); }
 
-function fmt(v) {
-  if (v === null || v === undefined) return '—';
-  if (typeof v === 'object') return v.label ?? JSON.stringify(v);
-  return String(v);
-}
-
 function renderTracks(s) {
   const box = $('tracks');
   box.innerHTML = '';
@@ -204,49 +217,52 @@ function renderTracks(s) {
   $('trackCount').textContent = s.tracks.length + ' of 7 alive';
 }
 
-function render() {
+/**
+ * The stage is drawn by the EUI presenter over `toView()`, not by this file.
+ *
+ * What was here before was a second copy of the rules: it decided what a
+ * provisional slot looks like, when a yes is needed, which pill to show. Every
+ * one of those is a contract question with an answer already, and a renderer
+ * that re-derives them is a renderer that can disagree with the thing it is
+ * drawing. Now this function does two things the presenter cannot: it keeps
+ * the ring animating, and it tells the model what is on screen.
+ */
+let presenter = null;
+let updateStage = () => {};
+let boundRun = null;
+const budget = new A.BudgetMonitor({ now: () => performance.now() });
+
+function optionsForRun(r, slot) {
+  const sd = r.def.slots[slot];
+  return sd && sd.options ? sd.options(ctx(), {}) : [];
+}
+
+function bindStage() {
   const run = spec.currentRun ?? ui.act;
-  const s = run ? run.state() : null;
-
-  const slots = $('slots'); slots.innerHTML = '';
-  if (s) {
-    for (const name of Object.keys(s.slots)) {
-      const sl = s.slots[name];
-      const d = document.createElement('div');
-      d.className = 'slot' + (sl.status === 'filled' ? '' : ' empty') + (sl.provisional ? ' prov' : '');
-      d.innerHTML = '<span class="k"></span><span class="v"></span>';
-      d.querySelector('.k').textContent = name + (sl.provisional ? ' · unsure' : '');
-      d.querySelector('.v').textContent = sl.status === 'filled' ? fmt(sl.value) : '—';
-      slots.appendChild(d);
-    }
+  if (!run || run === boundRun) return run;
+  boundRun = run;
+  if (!presenter) {
+    // No `said` here: #heard already draws their words above the card, which
+    // is where board 13 puts them. Passing it as well would print the sentence
+    // twice for one utterance.
+    presenter = new A.StagePresenter($('stage'), document, { queued: () => 0 });
   }
+  const wired = A.attachPresenters(run, [presenter], optionsForRun);
+  updateStage = wired.update;
+  budget.mark('shown');
+  return run;
+}
 
-  const v = $('verdict'); v.innerHTML = '';
-  if (s) {
-    const pill = (cls, txt) => { const p = document.createElement('span'); p.className = 'pill ' + cls; p.textContent = txt; v.appendChild(p); };
-    if (s.status === 'speculating') pill('prov', 'speculating — cannot commit');
-    if (s.radius) pill(s.radius === 'external' ? 'stop' : s.radius === 'self' ? 'ok' : 'hold', s.radius);
-    if (s.status === 'hold') pill('hold', 'silence will commit');
-    if (s.status === 'explicit') pill('stop', 'needs a yes out loud');
-    if (s.status === 'settled') pill('ok', 'committed');
-    if (s.status === 'frozen') pill('prov', 'frozen');
-  }
+function render() {
+  const run = bindStage();
+  if (!run) { $('stage').replaceChildren(); return; }
+  updateStage();
 
-  const cta = $('cta'); cta.innerHTML = '';
-  if (s && s.status === 'explicit' && run) {
-    const yes = document.createElement('button'); yes.className = 'yes'; yes.textContent = 'Yes, do it';
-    yes.onclick = () => run.assent().then(render);
-    const no = document.createElement('button'); no.className = 'no'; no.textContent = 'Cancel';
-    no.onclick = () => { run.discard(); render(); };
-    cta.append(yes, no);
-  }
-  if (s && run?.undoAvailable) {
-    const u = document.createElement('button'); u.className = 'no'; u.textContent = 'Undo';
-    u.onclick = () => run.undo().then(render);
-    cta.appendChild(u);
-  }
+  const s = run.state();
 
-  if (s && s.status === 'hold' && run.holdDurationMsValue) {
+  // The orb's ring is the orb's, not the card's: it is the credit and the
+  // state, and board 14 says it never unmounts while the tab is open.
+  if (s.status === 'hold' && run.holdDurationMsValue) {
     const f = Math.max(0, Math.min(1, (s.holdRemainingMs || 0) / run.holdDurationMsValue));
     $('arc').setAttribute('stroke-dashoffset', String(CIRC * (1 - f)));
     $('ms').textContent = Math.round(s.holdRemainingMs || 0) + 'ms';
@@ -283,15 +299,44 @@ $('mic').onclick = async () => {
   try { await voice.start(); } catch { voice = null; }
 };
 
-/* Typing is the same path as speaking: text in, final immediately. */
+/**
+ * Typing is the same path as speaking, and that has to include the shape of
+ * it. Handing the whole sentence over at once and calling it final skips the
+ * only thing speculation does: Hepta never sees a growing prefix, so nothing
+ * is ever speculated and the mic path is the only way to exercise it.
+ *
+ * So a typed sentence is replayed word by word at conversational speed,
+ * through the same generator the replay suite uses. The mic becomes a
+ * convenience rather than a prerequisite — which is the point of an SDK that
+ * takes text rather than audio.
+ */
+let replaying = 0;
+
+function speak(text, wpm = A.DEFAULT_WPM) {
+  clearTimeout(replaying);
+  state.listening = true;      // typing is engagement too
+  onSpeechStart();
+  const seq = A.partials(text, { wpm });
+  let i = 0;
+  const step = () => {
+    const p = seq[i++];
+    if (!p) return;
+    onTranscript(p.text, p.final);
+    if (p.final) { onSpeechStop(); return; }
+    replaying = setTimeout(step, seq[i].atMs - p.atMs);
+  };
+  step();
+}
+
 $('form').addEventListener('submit', (e) => {
   e.preventDefault();
   const t = $('input').value.trim(); if (!t) return;
   $('input').value = '';
-  state.listening = true;      // typing is engagement too
-  onTranscript(t, false);
-  onTranscript(t, true);
+  speak(t);
 });
+
+// The weekend test needs no mic and no key: drive it from the console.
+window.speak = speak;
 
 $('tools').textContent = JSON.stringify(tools(), null, 2);
 log('engine ready — ' + ui.definitions.length + ' acts, tools generated', 'boot');
