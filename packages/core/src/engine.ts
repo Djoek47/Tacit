@@ -71,8 +71,18 @@ export class AIUIC {
     return requiresModel(def);
   }
 
-  /** Start an act by name. Routing from text is the resolve layer's job. */
-  start(name: string): ActRun {
+  /**
+   * Start an act by name. Routing from text is the resolve layer's job.
+   *
+   * `speculative` has to be settable here rather than on the returned run,
+   * because this method evaluates before it returns. Setting it afterwards
+   * means the first evaluate runs unguarded: harmless today, since a new run
+   * has no engagement and so cannot reach HOLD, but it does paint one frame of
+   * "needs a yes" over a sentence the speaker is still in the middle of, and
+   * it leaves the safety of the whole speculation path resting on a clause
+   * written for a different reason.
+   */
+  start(name: string, opts: { speculative?: boolean } = {}): ActRun {
     const def = this.acts.get(name);
     if (!def) throw new Error(`unknown act "${name}"`);
     if (this.current && ['resolving', 'hold', 'explicit', 'frozen'].includes(this.current.status)) {
@@ -80,6 +90,7 @@ export class AIUIC {
       this.current.discard();
     }
     const run = new ActRun(def, this.clock, () => this.ctx(), this.outbox, this.emit);
+    if (opts.speculative) run.speculative = true;
     this.current = run;
     run.evaluate();
     return run;

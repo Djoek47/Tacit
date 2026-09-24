@@ -156,8 +156,20 @@ export class Speculator {
 
     // Hold the current leader unless a challenger is clearly ahead: the stage
     // is a thing a person is looking at, so churning it has a real cost.
+    //
+    // That cost is a mid-sentence cost, and it stops existing the moment the
+    // sentence does. On the final transcript there is no flicker left to
+    // prevent — only one last chance to be right — so the margin is dropped
+    // and the best track wins outright.
+    //
+    // Without this, a sentence that changes its mind cannot recover: "pay Maya
+    // no actually give Maya the laundry" keeps the payment act to the end,
+    // because the early words keep feeding the leader's score and the chore
+    // act never gets clear enough to earn the switch. The person watched
+    // themselves correct it and the stage did not follow.
     const current = tracks.find((t) => t.act === this.leader);
-    const shouldSwitch = !current || top.score - current.score >= this.switchMargin;
+    const margin = interim.final ? 0 : this.switchMargin;
+    const shouldSwitch = !current || top.score - current.score >= margin;
 
     if (shouldSwitch && top.act !== this.leader) {
       switched = true;
@@ -195,9 +207,10 @@ export class Speculator {
   private leadWith(track: Track, defs: ActDef[], ctx: Ctx): void {
     this.stopLeading();
     this.leader = track.act;
-    this.run = this.ui.start(track.act);
-    this.run.speculative = true;
-    this.run.evaluate();
+    // Speculative from birth, not a moment after: start() evaluates before it
+    // returns, and that first evaluate should already know the speaker has
+    // not finished.
+    this.run = this.ui.start(track.act, { speculative: true });
     this.paint(track, ctx);
   }
 

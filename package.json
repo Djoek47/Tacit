@@ -11,6 +11,7 @@
     "build:console": "npx esbuild apps/console/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=apps/console/aiuic.bundle.js",
     "build:orb": "npx esbuild apps/orb/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=apps/orb/aiuic.bundle.js",
     "orb": "node apps/orb/server.mjs",
-    "eval": "npx esbuild packages/eval/run.ts --bundle --format=esm --platform=node --outfile=.eval.mjs --log-level=error --alias:@intermenu/aiuic-core=./packages/core/src/index.ts --alias:@intermenu/aiuic-resolve=./packages/resolve/src/index.ts && node .eval.mjs"
+    "eval": "npx esbuild packages/eval/run.ts --bundle --format=esm --platform=node --outfile=.eval.mjs --log-level=error --alias:@intermenu/aiuic-core=./packages/core/src/index.ts --alias:@intermenu/aiuic-resolve=./packages/resolve/src/index.ts && node .eval.mjs",
+    "hepta": "npx esbuild packages/hepta/run.ts --bundle --format=esm --platform=node --outfile=.hepta.mjs --log-level=error --alias:@intermenu/aiuic-core=./packages/core/src/index.ts --alias:@intermenu/aiuic-resolve=./packages/resolve/src/index.ts && node .hepta.mjs"
   }
 }
