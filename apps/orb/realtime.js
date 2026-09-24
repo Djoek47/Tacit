@@ -12,15 +12,21 @@
  */
 
 export const EVENTS = {
-  // inbound
+  // inbound — all verified against the GA reference, Sept 2026
   sessionCreated: 'session.created',
   transcriptDelta: 'conversation.item.input_audio_transcription.delta',
   transcriptDone: 'conversation.item.input_audio_transcription.completed',
   speechStarted: 'input_audio_buffer.speech_started',
   speechStopped: 'input_audio_buffer.speech_stopped',
-  fnArgsDone: 'response.function_call_arguments.done',
   responseDone: 'response.done',
   error: 'error',
+  /**
+   * Supplementary only. The `.delta` sibling is documented in GA prose; the
+   * `.done` variant is not linked anywhere official, and the function-calling
+   * guide tells you to read the call off `response.done` instead. So this is a
+   * second listener, never the trigger — see `handle()`.
+   */
+  fnArgsDone: 'response.function_call_arguments.done',
   // outbound
   sessionUpdate: 'session.update',
   itemCreate: 'conversation.item.create',
@@ -48,6 +54,8 @@ export class RealtimeVoice {
     this.stream = null;
     this.audio = null;
     this.partial = '';
+    /** call_ids already handed to the contract. Two events can carry the same one. */
+    this.seenCalls = new Set();
   }
 
   get live() {
@@ -106,6 +114,7 @@ export class RealtimeVoice {
     try { this.pc?.close(); } catch { /* already gone */ }
     for (const t of this.stream?.getTracks() ?? []) t.stop();
     this.dc = this.pc = this.stream = null;
+    this.seenCalls.clear();
     this.status('idle');
   }
 
@@ -113,17 +122,44 @@ export class RealtimeVoice {
     if (this.dc?.readyState === 'open') this.dc.send(JSON.stringify(obj));
   }
 
+  /**
+   * The GA session shape. Three things here are not the beta shape, and the
+   * beta shape has been rejected outright since 2026-05-12:
+   *
+   *   session.type            new, required discriminator
+   *   audio.input.turn_detection   moved; the inner fields are unchanged
+   *   audio.input.transcription    moved from top-level input_audio_transcription
+   *
+   * `instructions`, `tools` and `tool_choice` stay top-level.
+   *
+   * The transcription path is the one claim I could not find documented for a
+   * speech-to-speech session rather than a transcription-only one. It is set
+   * explicitly because in the beta it was opt-in, and a session that silently
+   * does not transcribe hands Hepta nothing to speculate on. If the delta
+   * events never arrive, this is the first line to suspect.
+   */
   configure() {
     this.send({
       type: EVENTS.sessionUpdate,
       session: {
+        type: 'realtime',
         instructions: this.opts.instructions,
         tools: this.opts.tools,
         tool_choice: 'auto',
-        // Server-side turn detection gives us speech_started / speech_stopped,
-        // which is what Hepta needs to know when the tongue stops turning.
-        turn_detection: { type: 'server_vad', threshold: 0.5, silence_duration_ms: 500 },
-        input_audio_transcription: { model: 'gpt-4o-mini-transcribe' },
+        audio: {
+          input: {
+            // Server-side turn detection gives us speech_started /
+            // speech_stopped, which is what Hepta needs to know when the
+            // tongue stops turning.
+            turn_detection: {
+              type: 'server_vad',
+              threshold: 0.5,
+              prefix_padding_ms: 300,
+              silence_duration_ms: 500,
+            },
+            transcription: { model: 'gpt-4o-mini-transcribe' },
+          },
+        },
       },
     });
   }
@@ -180,8 +216,27 @@ export class RealtimeVoice {
         break;
       }
 
+      // The documented path. A response carrying a function call arrives as
+      // response.done with the call in output[], and that is what is wired to
+      // the contract.
+      case EVENTS.responseDone: {
+        for (const item of e.response?.output ?? []) {
+          if (item?.type !== 'function_call') continue;
+          if (this.seenCalls.has(item.call_id)) continue;
+          this.seenCalls.add(item.call_id);
+          this.opts.onToolCall(item.name, item.arguments ?? '{}', item.call_id);
+        }
+        break;
+      }
+
+      // If this event does still exist it fires first, which gets the card up
+      // sooner. Either way the call runs once: whichever arrives first claims
+      // the call_id.
       case EVENTS.fnArgsDone:
-        this.opts.onToolCall(e.name, e.arguments ?? '{}', e.call_id);
+        if (e.call_id && !this.seenCalls.has(e.call_id)) {
+          this.seenCalls.add(e.call_id);
+          this.opts.onToolCall(e.name, e.arguments ?? '{}', e.call_id);
+        }
         break;
 
       case EVENTS.error:

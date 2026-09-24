@@ -20,7 +20,7 @@ const HERE = resolve(fileURLToPath(new URL('.', import.meta.url)));
 const PORT = Number(process.env.PORT ?? 8787);
 const KEY = process.env.OPENAI_API_KEY ?? '';
 const BASE = (process.env.OPENAI_BASE_URL ?? 'https://api.openai.com').replace(/\/$/, '');
-const MODEL = process.env.OPENAI_REALTIME_MODEL ?? 'gpt-realtime';
+const MODEL = process.env.OPENAI_REALTIME_MODEL ?? 'gpt-realtime-2.1';
 const VOICE = process.env.OPENAI_VOICE ?? 'cedar';
 
 const TYPES = {
@@ -49,9 +49,41 @@ async function readBody(req, limit = 2_000_000) {
 }
 
 /**
- * Exchange the browser's SDP offer for an answer. Same shape as the route in
- * Creatix (`app/api/ai/mimic-test-realtime`), minus the auth and the database.
+ * Exchange the browser's SDP offer for an answer.
+ *
+ * Two hops, both of which changed when the Realtime beta was shut down in
+ * May 2026 and none of which are guessable from the old shape:
+ *
+ *   1. mint an ephemeral client secret     POST /v1/realtime/client_secrets
+ *      body {session:{type,model,audio}}, key read off `data.value`
+ *   2. exchange the SDP with that secret   POST /v1/realtime/calls
+ *      no ?model= query parameter; the model is set in step 1
+ *
+ * The old route was POST /v1/realtime?model=... with the API key and an
+ * `openai-beta: realtime=v1` header. That header has been dead since
+ * 2026-05-12 and the endpoint no longer exists, so the previous version of
+ * this file could not have connected once.
  */
+async function mintClientSecret() {
+  const r = await fetch(`${BASE}/v1/realtime/client_secrets`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${KEY}`, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      session: {
+        type: 'realtime',
+        model: MODEL,
+        audio: { output: { voice: VOICE } },
+      },
+    }),
+  });
+  const body = await r.text();
+  if (!r.ok) throw Object.assign(new Error(body), { status: r.status });
+  const data = JSON.parse(body);
+  const value = data.value ?? data?.client_secret?.value;
+  if (!value) throw Object.assign(new Error('no client secret in response: ' + body.slice(0, 300)), { status: 502 });
+  return value;
+}
+
 async function realtime(req, res) {
   if (!KEY.startsWith('sk-')) {
     return send(res, 503, 'Set OPENAI_API_KEY (an sk-... key) before starting the server.');
@@ -64,14 +96,17 @@ async function realtime(req, res) {
   }
   if (!sdp.trim()) return send(res, 400, 'Missing SDP offer.');
 
-  const url = `${BASE}/v1/realtime?model=${encodeURIComponent(MODEL)}&voice=${encodeURIComponent(VOICE)}`;
-  const upstream = await fetch(url, {
+  let secret;
+  try {
+    secret = await mintClientSecret();
+  } catch (err) {
+    console.error('[orb] could not mint a client secret:', err.status ?? '', String(err.message).slice(0, 400));
+    return send(res, err.status ?? 502, String(err.message));
+  }
+
+  const upstream = await fetch(`${BASE}/v1/realtime/calls`, {
     method: 'POST',
-    headers: {
-      authorization: `Bearer ${KEY}`,
-      'content-type': 'application/sdp',
-      'openai-beta': 'realtime=v1',
-    },
+    headers: { authorization: `Bearer ${secret}`, 'content-type': 'application/sdp' },
     body: sdp,
   });
 
