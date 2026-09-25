@@ -37,6 +37,7 @@
 
 import type { Ctx, Filled } from '@intermenu/aiuic-core';
 import type { App } from '@intermenu/aiuic-kit';
+import { MAIN, type MemRecord, type MemoryReader, type MemoryWriter } from '@intermenu/aiuic-memory';
 
 // ----------------------------------------------------------------- aggregator
 
@@ -110,15 +111,49 @@ export class Congregator {
    * is recorded — and only those. There is no `record(decision)`: a decision
    * that did not go through the contract is not a decision.
    */
-  constructor(app: App, private readonly now: () => number) {
+  constructor(app: App, private readonly now: () => number, private readonly memory?: MemoryWriter) {
     app.ui.on((e) => {
-      if (e.type === 'commit') this[WRITE]({ kind: 'committed', act: e.act, id: e.result.id, at: this.now() });
-      if (e.type === 'undo') this[WRITE]({ kind: 'undone', act: e.act, at: this.now() });
+      if (e.type === 'commit') {
+        this[WRITE]({ kind: 'committed', act: e.act, id: e.result.id, at: this.now() });
+        // An act may hand the record something to remember — an order, a
+        // fact the person stated. It is written because the act committed,
+        // which is to say because the person let it.
+        const extra = (e.result as { memory?: MemRecord[] }).memory ?? [];
+        this.remember('congregator', `${e.act} committed`, [
+          { kind: 'decision', act: e.act, id: e.result.id, summary: summarise(e.result) }, ...extra,
+        ]);
+      }
+      if (e.type === 'undo') {
+        this[WRITE]({ kind: 'undone', act: e.act, at: this.now() });
+        this.remember('congregator', `${e.act} undone`, [{ kind: 'undone', act: e.act, id: e.result.id }]);
+      }
     });
+  }
+
+  private remember(by: 'congregator', note: string, records: MemRecord[]): void {
+    if (!this.memory || records.length === 0) return;
+    try {
+      this.memory.commit(MAIN, by, note, records);
+    } catch {
+      // A memory that refuses a record (a fact without its words, say) must
+      // not undo the commit that happened. The ledger above still has it.
+    }
   }
 
   [WRITE](e: Entry): void {
     this.entries.push(e);
+    // The loop's own work goes to memory as thoughts and findings: what was
+    // looked for, what was found, what was planned. Never as facts.
+    if (e.kind === 'findings') {
+      this.remember('congregator', `findings for ${e.goal}`, e.findings
+        .filter((f) => f.confidence > 0)
+        .slice(0, 10)
+        .map((f) => ({ kind: 'finding' as const, source: f.source, claim: f.claim })));
+    } else if (e.kind === 'plan' || e.kind === 'answer' || e.kind === 'stopped') {
+      const text = e.kind === 'plan' ? `${e.plan.kind}${'why' in e.plan ? ': ' + e.plan.why : ''}`
+        : e.kind === 'answer' ? e.answer : `stopped: ${e.reason}`;
+      this.remember('congregator', e.kind, [{ kind: 'thought', topic: e.goal, text }]);
+    }
   }
 
   view(): Ledger {
@@ -129,6 +164,13 @@ export class Congregator {
   decisions(): Ledger {
     return this.view().filter((e) => e.kind === 'committed' || e.kind === 'undone');
   }
+}
+
+function summarise(r: unknown): string {
+  const o = r as Record<string, unknown>;
+  const v = o.result ?? o;
+  const s = typeof v === 'string' ? v : JSON.stringify(v);
+  return (s ?? '').slice(0, 200);
 }
 
 // --------------------------------------------------------------- orchestrator
@@ -149,6 +191,8 @@ export type PlanInput = {
   /** Read-only. The orchestrator sees what was done; it cannot add to it. */
   ledger: Ledger;
   depth: number;
+  /** The shared memory, read-only. What has been said, found and decided before. */
+  memory?: MemoryReader;
   /** Answers from subgoals, when this is the pass after a split. */
   parts?: readonly { goal: string; outcome: Outcome }[];
 };
@@ -178,6 +222,8 @@ export type PyramidConfig = {
   maxDepth?: number;
   /** How many times one goal may ask to look again before it must decide. */
   maxLooks?: number;
+  /** The shared memory. The reader goes to every role; the writer to the congregator only. */
+  memory?: { reader: MemoryReader; writer: MemoryWriter };
 };
 
 export const DEFAULT_MAX_DEPTH = 3;
@@ -189,7 +235,7 @@ export class Pyramid {
 
   constructor(private readonly config: PyramidConfig) {
     this.now = config.now ?? (() => Date.now());
-    this.congregator = new Congregator(config.app, this.now);
+    this.congregator = new Congregator(config.app, this.now, config.memory?.writer);
   }
 
   /** Pursue a goal round the loop: aggregate, orchestrate, congregate, recurse. */
@@ -212,11 +258,18 @@ export class Pyramid {
     let parts: { goal: string; outcome: Outcome }[] | undefined;
 
     for (;;) {
-      const findings = await this.config.aggregator.gather(query, ctx);
+      const fromSources = await this.config.aggregator.gather(query, ctx);
+      // The aggregator reads memory as one more source: what was said and
+      // decided before is information too, and the cheapest there is.
+      const remembered = (this.config.memory?.reader.search(query) ?? []).slice(0, 5).map((m) => ({
+        source: `memory/${m.kind}`, claim: m.text, confidence: m.kind === 'fact' ? 1 : 0.6, calibrated: m.kind === 'fact',
+      }));
+      const findings = Object.freeze([...fromSources, ...remembered]);
       c[WRITE]({ kind: 'findings', goal, findings, at: this.now() });
 
       const plan = await this.config.orchestrator({
         goal, findings, ledger: c.view(), depth, ...(parts ? { parts } : {}),
+        ...(this.config.memory ? { memory: this.config.memory.reader } : {}),
       });
       c[WRITE]({ kind: 'plan', goal, plan, at: this.now() });
 

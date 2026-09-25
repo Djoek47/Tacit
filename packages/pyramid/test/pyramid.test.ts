@@ -185,3 +185,50 @@ describe('the loop', () => {
     expect(h.pyramid.congregator.view().map((e) => e.kind)).toEqual(['goal', 'findings', 'plan', 'answer']);
   });
 });
+
+import { EphemeralStore, openMemory } from '@intermenu/aiuic-memory';
+
+describe('the shared memory', () => {
+  it('lets every role read it and only the congregator write it', async () => {
+    const mem = openMemory(new EphemeralStore());
+    mem.writer.commit('main', 'congregator', 'heard', [{ kind: 'fact', key: 'grocery budget', value: '400', said: 'my grocery budget is 400' }]);
+    let seen: string[] = [];
+    const clock = new FakeClock(T0);
+    const app = createApp({ clock, acts: [], ctx: () => ({ actor: { id: 'me' }, attention, reachLimit: 1 }) });
+    const p = new Pyramid({
+      app, memory: mem,
+      aggregator: new Aggregator([]),
+      orchestrator: (i) => { seen = i.findings.map((f) => f.source); expect(i.memory).toBeDefined(); expect('commit' in i.memory!).toBe(false); return { kind: 'answer', answer: 'x' }; },
+      ctx: () => ({ now: new Date(clock.now()) }) as Ctx,
+      now: () => clock.now(),
+    });
+    await p.pursue('what is my grocery budget');
+    expect(seen).toContain('memory/fact');
+    // the loop's work went to memory as thoughts, never as facts
+    const v = mem.reader.view();
+    expect(Object.keys(v.facts)).toEqual(['grocery budget']);
+    expect(v.thoughts.map((t) => t.topic)).toContain('what is my grocery budget');
+  });
+
+  it('records a committed decision, and what the act asked it to remember', async () => {
+    const mem = openMemory(new EphemeralStore());
+    const clock = new FakeClock(T0);
+    const app = createApp({
+      clock, speculate: false,
+      ctx: () => ({ actor: { id: 'me', basePauseMs: 850 }, attention, reachLimit: 1, undoWindowMs: 5000 }),
+      acts: [defineAct({
+        name: 'set_order', phrases: ['every morning'],
+        slots: { what: { primitive: 'chip', options: () => [{ value: 'due', label: 'what is due' }], required: true, order: 1 } },
+        radius: 'self', undo: () => {},
+        commit: () => ({ id: 'o1', memory: [{ kind: 'order', id: 'o1', text: 'every morning, what is due', active: true }] }),
+      })],
+    });
+    new Pyramid({ app, memory: mem, aggregator: new Aggregator([]), orchestrator: () => ({ kind: 'answer', answer: '' }),
+      ctx: () => ({ now: new Date(clock.now()) }) as Ctx, now: () => clock.now() });
+    app.hear('every morning what is due');
+    clock.advance(1000); await tick(); await tick();
+    const v = mem.reader.view();
+    expect(v.decisions.map((d) => d.act)).toEqual(['set_order']);
+    expect(v.orders.o1!.active).toBe(true);
+  });
+});
