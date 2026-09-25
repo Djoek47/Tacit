@@ -40,7 +40,7 @@ export type MemRecord =
   /** The person lowered a tool's radius. */
   | { kind: 'delegation'; tool: string; radius: string }
   /** The score: what the conductor may do unattended. */
-  | { kind: 'order'; id: string; text: string; active: boolean }
+  | { kind: 'order'; id: string; text: string; active: boolean; spec?: unknown }
   /** A line of thought — Hepta's threads, the loop's steps, a hunch. */
   | { kind: 'thought'; topic: string; text: string };
 
@@ -64,7 +64,7 @@ export type View = {
   findings: { source: string; claim: string; value?: unknown; at: number }[];
   decisions: { act: string; id: string; summary: string; at: number; undone: boolean }[];
   delegations: Record<string, string>;
-  orders: Record<string, { text: string; active: boolean }>;
+  orders: Record<string, { text: string; active: boolean; spec?: unknown; at: number }>;
   thoughts: { topic: string; text: string; at: number }[];
 };
 
@@ -136,7 +136,7 @@ class Graph {
           case 'decision': v.decisions.push({ act: r.act, id: r.id, summary: r.summary, at: c.at, undone: false }); break;
           case 'undone': { const d = [...v.decisions].reverse().find((x) => x.act === r.act && x.id === r.id); if (d) d.undone = true; break; }
           case 'delegation': v.delegations[r.tool] = r.radius; break;
-          case 'order': v.orders[r.id] = { text: r.text, active: r.active }; break;
+          case 'order': v.orders[r.id] = { text: r.text, active: r.active, ...(r.spec !== undefined ? { spec: r.spec } : {}), at: c.at }; break;
           case 'thought': v.thoughts.push({ topic: r.topic, text: r.text, at: c.at }); break;
         }
       }
