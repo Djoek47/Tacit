@@ -480,3 +480,48 @@ describe('domainColour', () => {
     expect(domainColour(null)).toBe(DOMAIN_COLOUR.neutral);
   });
 });
+
+// ------------------------------------------------------- an app's own domains
+
+import { lookupDomain, checkTheme, orbTints, ORB_TINT as TINT } from '../src/index.js';
+
+describe("an app's own domains", () => {
+  const extra = { tasks: { kicker: 'Tasks', colour: '#5B6CFF' }, groceries: { kicker: 'FOOD', colour: '#FF00FF' } };
+
+  it('paints a card in the colour its app declared', () => {
+    const d = lookupDomain('tasks', extra)!;
+    expect(d.kicker).toBe('TASKS');
+    expect(resolveColours(d).domain).toBe('#5B6CFF');
+  });
+
+  it('never lets an app repaint a built-in domain', () => {
+    expect(resolveColours(lookupDomain('groceries', extra)).domain).toBe(DOMAIN_COLOUR.mint);
+  });
+
+  it('lints a custom domain as known, and an undeclared one as unknown', () => {
+    const act = (domain: string) => ({ name: 'x', domain, slots: { a: { primitive: 'chip', order: 1 } }, radius: 'self' } as never);
+    expect(lintDomains([act('tasks')], extra).filter((l) => l.level === 'error')).toEqual([]);
+    expect(lintDomains([act('vibes')], extra).some((l) => l.level === 'error')).toBe(true);
+  });
+
+  it('keeps the accent off a custom domain too', () => {
+    expect(resolveColours(lookupDomain('tasks', extra), '#FF5FA2').domain).toBe('#5B6CFF');
+  });
+});
+
+describe('a personal Hepta', () => {
+  it("takes the person's colour for the assistant at rest and speaking, and nowhere else", () => {
+    const t = orbTints({ assistant: '#E07BFF' });
+    expect(t.idle).toBe('#E07BFF');
+    expect(t.speaking).toBe('#E07BFF');
+    expect(t.listening).toBe(TINT.listening);
+    expect(t.thinking).toBe(TINT.thinking);
+  });
+
+  it('refuses a colour that already means something, or is close enough to be mistaken for it', () => {
+    expect(checkTheme({ assistant: '#34D399' })[0]).toMatch(/success/);
+    expect(checkTheme({ accent: '#F87070' })[0]).toMatch(/danger/);
+    expect(checkTheme({ assistant: '#E07BFF', accent: '#FF5FA2' })).toEqual([]);
+    expect(orbTints({ assistant: '#34D399' }).idle).toBe(DOMAIN_COLOUR.poppinsCyan);
+  });
+});

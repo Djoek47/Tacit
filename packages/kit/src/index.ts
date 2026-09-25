@@ -41,7 +41,7 @@ import {
 import { Speculator, type Speculation } from '@intermenu/hepta';
 import { attachPresenters, toView, type Presenter, type StageView } from '@intermenu/aiuic-present';
 import { lintActs, type Lint } from '@intermenu/aiuic-devtools';
-import { lintDomains } from '@intermenu/aiuic-eui';
+import { lintDomains, type CustomDomains } from '@intermenu/aiuic-eui';
 
 export type AppConfig = {
   acts: ActDef[];
@@ -61,6 +61,8 @@ export type AppConfig = {
    * declare `options` on the slot and never need this.
    */
   optionsFor?: (act: ActDef, slot: string) => Option[];
+  /** Domains the app declares in its shape, so the lint knows them. */
+  domains?: CustomDomains;
 };
 
 export type HearResult = {
@@ -262,7 +264,7 @@ export class App {
   lint(): Lint[] {
     const defs = this.ui.definitions;
     return [
-      ...lintDomains(defs).map((l) => ({ act: l.act, level: l.level, message: l.message } as Lint)),
+      ...lintDomains(defs, this.config.domains).map((l) => ({ act: l.act, level: l.level, message: l.message } as Lint)),
       ...lintActs(defs),
     ];
   }

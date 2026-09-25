@@ -27,6 +27,11 @@ export type DomainName =
 export type DomainDef = {
   name: DomainName;
   colour: DomainColour;
+  /**
+   * A custom domain's own colour, from an app's shape. Built-in domains never
+   * set this: their colour is the language's, not the app's.
+   */
+  hex?: string;
   /** The kicker, in caps, over the card. */
   kicker: string;
   /** One line: what this part of the app does. Board 12's subtitle. */
@@ -121,10 +126,31 @@ export const DOMAINS: Record<DomainName, DomainDef> = {
 const ORDER: Radius[] = ['self', 'shared', 'other-person', 'external'];
 const rank = (r: Radius) => ORDER.indexOf(r);
 
-export function domainOf(act: ActDef): DomainDef | null {
-  const d = (act as { domain?: string }).domain;
-  if (!d) return null;
-  return DOMAINS[d as DomainName] ?? null;
+/** A domain an app declares in its shape — "TASKS", in the app's own colour. */
+export type CustomDomain = { kicker: string; colour: string };
+export type CustomDomains = Record<string, CustomDomain>;
+
+/**
+ * Find a domain by name: built-in first, then the app's own.
+ *
+ * Built-in wins, always. An app that declares its own "groceries" does not get
+ * to repaint groceries — the name already means something in every other app,
+ * and that meaning is the whole reason a colour can be read at a glance.
+ */
+export function lookupDomain(name: string | null | undefined, extra?: CustomDomains): DomainDef | null {
+  if (!name) return null;
+  const builtIn = DOMAINS[name as DomainName];
+  if (builtIn) return builtIn;
+  const c = extra?.[name];
+  if (!c) return null;
+  return {
+    name: name as DomainName, colour: 'neutral', hex: c.colour,
+    kicker: c.kicker.toUpperCase().slice(0, 24), does: '', shape: '',
+  };
+}
+
+export function domainOf(act: ActDef, extra?: CustomDomains): DomainDef | null {
+  return lookupDomain((act as { domain?: string }).domain, extra);
 }
 
 /**
@@ -140,7 +166,7 @@ export function resolveColours(
   accent?: string,
 ): { domain: string; kicker: string; accent: string | null } {
   const def = typeof domain === 'string' ? DOMAINS[domain] : domain;
-  const colour = def ? DOMAIN_COLOUR[def.colour] : DOMAIN_COLOUR.neutral;
+  const colour = def ? (def.hex ?? DOMAIN_COLOUR[def.colour]) : DOMAIN_COLOUR.neutral;
   return { domain: colour, kicker: colour, accent: accent ?? null };
 }
 
@@ -155,12 +181,12 @@ export type DomainLint = {
  * Board 12 and board 13, as checks. `error` means the act contradicts the
  * design language and shipping it makes the colour a lie.
  */
-export function lintDomains(acts: ActDef[]): DomainLint[] {
+export function lintDomains(acts: ActDef[], extra?: CustomDomains): DomainLint[] {
   const out: DomainLint[] = [];
 
   for (const act of acts) {
     const raw = (act as { domain?: string }).domain;
-    const def = domainOf(act);
+    const def = domainOf(act, extra);
 
     if (!raw) {
       out.push({ act: act.name, domain: null, level: 'note',

@@ -23,7 +23,7 @@
 
 import type { Handlers, Presenter, StageView } from '@intermenu/aiuic-present';
 import { beatOf, skipsShow, type Beat } from './beats.js';
-import { DOMAINS, resolveColours, type DomainDef, type DomainName } from './domain.js';
+import { DOMAINS, lookupDomain, resolveColours, type CustomDomains, type DomainDef, type DomainName } from './domain.js';
 import { DOMAIN_COLOUR } from './tokens.js';
 
 export type El = {
@@ -44,6 +44,8 @@ export type StageOptions = {
   queued?: () => number;
   /** What they actually said. Board 13, ALWAYS: "Their words above it." */
   said?: () => string;
+  /** Domains the app declares in its shape. Built-in names cannot be overridden. */
+  domains?: CustomDomains;
 };
 
 export class StagePresenter implements Presenter {
@@ -71,7 +73,7 @@ export class StagePresenter implements Presenter {
       return;
     }
 
-    const domain = (v.domain ? DOMAINS[v.domain as DomainName] : null) ?? null;
+    const domain = lookupDomain(v.domain, this.opts.domains);
     const colours = resolveColours(domain, this.opts.accent);
     const beat = beatOf(v, { queued: this.opts.queued?.() ?? 0, domain });
     this.lastBeat = beat;

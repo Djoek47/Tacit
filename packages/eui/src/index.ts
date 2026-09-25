@@ -18,3 +18,4 @@ export * from './domain.js';
 export * from './beats.js';
 export * from './css.js';
 export * from './stage.js';
+export * from './theme.js';
