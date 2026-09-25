@@ -12899,7 +12899,12 @@ function probePage(vw) {
   const wide = all.filter((el) => visible(el)).map((el) => ({ el, r: el.getBoundingClientRect() })).filter(({ r }) => r.right > vw + 1);
   const offenders = wide.filter(({ el }) => !wide.some((o) => o.el !== el && o.el.contains(el))).slice(0, 3).map(({ el, r }) => ({ what: describe(el), right: Math.round(r.right) }));
   const interactive = all.filter((el) => el.matches("a[href], button, input:not([type=hidden]), select, textarea, [role=button], [onclick]") && visible(el));
-  const small = interactive.map((el) => ({ el, r: el.getBoundingClientRect() })).filter(({ r }) => r.width < 44 || r.height < 44).filter(({ el }) => !(el.tagName === "A" && getComputedStyle(el).display === "inline")).slice(0, 8).map(({ el, r }) => ({ what: describe(el), w: Math.round(r.width), h: Math.round(r.height) }));
+  const small = interactive.map((el) => ({ el, r: el.getBoundingClientRect() })).filter(({ r }) => r.width < 44 || r.height < 44).filter(({ el }) => !(el.tagName === "A" && getComputedStyle(el).display === "inline")).filter(({ el }) => {
+    const label = el.tagName === "INPUT" ? el.closest("label") : null;
+    if (!label) return true;
+    const l = label.getBoundingClientRect();
+    return l.width < 44 || l.height < 44;
+  }).slice(0, 8).map(({ el, r }) => ({ what: describe(el), w: Math.round(r.width), h: Math.round(r.height) }));
   const clippedEls = all.filter((el) => {
     if (!visible(el) || !el.innerText?.trim()) return false;
     const s = getComputedStyle(el);
@@ -12940,12 +12945,13 @@ async function testApp(url, opts = {}) {
       const findings = [];
       const page = await browser.newPage({ viewport: { width: vp.width, height: vp.height }, hasTouch: vp.touch, isMobile: vp.touch && vp.width < 600 });
       page.on("console", (m) => {
-        if (m.type() === "error") findings.push({ rule: "console", severity: "error", says: `The console shows an error: ${m.text().slice(0, 200)}` });
+        if (m.type() === "error" && !/^Failed to load resource/.test(m.text())) findings.push({ rule: "console", severity: "error", says: `The console shows an error: ${m.text().slice(0, 200)}` });
       });
       page.on("pageerror", (e) => findings.push({ rule: "console", severity: "error", says: `A script on the page crashed: ${e.message.slice(0, 200)}` }));
-      page.on("requestfailed", (r) => findings.push({ rule: "console", severity: "warn", says: `Something failed to load: ${r.url().slice(0, 120)} (${r.failure()?.errorText ?? "failed"})` }));
+      const weight = (type) => type === "script" || type === "document" ? "error" : "warn";
+      page.on("requestfailed", (r) => findings.push({ rule: "console", severity: weight(r.resourceType()), says: `Something failed to load: ${r.url().slice(0, 120)} (${r.failure()?.errorText ?? "failed"})` }));
       page.on("response", (r) => {
-        if (r.status() >= 400) findings.push({ rule: "console", severity: "warn", says: `The server answered ${r.status()} for ${r.url().slice(0, 120)}` });
+        if (r.status() >= 400) findings.push({ rule: "console", severity: weight(r.request().resourceType()), says: `The server answered ${r.status()} for ${r.url().slice(0, 120)}` });
       });
       try {
         await page.goto(url, { waitUntil: "load", timeout: 2e4 });
@@ -12956,6 +12962,17 @@ async function testApp(url, opts = {}) {
         continue;
       }
       await page.waitForTimeout(settle);
+      const { charset, wide } = await page.evaluate(() => ({
+        charset: document.characterSet,
+        wide: /[^\u0000-\u007f]/.test(document.documentElement.outerHTML)
+      }));
+      if (wide && charset.toUpperCase() !== "UTF-8") {
+        findings.push({
+          rule: "console",
+          severity: "error",
+          says: `The page is being read as ${charset}, not UTF-8. Accented letters will look broken, and bundled code with accents in it can crash. Put <meta charset="utf-8"> first in the head.`
+        });
+      }
       for (const [i, s] of (opts.steps ?? []).entries()) {
         try {
           if ("click" in s) await page.click(s.click, { timeout: 3e3 });
@@ -27684,6 +27701,18 @@ function createDevServer(cfg) {
 }
 
 // src/cli.ts
+var USAGE = `hepta-dev \u2014 the developer tools on the command line, or as an MCP server.
+
+  hepta-dev init                       write a BRIEF.md to start from
+  hepta-dev brief     [BRIEF.md]       read it; check how the menus connect
+  hepta-dev draft     [BRIEF.md]       the acts it implies, and why
+  hepta-dev scaffold  [BRIEF.md] [dir] a runnable MCP server   (--overwrite)
+  hepta-dev prototype [BRIEF.md] [out] a clickable prototype   (--overwrite)
+  hepta-dev test      <url>            use it like a person    (--steps file.json --shots dir)
+  hepta-dev search    <words\u2026>         the code, its history, the chats (--chat file)
+  hepta-dev evolution [repo]           how it got here
+  hepta-dev dossier   [repo]           what a rebuild starts from (--brief BRIEF.md)
+  hepta-dev mcp                        serve all of the above over MCP (stdio)`;
 var HERE = dirname2(fileURLToPath(import.meta.url));
 var runtime = () => readFileSync4(join3(HERE, "runtime.js"), "utf8");
 var TEMPLATE = `# Your app's name
@@ -27801,7 +27830,7 @@ Next: cd ${dir} && npm install && node ${resolve2(HERE, "../hepta/hepta.mjs")} -
       await createDevServer({ root: process.cwd(), runtime, ...process.env.HEPTA_CHROMIUM ? { executablePath: process.env.HEPTA_CHROMIUM } : {} }).connect(new StdioServerTransport());
       return;
     default:
-      console.log(readFileSync4(fileURLToPath(import.meta.url), "utf8").match(/\/\*\*([\s\S]*?)\*\//)?.[1]?.replace(/^ \* ?/gm, "") ?? "hepta-dev");
+      console.log(USAGE);
   }
 }
 main(process.argv.slice(2)).catch((e) => {

@@ -1,3 +1,6 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hepta for Developers</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -106,4 +109,8 @@
   .rule{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:14px 0}
   footer{max-width:1180px;margin:0 auto;border-top:1px solid var(--line);padding-block:22px 40px;color:var(--faint);font-size:13.5px}
   @media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+  /* Fingers are wider than cursors: every tap target is at least 44 px where the pointer is coarse. */
+  @media (pointer:coarse){ .top .brand,.top nav a,.note a{display:inline-flex;align-items:center;min-height:44px} .top nav a{padding-inline:4px} .device .try,.code .copy{min-height:44px;min-width:44px} }
+  /* On a phone the header is two rows: the name, then the sections as one row that scrolls sideways on its own. */
+  @media (max-width:640px){ .top{flex-wrap:wrap;row-gap:4px} .top nav{margin-left:0;width:100%;flex-wrap:nowrap;overflow-x:auto;gap:8px;scrollbar-width:none} .top nav a{white-space:nowrap} }
 </style>

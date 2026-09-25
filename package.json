@@ -6,9 +6,9 @@
   "scripts": {
     "test": "for p in core resolve hepta tools compose memory brand devtools present eui kit pyramid mcp conductor server devkit eval; do (cd packages/$p && npx vitest run) || exit 1; done",
     "typecheck": "for p in core resolve hepta tools compose memory brand devtools present eui kit pyramid mcp conductor server devkit eval; do (cd packages/$p && npx tsc --noEmit -p tsconfig.json) || exit 1; done",
-    "build:demo": "npx esbuild demo/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=demo/aiuic.bundle.js",
-    "build:heckit": "npx esbuild apps/heckit/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=apps/heckit/aiuic.bundle.js",
-    "build:console": "npx esbuild apps/console/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=apps/console/aiuic.bundle.js",
+    "build:demo": "npx esbuild demo/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=demo/aiuic.bundle.js --log-level=warning && scripts/page.sh demo page-head.html page-body.html",
+    "build:heckit": "npx esbuild apps/heckit/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=apps/heckit/aiuic.bundle.js --log-level=warning && scripts/page.sh apps/heckit",
+    "build:console": "npx esbuild apps/console/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=apps/console/aiuic.bundle.js --log-level=warning && scripts/page.sh apps/console",
     "build:orb": "npx esbuild apps/orb/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=apps/orb/aiuic.bundle.js",
     "orb": "node apps/orb/server.mjs",
     "eval": "npx esbuild packages/eval/run.ts --bundle --format=esm --platform=node --outfile=.eval.mjs --log-level=error --alias:@intermenu/aiuic-core=./packages/core/src/index.ts --alias:@intermenu/aiuic-resolve=./packages/resolve/src/index.ts && node .eval.mjs",
@@ -16,8 +16,11 @@
     "build:hepta": "cd apps/hepta && npx esbuild src/daemon.ts --bundle --platform=node --format=esm --target=node20 --outfile=hepta.mjs --log-level=warning --banner:js=\"import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\"",
     "hepta:run": "cd apps/hepta && node hepta.mjs",
     "build:runtime": "npx esbuild packages/devkit/runtime/entry.ts --bundle --format=iife --global-name=HeptaRuntime --platform=browser --target=es2020 --minify --outfile=packages/devkit/runtime/runtime.js --log-level=warning",
-    "build": "npm run build:runtime && npm run build:hepta && npm run build:hepta-dev && npm run build:studio",
+    "build": "npm run build:runtime && npm run build:hepta && npm run build:hepta-dev && npm run build:studio && npm run build:pages",
     "build:hepta-dev": "cd apps/hepta-dev && npx esbuild src/cli.ts --bundle --platform=node --format=esm --target=node20 --outfile=hepta-dev.mjs --external:playwright --log-level=warning --banner:js=\"import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\" && cp ../../packages/devkit/runtime/runtime.js runtime.js",
-    "build:studio": "cd apps/studio && npx esbuild entry.ts --bundle --format=iife --global-name=AIUIC --platform=browser --target=es2020 --minify --legal-comments=none --outfile=aiuic.bundle.js --log-level=warning && sed -e '1d' -e '$d' app.js > .app.tmp.js && npx esbuild .app.tmp.js --minify --target=es2020 --log-level=warning --outfile=.app.min.js && { cat head.html body.html; echo '<script>'; cat aiuic.bundle.js; echo '</script><script>'; cat .app.min.js; echo '</script>'; } | sed 's#(https://github.com/modelcontextprotocol/modelcontextprotocol/issues/986)#(MCP SEP 986)#' > index.html && rm -f .app.tmp.js .app.min.js"
+    "build:studio": "cd apps/studio && npx esbuild entry.ts --bundle --format=iife --global-name=AIUIC --platform=browser --target=es2020 --minify --legal-comments=none --outfile=aiuic.bundle.js --log-level=warning && sed -e '1d' -e '$d' app.js > .app.tmp.js && npx esbuild .app.tmp.js --minify --target=es2020 --log-level=warning --outfile=.app.min.js && { cat head.html body.html; echo '<script>'; cat aiuic.bundle.js; echo '</script><script>'; cat .app.min.js; echo '</script>'; } | sed 's#(https://github.com/modelcontextprotocol/modelcontextprotocol/issues/986)#(MCP SEP 986)#' > index.html && rm -f .app.tmp.js .app.min.js",
+    "build:stage": "npx esbuild apps/stage/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=apps/stage/aiuic.bundle.js --log-level=warning && scripts/page.sh apps/stage",
+    "build:pages": "npm run build:demo && npm run build:heckit && npm run build:console && npm run build:stage && npm run build:orb && npm run build:docs",
+    "build:docs": "npm run build:runtime && scripts/page.sh apps/docs head.html body.html packages/devkit/runtime/runtime.js"
   }
 }

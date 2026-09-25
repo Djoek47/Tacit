@@ -1,5 +1,7 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The EUI Stage</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Azeret+Mono:wght@300;400;500&display=swap">
 <style>
   :root{
@@ -52,4 +54,6 @@
   .meta{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--faint);
     font-family:"Azeret Mono",monospace;margin-top:12px}
   .meta b{color:var(--dim);font-weight:400}
+  /* Fingers are wider than cursors: every tap target is at least 44 px where the pointer is coarse. */
+  @media (pointer:coarse){ button.b{min-height:44px} }
 </style>

@@ -104,6 +104,13 @@ function probePage(vw: number): Probe {
     .filter(({ r }) => r.width < 44 || r.height < 44)
     // Links inside running text are exempt; the standard allows them.
     .filter(({ el }) => !(el.tagName === 'A' && getComputedStyle(el).display === 'inline'))
+    // A checkbox inside its label is tapped through the label, so the label is what has to be big enough.
+    .filter(({ el }) => {
+      const label = el.tagName === 'INPUT' ? el.closest('label') : null;
+      if (!label) return true;
+      const l = label.getBoundingClientRect();
+      return l.width < 44 || l.height < 44;
+    })
     .slice(0, 8)
     .map(({ el, r }) => ({ what: describe(el), w: Math.round(r.width), h: Math.round(r.height) }));
 
@@ -157,11 +164,14 @@ export async function testApp(url: string, opts: TestOptions = {}): Promise<Test
       const findings: TestFinding[] = [];
       const page = await browser.newPage({ viewport: { width: vp.width, height: vp.height }, hasTouch: vp.touch, isMobile: vp.touch && vp.width < 600 });
       page.on('console', (m) => {
-        if (m.type() === 'error') findings.push({ rule: 'console', severity: 'error', says: `The console shows an error: ${m.text().slice(0, 200)}` });
+        // Chrome also logs every failed request as a bare console error; the request handlers below say it better.
+        if (m.type() === 'error' && !/^Failed to load resource/.test(m.text())) findings.push({ rule: 'console', severity: 'error', says: `The console shows an error: ${m.text().slice(0, 200)}` });
       });
       page.on('pageerror', (e) => findings.push({ rule: 'console', severity: 'error', says: `A script on the page crashed: ${e.message.slice(0, 200)}` }));
-      page.on('requestfailed', (r) => findings.push({ rule: 'console', severity: 'warn', says: `Something failed to load: ${r.url().slice(0, 120)} (${r.failure()?.errorText ?? 'failed'})` }));
-      page.on('response', (r) => { if (r.status() >= 400) findings.push({ rule: 'console', severity: 'warn', says: `The server answered ${r.status()} for ${r.url().slice(0, 120)}` }); });
+      // A missing script or page breaks the app; a missing font or picture only looks worse.
+      const weight = (type: string): 'error' | 'warn' => (type === 'script' || type === 'document' ? 'error' : 'warn');
+      page.on('requestfailed', (r) => findings.push({ rule: 'console', severity: weight(r.resourceType()), says: `Something failed to load: ${r.url().slice(0, 120)} (${r.failure()?.errorText ?? 'failed'})` }));
+      page.on('response', (r) => { if (r.status() >= 400) findings.push({ rule: 'console', severity: weight(r.request().resourceType()), says: `The server answered ${r.status()} for ${r.url().slice(0, 120)}` }); });
 
       try {
         await page.goto(url, { waitUntil: 'load', timeout: 20_000 });
@@ -172,6 +182,17 @@ export async function testApp(url: string, opts: TestOptions = {}): Promise<Test
         continue;
       }
       await page.waitForTimeout(settle);
+
+      // Served without a declared charset, UTF-8 bytes are read as Latin-1: accents turn to Ã©, and a
+      // bundled regular expression with an accent range stops parsing, which kills the whole script.
+      // A page that is pure ASCII reads the same either way, so only a page with other characters is flagged.
+      const { charset, wide } = await page.evaluate(() => ({
+        charset: document.characterSet, wide: /[^\u0000-\u007f]/.test(document.documentElement.outerHTML),
+      }));
+      if (wide && charset.toUpperCase() !== 'UTF-8') {
+        findings.push({ rule: 'console', severity: 'error',
+          says: `The page is being read as ${charset}, not UTF-8. Accented letters will look broken, and bundled code with accents in it can crash. Put <meta charset="utf-8"> first in the head.` });
+      }
 
       for (const [i, s] of (opts.steps ?? []).entries()) {
         try {

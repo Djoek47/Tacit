@@ -22,6 +22,19 @@ import {
   repoSource, transcriptSource, evolution, formatEvolution, dossier, createDevServer, type Step,
 } from '../../../packages/devkit/src/index.js';
 
+const USAGE = `hepta-dev — the developer tools on the command line, or as an MCP server.
+
+  hepta-dev init                       write a BRIEF.md to start from
+  hepta-dev brief     [BRIEF.md]       read it; check how the menus connect
+  hepta-dev draft     [BRIEF.md]       the acts it implies, and why
+  hepta-dev scaffold  [BRIEF.md] [dir] a runnable MCP server   (--overwrite)
+  hepta-dev prototype [BRIEF.md] [out] a clickable prototype   (--overwrite)
+  hepta-dev test      <url>            use it like a person    (--steps file.json --shots dir)
+  hepta-dev search    <words…>         the code, its history, the chats (--chat file)
+  hepta-dev evolution [repo]           how it got here
+  hepta-dev dossier   [repo]           what a rebuild starts from (--brief BRIEF.md)
+  hepta-dev mcp                        serve all of the above over MCP (stdio)`;
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const runtime = () => readFileSync(join(HERE, 'runtime.js'), 'utf8');
 
@@ -142,7 +155,7 @@ async function main(argv: string[]): Promise<void> {
         .connect(new StdioServerTransport());
       return;
     default:
-      console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8').match(/\/\*\*([\s\S]*?)\*\//)?.[1]?.replace(/^ \* ?/gm, '') ?? 'hepta-dev');
+      console.log(USAGE);
   }
 }
 

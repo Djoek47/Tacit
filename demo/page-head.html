@@ -1,3 +1,6 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Silence Commits</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500&display=swap">
 <style>
@@ -142,4 +145,6 @@
   .note b{color:var(--ink); font-weight:500}
   .note code{background:var(--sunk); border:1px solid var(--line-soft); border-radius:5px; padding:1px 5px; font-size:12px}
   @media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+  /* Fingers are wider than cursors: every tap target is at least 44 px where the pointer is coarse. */
+  @media (pointer:coarse){ button,input:not([type=checkbox]){min-height:44px} .tg{min-height:44px;display:inline-flex;align-items:center} }
 </style>

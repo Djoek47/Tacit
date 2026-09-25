@@ -1,3 +1,6 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AIUIC Console</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Azeret+Mono:wght@300;400;500&family=Instrument+Sans:wght@400;500&display=swap">
 <style>
@@ -118,4 +121,6 @@
 
   footer{border-top:1px solid rgba(255,255,255,.07);padding-top:20px;color:var(--faint);font-size:13px}
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+  /* Fingers are wider than cursors: every tap target is at least 44 px where the pointer is coarse. */
+  @media (pointer:coarse){ select,button,input.mini{min-height:44px} .chips .chip{min-width:44px} }
 </style>

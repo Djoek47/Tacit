@@ -1,3 +1,6 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Heckit</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Azeret+Mono:wght@300;400&family=Instrument+Sans:wght@400;500&display=swap">
 <style>
@@ -158,4 +161,6 @@
   .ofield:focus{border-color:rgba(143,232,255,.5)}
   [hidden]{display:none!important}
   @media (prefers-reduced-motion:reduce){ *{animation-duration:.01ms!important; transition-duration:.01ms!important} }
+  /* Fingers are wider than cursors: every tap target is at least 44 px where the pointer is coarse. */
+  @media (pointer:coarse){ .say .go{width:44px;height:44px;min-width:44px} .hint button{min-height:44px} }
 </style>
