@@ -1,0 +1,56 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "declaration": true,
+    "outDir": "dist",
+    "rootDir": "..",
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": true,
+    "paths": {
+      "@intermenu/aiuic-core": [
+        "../core/src/index.ts"
+      ],
+      "@intermenu/aiuic-resolve": [
+        "../resolve/src/index.ts"
+      ],
+      "@intermenu/hepta": [
+        "../hepta/src/index.ts"
+      ],
+      "@intermenu/aiuic-present": [
+        "../present/src/index.ts"
+      ],
+      "@intermenu/aiuic-devtools": [
+        "../devtools/src/index.ts"
+      ],
+      "@intermenu/aiuic-eui": [
+        "../eui/src/index.ts"
+      ],
+      "@intermenu/aiuic-kit": [
+        "../kit/src/index.ts"
+      ],
+      "@intermenu/aiuic-memory": [
+        "../memory/src/index.ts"
+      ],
+      "@intermenu/aiuic-pyramid": [
+        "../pyramid/src/index.ts"
+      ],
+      "@intermenu/aiuic-conductor": [
+        "../conductor/src/index.ts"
+      ],
+      "@intermenu/aiuic-mcp": [
+        "../mcp/src/index.ts"
+      ]
+    }
+  },
+  "include": [
+    "src",
+    "test"
+  ]
+}

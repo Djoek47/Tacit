@@ -1,0 +1,8 @@
+{
+  "dataDir": "~/.hepta",
+  "servers": [
+    { "name": "tasks", "command": "node", "args": ["examples/tasks-server.mjs"] }
+  ],
+  "http": { "port": 8790 },
+  "notify": { "url": "https://ntfy.sh/replace-with-your-own-topic" }
+}

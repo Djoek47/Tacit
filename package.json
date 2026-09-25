@@ -4,14 +4,16 @@
   "version": "0.2.0",
   "description": "AIUIC + Hepta: the layer between knowing what the user wants and the write happening.",
   "scripts": {
-    "test": "for p in core resolve hepta tools compose memory brand devtools present eui kit pyramid mcp conductor eval; do (cd packages/$p && npx vitest run) || exit 1; done",
-    "typecheck": "for p in core resolve hepta tools compose memory brand devtools present eui kit pyramid mcp conductor eval; do (cd packages/$p && npx tsc --noEmit -p tsconfig.json) || exit 1; done",
+    "test": "for p in core resolve hepta tools compose memory brand devtools present eui kit pyramid mcp conductor server eval; do (cd packages/$p && npx vitest run) || exit 1; done",
+    "typecheck": "for p in core resolve hepta tools compose memory brand devtools present eui kit pyramid mcp conductor server eval; do (cd packages/$p && npx tsc --noEmit -p tsconfig.json) || exit 1; done",
     "build:demo": "npx esbuild demo/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=demo/aiuic.bundle.js",
     "build:heckit": "npx esbuild apps/heckit/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=apps/heckit/aiuic.bundle.js",
     "build:console": "npx esbuild apps/console/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=apps/console/aiuic.bundle.js",
     "build:orb": "npx esbuild apps/orb/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=apps/orb/aiuic.bundle.js",
     "orb": "node apps/orb/server.mjs",
     "eval": "npx esbuild packages/eval/run.ts --bundle --format=esm --platform=node --outfile=.eval.mjs --log-level=error --alias:@intermenu/aiuic-core=./packages/core/src/index.ts --alias:@intermenu/aiuic-resolve=./packages/resolve/src/index.ts && node .eval.mjs",
-    "hepta": "npx esbuild packages/hepta/run.ts --bundle --format=esm --platform=node --outfile=.hepta.mjs --log-level=error --alias:@intermenu/aiuic-core=./packages/core/src/index.ts --alias:@intermenu/aiuic-resolve=./packages/resolve/src/index.ts && node .hepta.mjs"
+    "hepta": "npx esbuild packages/hepta/run.ts --bundle --format=esm --platform=node --outfile=.hepta.mjs --log-level=error --alias:@intermenu/aiuic-core=./packages/core/src/index.ts --alias:@intermenu/aiuic-resolve=./packages/resolve/src/index.ts && node .hepta.mjs",
+    "build:hepta": "cd apps/hepta && npx esbuild src/daemon.ts --bundle --platform=node --format=esm --target=node20 --outfile=hepta.mjs --log-level=warning --banner:js=\"import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\"",
+    "hepta:run": "cd apps/hepta && node hepta.mjs"
   }
 }

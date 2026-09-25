@@ -194,7 +194,8 @@ export function openMemory(store: Store, now: () => number = () => Date.now()): 
       if (q.size === 0) return [];
       const v = g.view(branch);
       const items: { kind: string; text: string; at: number }[] = [
-        ...Object.entries(v.facts).map(([k, f]) => ({ kind: 'fact', text: `${k}: ${f.value}`, at: f.at })),
+        // A fact travels with the words it came from: that is what makes it one.
+        ...Object.entries(v.facts).map(([k, f]) => ({ kind: 'fact', text: `${k}: ${f.value} (said: "${f.said}")`, at: f.at })),
         ...v.findings.map((f) => ({ kind: 'finding', text: `${f.source}: ${f.claim}`, at: f.at })),
         ...v.decisions.map((d) => ({ kind: 'decision', text: `${d.act}: ${d.summary}${d.undone ? ' (undone)' : ''}`, at: d.at })),
         ...v.thoughts.map((t) => ({ kind: 'thought', text: `${t.topic}: ${t.text}`, at: t.at })),

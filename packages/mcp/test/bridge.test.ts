@@ -176,3 +176,26 @@ describe('the free-text guess', () => {
     expect(r('add finish the deck for work')[0]!.value).toBe('finish the deck');
   });
 });
+
+describe('delegating is the person\'s act', () => {
+  it('offers only tools that can be lowered, and records the choice', async () => {
+    const { delegationAct } = await import('../src/index.js');
+    const h = await appFor();
+    const act = delegationAct([h.conn]);
+    const opts = act.slots.tool!.options!({} as Ctx, {}) as { label: string }[];
+    expect(opts.map((o) => o.label)).toEqual(['Tasks: add task']);
+    const r = await act.commit({ tool: { server: 'tasks', tool: 'add_task' }, level: 'self' }, {} as Ctx);
+    expect(h.conn.tools().find((t) => t.tool === 'add_task')!.radius).toBe('self');
+    expect((r as unknown as { memory: unknown[] }).memory).toEqual([{ kind: 'delegation', tool: 'tasks/add_task', radius: 'self' }]);
+    await act.undo!(r, {} as Ctx);
+    expect(h.conn.tools().find((t) => t.tool === 'add_task')!.radius).toBe('external');
+  });
+
+  it('re-applies what was remembered, and skips what is no longer allowed', async () => {
+    const { applyDelegations } = await import('../src/index.js');
+    const h = await appFor();
+    const skipped = applyDelegations([h.conn], { 'tasks/add_task': 'self', 'tasks/send_invoice': 'self', 'gone/x': 'self' });
+    expect(h.conn.tools().find((t) => t.tool === 'add_task')!.radius).toBe('self');
+    expect(skipped).toHaveLength(2);
+  });
+});

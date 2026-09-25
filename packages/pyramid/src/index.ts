@@ -156,6 +156,22 @@ export class Congregator {
     }
   }
 
+  /**
+   * A line of thought from outside — another agent thinking alongside. It
+   * goes to a branch, never to main, and only as a thought: memory refuses
+   * anything real on a branch, so this cannot be the door a fact walks in by.
+   */
+  think(branch: string, topic: string, text: string, by: 'orchestrator' | 'aggregator' = 'orchestrator'): boolean {
+    if (!this.memory || branch === MAIN) return false;
+    try { this.memory.branch(branch); } catch { /* exists already */ }
+    try {
+      this.memory.commit(branch, by, 'a line of thought', [{ kind: 'thought', topic: topic.slice(0, 120), text: text.slice(0, 2000) }]);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   view(): Ledger {
     return this.entries.map((e) => Object.freeze({ ...e }));
   }
