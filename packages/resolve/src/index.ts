@@ -6,3 +6,4 @@ export * from './jev.js';
 export * from './tiered.js';
 export * from "./ondevice.js";
 export * from './grammar.js';
+export * from './free.js';

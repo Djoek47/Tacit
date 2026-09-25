@@ -20,6 +20,7 @@
  * definition-time checks apply to it too.
  */
 
+import { remainder, resolveQuantity, resolveWhen } from '@intermenu/aiuic-resolve';
 import {
   defineAct,
   type ActDef,
@@ -178,6 +179,15 @@ export class Composer {
       }
 
       const slot: SlotDef = { primitive: raw.primitive, order: raw.order, options };
+      // A composed slot gets the same local grammar a hand-written one would:
+      // "tomorrow at 9", "$12", and the rest of the sentence for free text.
+      // Without these it could only be filled by a tap or a model, which
+      // makes a composed act useless offline.
+      if (!raw.options && !raw.catalog) {
+        if (raw.primitive === 'when') slot.resolve = (t, c) => resolveWhen(t, c);
+        else if (raw.primitive === 'quantity') slot.resolve = (t) => resolveQuantity(t);
+        else if (raw.primitive === 'ghostField') { slot.resolve = remainder(spec.phrases ?? []); slot.fill = 'either'; }
+      }
       if (raw.required) slot.required = true;
       if (raw.params) slot.params = raw.params;
       slots[name] = slot;

@@ -176,3 +176,23 @@ describe('runtime act composition', () => {
     expect(menu.find((m) => m.capability === 'draft_plan')!.catalogs).toEqual(['cities']);
   });
 });
+
+describe('local grammar on composed slots', () => {
+  it('fills when, quantity and free text from the sentence, with no model', async () => {
+    const { Composer } = await import('../src/index.js');
+    const c = new Composer();
+    c.register({ name: 'note', describe: 'x', radius: 'self', run: () => ({ id: '1' }), undo: () => {} });
+    const def = c.compose({
+      name: 'remind', capability: 'note', phrases: ['remind me to'],
+      slots: {
+        what: { primitive: 'ghostField', order: 1, required: true },
+        when: { primitive: 'when', order: 2 },
+        cost: { primitive: 'quantity', order: 3 },
+      },
+    });
+    const now = new Date(Date.UTC(2026, 8, 25, 12));
+    expect(def.slots.what!.resolve!('remind me to call mum', {} as never, {})[0]!.value).toBe('call mum');
+    expect(def.slots.when!.resolve!('tomorrow', { now } as never, {}).length).toBeGreaterThan(0);
+    expect((def.slots.cost!.resolve!('twelve dollars', {} as never, {})[0]!.value as { n: number }).n).toBe(12);
+  });
+});

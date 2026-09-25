@@ -4,8 +4,8 @@
   "version": "0.2.0",
   "description": "AIUIC + Hepta: the layer between knowing what the user wants and the write happening.",
   "scripts": {
-    "test": "for p in core resolve hepta tools compose memory brand devtools present eui kit pyramid mcp conductor server eval; do (cd packages/$p && npx vitest run) || exit 1; done",
-    "typecheck": "for p in core resolve hepta tools compose memory brand devtools present eui kit pyramid mcp conductor server eval; do (cd packages/$p && npx tsc --noEmit -p tsconfig.json) || exit 1; done",
+    "test": "for p in core resolve hepta tools compose memory brand devtools present eui kit pyramid mcp conductor server devkit eval; do (cd packages/$p && npx vitest run) || exit 1; done",
+    "typecheck": "for p in core resolve hepta tools compose memory brand devtools present eui kit pyramid mcp conductor server devkit eval; do (cd packages/$p && npx tsc --noEmit -p tsconfig.json) || exit 1; done",
     "build:demo": "npx esbuild demo/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=demo/aiuic.bundle.js",
     "build:heckit": "npx esbuild apps/heckit/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=apps/heckit/aiuic.bundle.js",
     "build:console": "npx esbuild apps/console/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=apps/console/aiuic.bundle.js",
