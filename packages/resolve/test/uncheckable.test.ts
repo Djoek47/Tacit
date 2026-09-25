@@ -36,3 +36,33 @@ describe('an act that asks only for free text', () => {
     expect(route('add the dishes for Maya tomorrow')).toBe('add_chore');
   });
 });
+
+describe('a sentence that mentions things without asking for them (found by the harder eval suite)', () => {
+  const CHORES = [{ value: 'dishes', label: 'dishes' }, { value: 'laundry', label: 'laundry' }, { value: 'trash', label: 'trash', aliases: ['bins'] }];
+  const home: ActDef[] = [
+    defineAct({ name: 'assign_chore', phrases: ['for'], radius: 'external', commit: () => ({ id: '1' }), slots: {
+      who: { primitive: 'face', options: () => PEOPLE, required: true, order: 1 },
+      chore: { primitive: 'chip', options: () => CHORES, required: true, order: 2 } } }),
+    defineAct({ name: 'settle_up', phrases: ['pay'], radius: 'external', commit: () => ({ id: '2' }), slots: {
+      who: { primitive: 'face', options: () => PEOPLE, required: true, order: 1 },
+      amount: { primitive: 'quantity', resolve: resolveQuantity, required: true, order: 2 } } }),
+  ];
+  const opts = (a: ActDef, s: string) => (a.slots[s]?.options?.(ctx, {}) ?? []) as { value: unknown; label: string }[];
+  const at = (t: string) => pickAct(new LocalResolver().scoreSync(t, home, ctx, opts)).kind;
+
+  it('opens no card for a chore, a person or an amount mentioned in passing', () => {
+    expect(at('I love doing the dishes')).toBe('none');
+    expect(at('did Sam already take the bins out')).toBe('none');
+    expect(at('twenty dollars is a lot')).toBe('none');
+    // Every slot filled, and still a question: this one reached HOLD in the Hepta replay.
+    expect(at('did Sam do the laundry')).toBe('none');
+  });
+  it('still hears the same words as a request', () => {
+    expect(at('do the laundry')).toBe('start');
+    expect(at('can you do the dishes')).toBe('start');
+    // A known limit, pinned so it is a decision and not an accident: a trigger phrase speaks for
+    // itself whatever the sentence shape, so a question that names the act still opens its card.
+    // Paying is external, so the card waits for an explicit yes.
+    expect(at('did you pay Maya 20 dollars')).toBe('start');
+  });
+});

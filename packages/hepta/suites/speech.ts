@@ -39,4 +39,14 @@ export const speech: ReplayCase[] = [
 
   // Should route nowhere and stay nowhere.
   { text: 'what is the weather like', act: null, note: 'not an act' },
+
+  // ---- the harder half (added with the harder eval suite)
+  { text: 'la vaisselle pour Maya demain', act: 'assign_chore', note: 'fr' },
+  { text: 'payer Sam douze dollars', act: 'settle_up', note: 'fr, number as a word' },
+  { text: 'uh the the dishes for Sam', act: 'assign_chore', note: 'false start and a filler' },
+  { text: 'pay Sam twenty no thirty dollars', act: 'settle_up', note: 'a revised amount: must not commit the first' },
+  { text: 'pay Maya a hundred and twenty dollars', act: 'settle_up', note: 'the number only completes at the end' },
+  { text: 'the dishes for Maya and Sam', act: 'assign_chore', note: 'two people for one slot: must not commit either' },
+  { text: 'I love doing the dishes', act: null, note: 'mentions a chore, asks nothing' },
+  { text: 'did Sam do the laundry', act: null, note: 'a question, not a request' },
 ];

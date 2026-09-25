@@ -101,6 +101,12 @@ export type Trace = {
   endedRight: boolean;
   /** Committed, or left speculating, before the transcript was final. */
   earlyCommit: boolean;
+  /**
+   * Ended holding an act nobody asked for: when the hold runs out, it commits
+   * on silence. Worse than a routing miss, and invisible to EARLY COMMITS,
+   * which only looks before the sentence ends. Found by "did Sam do the laundry".
+   */
+  wrongHold: boolean;
   /** Most tracks alive at once. */
   peakTracks: number;
 };
@@ -159,6 +165,7 @@ export function replay(
     switches,
     endedRight: (last?.leader ?? null) === kase.act,
     earlyCommit,
+    wrongHold: !!last && last.status === 'hold' && (last.leader ?? null) !== kase.act,
     peakTracks,
   };
 }
@@ -168,6 +175,8 @@ export type SpeculationReport = {
   endedRight: number;
   /** The number that must be zero. */
   earlyCommits: number;
+  /** The other number that must be zero. */
+  wrongHolds: number;
   /** Mean fraction of the sentence still unsaid when the card was right. */
   meanLeadFraction: number;
   meanLeadMs: number;
@@ -185,6 +194,7 @@ export function speculationReport(traces: Trace[]): SpeculationReport {
     cases: traces.length,
     endedRight: traces.filter((t) => t.endedRight).length,
     earlyCommits: traces.filter((t) => t.earlyCommit).length,
+    wrongHolds: traces.filter((t) => t.wrongHold).length,
     meanLeadFraction: withLead.length
       ? sum(withLead.map((t) => 1 - t.leadWords! / t.words)) / withLead.length
       : 0,
@@ -203,6 +213,7 @@ export function formatSpeculation(r: SpeculationReport): string {
     `cases              ${r.cases}`,
     `ended on the act   ${r.endedRight}/${r.cases}  (${pct(r.endedRight / (r.cases || 1))})`,
     `EARLY COMMITS      ${r.earlyCommits}      <- must be 0`,
+    `WRONG HOLDS        ${r.wrongHolds}      <- must be 0: would commit on silence what nobody asked for`,
     ``,
     `card right by      ${pct(r.meanLeadFraction)} of the way in`,
     `time bought        ${Math.round(r.meanLeadMs)}ms before the sentence ended`,

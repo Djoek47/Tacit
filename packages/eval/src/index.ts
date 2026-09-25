@@ -26,6 +26,14 @@ export type Case = {
   /** The act it should route to, or null when it should route to nothing. */
   act: string | null;
   slots?: Record<string, unknown>;
+  /**
+   * Slots that must NOT be confirmed: a misheard name, a word that fits two
+   * options. Empty, narrowed or provisional is right; confirmed is a false
+   * confirm, whatever it was confirmed as. Without this, a confident guess on a
+   * slot the case left unlabelled was counted as "spurious" and never reached
+   * the false-confirm rate, which is how the seed suite hid "dishes for Maia".
+   */
+  unsure?: string[];
   /** Free-text note explaining what this case is probing. */
   note?: string;
 };
@@ -128,7 +136,7 @@ export function runSuite(
 
     if (def && c.slots) {
       const filled = resolve.fill(c.text, def, ctx, optionsFor);
-      const names = new Set([...Object.keys(c.slots), ...Object.keys(filled)]);
+      const names = new Set([...Object.keys(c.slots), ...(c.unsure ?? []), ...Object.keys(filled)]);
 
       for (const name of names) {
         const expected = c.slots[name];
@@ -137,7 +145,10 @@ export function runSuite(
         const score = cands[0]?.score ?? 0;
 
         let outcome: SlotOutcome;
-        if (expected === undefined) {
+        if (c.unsure?.includes(name)) {
+          outcome = verdict.outcome === 'filled' && !verdict.provisional ? 'confirmed-wrong'
+            : verdict.outcome === 'filled' ? 'provisional-right' : 'narrowed';
+        } else if (expected === undefined) {
           outcome = verdict.outcome === 'empty' ? 'narrowed' : 'spurious';
         } else if (verdict.outcome === 'empty') {
           outcome = 'missed';
@@ -261,6 +272,10 @@ export function sweep(
       const def = acts.find((a) => a.name === c.act);
       if (!def || !c.slots) continue;
       const filled = resolve.fill(c.text, def, ctx, optionsFor);
+      for (const name of c.unsure ?? []) {
+        const v = classifyWith(filled[name] ?? [], tauFill, deltaFill);
+        if (v.outcome === 'filled' && !v.provisional) confirmedWrong++;
+      }
       for (const [name, expected] of Object.entries(c.slots)) {
         const v = classifyWith(filled[name] ?? [], tauFill, deltaFill);
         if (v.outcome === 'filled' && !v.provisional) {

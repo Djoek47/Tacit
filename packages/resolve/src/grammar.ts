@@ -14,49 +14,17 @@
 
 import type { Candidate, Ctx } from '@intermenu/aiuic-core';
 import { normalize } from './text.js';
+import { amounts, revisedBetween, wordsToNumber } from './numbers.js';
 
 export type WhenValue = { at: number; label: string; granularity: 'day' | 'minute' };
 export type QuantityValue = { n: number; label: string; unit?: string };
 export type DurationValue = { ms: number; label: string };
 
-const ONES: Record<string, number> = {
-  zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
-  ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16,
-  seventeen: 17, eighteen: 18, nineteen: 19,
-};
-const TENS: Record<string, number> = {
-  twenty: 20, thirty: 30, forty: 40, fourty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90,
-};
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 const MONTHS = ['january','february','march','april','may','june','july','august','september','october','november','december'];
 
-const CURRENCY: Record<string, string> = {
-  dollar: 'USD', dollars: 'USD', buck: 'USD', bucks: 'USD', usd: 'USD',
-  euro: 'EUR', euros: 'EUR', eur: 'EUR', pound: 'GBP', pounds: 'GBP', quid: 'GBP', gbp: 'GBP',
-};
-
-/** "twenty five" -> 25. Returns null when the words are not a number. */
-export function wordsToNumber(words: string[]): number | null {
-  let total: number | null = null;
-  for (let i = 0; i < words.length; i++) {
-    const w = words[i]!;
-    if (TENS[w] !== undefined) {
-      let n = TENS[w]!;
-      const next = words[i + 1];
-      if (next && ONES[next] !== undefined && ONES[next]! < 10) { n += ONES[next]!; i++; }
-      total = (total ?? 0) + n;
-    } else if (ONES[w] !== undefined) {
-      total = (total ?? 0) + ONES[w]!;
-    } else if (w === 'hundred' && total !== null) {
-      total *= 100;
-    } else if (w === 'a' || w === 'an') {
-      if (words[i + 1] === 'hundred') { total = 100; i++; }
-    } else if (total !== null) {
-      break;
-    }
-  }
-  return total;
-}
+export { wordsToNumber } from './numbers.js';
 
 function fmtMoney(n: number, code?: string): string {
   const sym = code === 'EUR' ? '€' : code === 'GBP' ? '£' : '$';
@@ -64,42 +32,35 @@ function fmtMoney(n: number, code?: string): string {
   return code ? sym + body : body;
 }
 
-/** A number, with its currency when one was spoken. */
+/**
+ * A number, with its currency when one was spoken. How sure it is depends on
+ * how many amounts the sentence holds; see numbers.ts.
+ */
 export function resolveQuantity(text: string, _ctx?: Ctx): Candidate[] {
-  const t = normalize(text);
-  const words = t.split(' ');
+  const { found, toks } = amounts(text);
+  const cand = (n: number, code: string | undefined, score: number): Candidate => ({
+    value: { n, label: fmtMoney(n, code), ...(code ? { unit: code } : {}) } satisfies QuantityValue,
+    label: fmtMoney(n, code), score, calibrated: true,
+  });
+  if (!found.length) return [];
 
-  const symbol = /(?:^|\s)([$€£])\s?(\d+(?:[.,]\d{1,2})?)/.exec(text);
-  if (symbol) {
-    const n = parseFloat(symbol[2]!.replace(',', '.'));
-    const code = symbol[1] === '€' ? 'EUR' : symbol[1] === '£' ? 'GBP' : 'USD';
-    return [{ value: { n, label: fmtMoney(n, code), unit: code } satisfies QuantityValue,
-              label: fmtMoney(n, code), score: 1, calibrated: true }];
+  if (found.length === 1) {
+    const a = found[0]!;
+    // "fifteen fifty": $15.50 or $1,550. Both, equally, and the person picks.
+    if (a.alternatives) return a.alternatives.map((n) => cand(n, a.code, 0.5));
+    return [cand(a.n, a.code, 1)];
   }
 
-  const digits = /(?:^|\s)(\d+(?:[.,]\d{1,2})?)(?:\s|$)/.exec(' ' + t + ' ');
-  if (digits) {
-    const n = parseFloat(digits[1]!.replace(',', '.'));
-    const after = words[words.indexOf(digits[1]!.replace('.', '.')) + 1];
-    const code = after ? CURRENCY[after] : undefined;
-    return [{ value: { n, label: fmtMoney(n, code), ...(code ? { unit: code } : {}) } satisfies QuantityValue,
-              label: fmtMoney(n, code), score: 1, calibrated: true }];
+  // Taken back: the last amount is the one meant, shown as a guess rather than confirmed.
+  const last = found[found.length - 1]!, prev = found[found.length - 2]!;
+  if (revisedBetween(toks, prev.end, last.start) && !last.alternatives) {
+    return [cand(last.n, last.code, 0.7), cand(prev.n, prev.code, 0.2)];
   }
-
-  for (let i = 0; i < words.length; i++) {
-    if (ONES[words[i]!] !== undefined || TENS[words[i]!] !== undefined) {
-      const n = wordsToNumber(words.slice(i));
-      if (n === null) continue;
-      let code: string | undefined;
-      for (let j = i; j < Math.min(words.length, i + 4); j++) {
-        const c = CURRENCY[words[j]!];
-        if (c) { code = c; break; }
-      }
-      return [{ value: { n, label: fmtMoney(n, code), ...(code ? { unit: code } : {}) } satisfies QuantityValue,
-                label: fmtMoney(n, code), score: 1, calibrated: true }];
-    }
-  }
-  return [];
+  // "20 dollars for 2 pizzas": the one with a currency is the amount.
+  const money = found.filter((a) => a.code && !a.alternatives);
+  if (money.length === 1) return [cand(money[0]!.n, money[0]!.code, 1)];
+  // Nothing tells them apart.
+  return found.flatMap((a) => (a.alternatives ? a.alternatives.map((n) => cand(n, a.code, 0.5)) : [cand(a.n, a.code, 0.5)]));
 }
 
 const DAY_MS = 86_400_000;
@@ -144,6 +105,20 @@ export function resolveWhen(text: string, ctx?: Ctx): Candidate[] {
   if (/\btomorrow\b/.test(t)) push(atDay(now, 1, 'tomorrow'));
   if (/\bday after tomorrow\b/.test(t)) push(atDay(now, 2, 'the day after tomorrow'));
   if (/\byesterday\b/.test(t)) push(atDay(now, -1, 'yesterday'));
+
+  // French, labelled with the word the speaker used.
+  if (/\baujourd[ '-]?hui\b/.test(t)) push(atDay(now, 0, "aujourd'hui"));
+  if (/\bapres[ -]?demain\b/.test(t)) push(atDay(now, 2, 'après-demain'));
+  else if (/\bdemain\b/.test(t)) push(atDay(now, 1, 'demain'));
+  if (/\bhier\b/.test(t)) push(atDay(now, -1, 'hier'));
+  if (/\bce soir\b/.test(t)) {
+    const d = new Date(now.getTime()); d.setHours(20, 0, 0, 0);
+    push({ at: d.getTime(), label: 'ce soir', granularity: 'minute' });
+  }
+  for (let i = 0; i < JOURS.length; i++) {
+    const m = new RegExp('\\b' + JOURS[i] + '(\\s+prochain)?\\b').exec(t);
+    if (m) push(atDay(now, nextWeekday(now, i, !!m[1]), cap(JOURS[i]!) + (m[1] ? ' prochain' : '')));
+  }
 
   if (/\btonight\b/.test(t)) {
     const d = new Date(now.getTime()); d.setHours(20, 0, 0, 0);

@@ -23,34 +23,35 @@ export const PEOPLE = [
 ];
 
 export const CHORES = [
-  { value: 'dishes', label: 'dishes', aliases: ['washing up'] },
-  { value: 'trash', label: 'trash', aliases: ['bins', 'garbage'] },
-  { value: 'laundry', label: 'laundry', aliases: ['washing'] },
-  { value: 'vacuum', label: 'vacuum', aliases: ['hoover'] },
+  // A bilingual household's catalog: the French names are aliases, as the app would declare them.
+  { value: 'dishes', label: 'dishes', aliases: ['washing up', 'vaisselle'] },
+  { value: 'trash', label: 'trash', aliases: ['bins', 'garbage', 'poubelles'] },
+  { value: 'laundry', label: 'laundry', aliases: ['washing', 'lessive'] },
+  { value: 'vacuum', label: 'vacuum', aliases: ['hoover', 'aspirateur'] },
 ];
 
 export const household: Case[] = [
   // plain, both slots present
   { text: 'dishes for Maya', act: 'assign_chore', slots: { assignee: MAYA, chore: 'dishes' } },
   { text: 'trash for Sam', act: 'assign_chore', slots: { assignee: SAM, chore: 'trash' } },
-  { text: 'laundry for Maya tomorrow', act: 'assign_chore', slots: { assignee: MAYA, chore: 'laundry' } },
-  { text: 'vacuum for Sam on Friday', act: 'assign_chore', slots: { assignee: SAM, chore: 'vacuum' } },
+  { text: 'laundry for Maya tomorrow', act: 'assign_chore', slots: { assignee: MAYA, chore: 'laundry', due: { label: 'tomorrow' } } },
+  { text: 'vacuum for Sam on Friday', act: 'assign_chore', slots: { assignee: SAM, chore: 'vacuum', due: { label: 'Friday' } } },
   { text: 'assign the dishes to Sam', act: 'assign_chore', slots: { assignee: SAM, chore: 'dishes' } },
 
   // aliases
   { text: 'bins for Maya', act: 'assign_chore', slots: { assignee: MAYA, chore: 'trash' }, note: 'alias' },
   { text: 'Sam can do the washing up', act: 'assign_chore', slots: { assignee: SAM, chore: 'dishes' }, note: 'alias' },
-  { text: 'garbage for Sam tonight', act: 'assign_chore', slots: { assignee: SAM, chore: 'trash' }, note: 'alias' },
+  { text: 'garbage for Sam tonight', act: 'assign_chore', slots: { assignee: SAM, chore: 'trash', due: { label: 'tonight' } }, note: 'alias' },
   { text: 'hoover for Maya', act: 'assign_chore', slots: { assignee: MAYA, chore: 'vacuum' }, note: 'alias' },
 
   // the hard ones: two names one edit apart
   { text: 'dishes for Drako', act: 'assign_chore', slots: { assignee: DRAKO, chore: 'dishes' }, note: 'near-twin name' },
   { text: 'dishes for Draco', act: 'assign_chore', slots: { assignee: DRACO, chore: 'dishes' }, note: 'near-twin name' },
-  { text: 'trash for Drako tomorrow', act: 'assign_chore', slots: { assignee: DRAKO, chore: 'trash' }, note: 'near-twin name' },
+  { text: 'trash for Drako tomorrow', act: 'assign_chore', slots: { assignee: DRAKO, chore: 'trash', due: { label: 'tomorrow' } }, note: 'near-twin name' },
 
   // transcription noise
-  { text: 'dishes for Dracko', act: 'assign_chore', slots: { chore: 'dishes' }, note: 'misheard name — should not confirm either twin' },
-  { text: 'dishes for Maia', act: 'assign_chore', slots: { chore: 'dishes' }, note: 'misheard name' },
+  { text: 'dishes for Dracko', act: 'assign_chore', slots: { chore: 'dishes' }, unsure: ['assignee'], note: 'misheard name — should not confirm either twin' },
+  { text: 'dishes for Maia', act: 'assign_chore', slots: { chore: 'dishes' }, unsure: ['assignee'], note: 'misheard name' },
 
   // only one slot named
   { text: 'Maya', act: null, note: 'a bare name is not an act' },

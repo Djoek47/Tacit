@@ -49,7 +49,7 @@
  */
 
 import type { Ctx } from '@intermenu/aiuic-core';
-import { resolveQuantity } from '@intermenu/aiuic-resolve';
+import { endsInOpenNumber, resolveQuantity } from '@intermenu/aiuic-resolve';
 
 // ------------------------------------------------------------------- threads
 
@@ -131,6 +131,9 @@ export const contradiction: Detector = (p, t) => {
   if (t.value === undefined || t.resolved) return null;
   if (t.stance?.overridden) return null;
   if (overlap(p.text, t.keys) < 0.5) return null;
+  // "going to be four…" may still become "four hundred". Cutting in on the
+  // first word of a number was a wrong cut in the harder debate suite.
+  if (!p.final && endsInOpenNumber(p.text)) return null;
   const n = numberIn(p.text);
   if (n === null || t.value === 0) return null;
   const rel = Math.abs(n - t.value) / Math.abs(t.value);
@@ -218,7 +221,11 @@ export const DEFAULTS = {
 } as const;
 
 /** Words that end a clause, so the next word is somewhere a person could come in. */
-const BOUNDARY = new Set(['and', 'but', 'so', 'because', 'then', 'or', 'anyway', 'okay', 'ok', 'right']);
+const BOUNDARY = new Set([
+  'and', 'but', 'so', 'because', 'then', 'or', 'anyway', 'okay', 'ok', 'right',
+  // French: the same joints of a sentence.
+  'et', 'mais', 'donc', 'parce', 'puis', 'ou', 'bref', 'bon', 'alors', 'enfin',
+]);
 /** Sounds that say "go on", not "my turn". */
 const BACKCHANNEL = new Set(['yeah', 'yes', 'yep', 'mm', 'mhm', 'uh-huh', 'uh', 'huh', 'ok', 'okay', 'right', 'sure', 'hmm', 'ah', 'oh']);
 /** Words that take the floor however few there are. */
@@ -281,7 +288,10 @@ export class Lines {
    */
   listenFor(p: Heard): Thread | null {
     if (!p.final) return null;
-    const m = /\b(?:my|our|the)\s+([a-z][a-z ]{1,40}?)\s+(?:is|are|was|=|will be|should be)\s+(.+)$/i.exec(p.text);
+    // English, then French ("mon budget courses est de 400").
+    const m = /\b(?:my|our|the)\s+([a-z][a-z ]{1,40}?)\s+(?:is|are|was|=|will be|should be)\s+(.+)$/i.exec(p.text)
+      ?? /\b(?:mon|ma|mes|notre|nos|le|la|les)\s+([a-z][a-z ]{1,40}?)\s+(?:est|sont|etait|sera|va etre)\s+(?:de\s+)?(.+)$/i
+        .exec(p.text.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
     if (!m) return null;
     const n = numberIn(m[2]!);
     if (n === null) return null;

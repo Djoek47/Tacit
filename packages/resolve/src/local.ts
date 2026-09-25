@@ -5,6 +5,7 @@
  * absent" a mechanism rather than a hope.
  */
 
+import { mood } from './mood.js';
 import type { ActDef, Candidate, Ctx, Filled, Option } from '@intermenu/aiuic-core';
 import { matchPhrase, tokenize, type Token } from './text.js';
 import {
@@ -92,6 +93,7 @@ export class LocalResolver implements Resolver {
   scoreSync(text: string, acts: ActDef[], ctx: Ctx, optionsFor: OptionsFor): ActScore[] {
     const tokens = tokenize(text);
     const scores: ActScore[] = [];
+    const sentenceMood = mood(text);
 
     for (const act of acts) {
       let phraseMatch = 0;
@@ -141,11 +143,18 @@ export class LocalResolver implements Resolver {
       weight += this.routing.coverageWeight;
       total += this.routing.coverageWeight * (evaluable.length > 0 ? requiredCoverage : this.routing.uncheckableCoverage);
 
+      // Nothing named the act, and the sentence is not asking for anything:
+      // a chore or a name mentioned in passing is not a request. Scaled so that
+      // even full coverage lands under the routing threshold. Halving was the
+      // first try, and "did Sam do the laundry" (both slots filled, score 1.0)
+      // halved to exactly the threshold, opened a card, and held it to commit.
+      const asking = phraseMatch >= this.routing.phraseFloor || sentenceMood === 'request';
+      const raw = weight > 0 ? total / weight : 0;
       scores.push({
         act: act.name,
         phraseMatch,
         requiredCoverage,
-        score: weight > 0 ? total / weight : 0,
+        score: asking ? raw : raw * this.routing.tauAct * 0.8,
       });
     }
 

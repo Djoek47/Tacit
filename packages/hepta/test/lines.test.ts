@@ -194,3 +194,26 @@ describe('wandering', () => {
     expect(l.wander(3 * 60 * 60_000, false)).toBeNull(); // three hours on, it has faded
   });
 });
+
+describe('the harder debate cases', () => {
+  it('picks a claim out of a French sentence, and cuts at a French joint', () => {
+    const l = new Lines();
+    say(l, 'mon budget courses est de 400', 0);
+    expect(l.all[0]).toMatchObject({ kind: 'claim', topic: 'budget courses', value: 400 });
+    const cut = firstCut(say(l, 'je pense que le budget courses va être de 650 et ça me va', 10_000));
+    expect(cut?.heard.text).toBe('je pense que le budget courses va être de 650 et');
+  });
+
+  it('does not cut on the first word of a number that turns out to be the same one', () => {
+    const l = new Lines();
+    say(l, 'my grocery budget is 400', 0);
+    expect(firstCut(say(l, 'the grocery budget is going to be four hundred like we said', 10_000))).toBeUndefined();
+  });
+
+  it('waits for a number said in words to finish before it compares', () => {
+    const l = new Lines();
+    say(l, 'my grocery budget is four hundred', 0);
+    const cut = firstCut(say(l, 'I think the grocery budget is going to be six hundred and fifty and I am fine with that', 10_000));
+    expect(cut?.heard.text).toMatch(/six hundred and fifty and$/);
+  });
+});

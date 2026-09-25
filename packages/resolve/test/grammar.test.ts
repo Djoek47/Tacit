@@ -126,3 +126,70 @@ describe('everything here is calibrated', () => {
     }
   });
 });
+
+describe('amounts as people say them (found by the harder eval suite)', () => {
+  const q = (t: string) => resolveQuantity(t).map((c) => [(c.value as { n: number }).n, c.score]);
+  it('reads compound number words', () => {
+    expect(q('pay Sam a hundred and twenty dollars')).toEqual([[120, 1]]);
+    expect(q('pay Maya two hundred')).toEqual([[200, 1]]);
+    expect(q('pay Maya twelve dollars and fifty cents')).toEqual([[12.5, 1]]);
+    expect(q('twenty five')).toEqual([[25, 1]]);
+  });
+  it('reads French numbers', () => {
+    expect(q('payer Maya douze dollars')).toEqual([[12, 1]]);
+    expect(q('rembourser Sam vingt-cinq dollars')).toEqual([[25, 1]]);
+    expect(q('soixante-douze')).toEqual([[72, 1]]);
+    expect(q('quatre-vingt-dix euros')).toEqual([[90, 1]]);
+    expect(q('vingt et un')).toEqual([[21, 1]]);
+    expect(q('cent vingt dollars')).toEqual([[120, 1]]);
+    expect(q('douze dollars cinquante')).toEqual([[12.5, 1]]);
+    expect(q('envoie 40 $ à Maya')).toEqual([[40, 1]]);
+  });
+  it('never confirms "fifteen fifty": both readings, equally', () => {
+    expect(q('pay Sam fifteen fifty')).toEqual([[15.5, 0.5], [1550, 0.5]]);
+  });
+  it('takes the corrected amount, as a guess', () => {
+    expect(q('pay Maya twenty, sorry, thirty dollars')[0]).toEqual([30, 0.7]);
+    expect(q('pay Maya 20 no 30')[0]).toEqual([30, 0.7]);
+  });
+  it('prefers the amount with a currency, and refuses to choose between two bare numbers', () => {
+    expect(q('pay Maya 20 dollars for 2 pizzas')).toEqual([[20, 1]]);
+    expect(q('pay Maya 20 for 2 pizzas')).toEqual([[20, 0.5], [2, 0.5]]);
+  });
+  it('does not read a time of day as an amount', () => {
+    expect(q('pay Maya 20 dollars at 5pm')).toEqual([[20, 1]]);
+  });
+  it('does not read an article as a number', () => {
+    expect(q('une pizza pour Maya')).toEqual([]);
+  });
+  it('still reads a duration after a preposition', () => {
+    expect((resolveDuration('for twenty minutes')[0]!.value as { ms: number }).ms).toBe(1_200_000);
+  });
+});
+
+describe('French days', () => {
+  const ctx = { now: new Date('2026-09-23T14:00:00'), actor: { id: 'me' } } as Ctx; // a Wednesday
+  const w = (t: string) => resolveWhen(t, ctx).map((c) => (c.value as { label: string; at: number }));
+  it('reads demain, après-demain, ce soir and weekdays, labelled as said', () => {
+    expect(w('les poubelles pour Sam demain')[0]!.label).toBe('demain');
+    expect(new Date(w('demain')[0]!.at).getDate()).toBe(24);
+    expect(w('après-demain').map((v) => v.label)).toEqual(['après-demain']);
+    expect(w('la lessive pour Maya vendredi')[0]!.label).toBe('Vendredi');
+    expect(new Date(w('vendredi')[0]!.at).getDay()).toBe(5);
+    expect(w('ce soir')[0]!.label).toBe('ce soir');
+  });
+});
+
+describe('a number still being said', () => {
+  it('knows a number word at the end may still grow, and digits do not', async () => {
+    const { endsInOpenNumber } = await import('../src/numbers.js');
+    expect(endsInOpenNumber('the budget is going to be four')).toBe(true);
+    expect(endsInOpenNumber('six hundred and')).toBe(true);
+    expect(endsInOpenNumber('vingt et')).toBe(true);
+    expect(endsInOpenNumber('going to be a')).toBe(true);
+    expect(endsInOpenNumber('six hundred and fifty and')).toBe(false);
+    expect(endsInOpenNumber('going to be 650')).toBe(false);
+    expect(endsInOpenNumber('650 and')).toBe(false);
+    expect(endsInOpenNumber('the grocery budget')).toBe(false);
+  });
+});

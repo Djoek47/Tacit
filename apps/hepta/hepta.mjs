@@ -25140,18 +25140,18 @@ function createAIUIC(config3) {
 // ../../packages/resolve/src/text.ts
 var PUNCT = /[.,!?;:'"`()[\]{}<>/\\|@#$%^&*_+=~]/g;
 function normalize(s) {
-  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(PUNCT, " ").replace(/\s+/g, " ").trim();
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(PUNCT, " ").replace(/\s+/g, " ").trim();
 }
 function tokenize(s) {
-  const tokens2 = [];
+  const tokens3 = [];
   const re = /[^\s.,!?;:'"`()[\]{}<>/\\|@#$%^&*_+=~]+/g;
   let m;
   while ((m = re.exec(s)) !== null) {
     const raw = m[0];
     const norm = normalize(raw);
-    if (norm) tokens2.push({ raw, norm, start: m.index, end: m.index + raw.length });
+    if (norm) tokens3.push({ raw, norm, start: m.index, end: m.index + raw.length });
   }
-  return tokens2;
+  return tokens3;
 }
 function levenshtein(a, b) {
   if (a === b) return 0;
@@ -25205,14 +25205,30 @@ var DEFAULT_ROUTING = {
   uncheckableCoverage: 0.25
 };
 
+// ../../packages/resolve/src/mood.ts
+var POLITE = /^(please|can you|could you|would you|will you|can we|could we|let s|lets|peux tu|pourrais tu|tu peux|pouvez vous|est ce que tu peux|est ce que vous pouvez)\b/;
+var WANT = /^(i want|i need|i d like|id like|i would like|we need|we want|je veux|je voudrais|j ai besoin|jai besoin|il faut)\b/;
+var QUESTION = /^(did|does|is|are|was|were|has|have|had|what|when|where|who|whom|whose|why|how|which|do (you|we|they|i)|est ce|qui|quand|ou est|pourquoi|comment|combien|quel|quelle|quels|quelles)\b/;
+var STATEMENT_START = /^(i|we|it|that|this|there|he|she|they|je|j|on|c|ca|il|elle|nous)\b/;
+var COPULA = /\b(is|are|was|were|s|est|sont|etait)\b/;
+function mood(text2) {
+  const t = normalize(text2.replace(/[\u2019'-]/g, " "));
+  if (!t) return "statement";
+  if (POLITE.test(t) || WANT.test(t)) return "request";
+  if (text2.trim().endsWith("?") || QUESTION.test(t)) return "question";
+  if (STATEMENT_START.test(t)) return "statement";
+  if (COPULA.test(t)) return "statement";
+  return "request";
+}
+
 // ../../packages/resolve/src/local.ts
-function candidatesForOptions(tokens2, options) {
+function candidatesForOptions(tokens3, options) {
   const out = [];
   for (const opt of options) {
     const needles = [opt.label, ...opt.aliases ?? []];
     let best = null;
     for (const n of needles) {
-      const m = matchPhrase(tokens2, n);
+      const m = matchPhrase(tokens3, n);
       if (m && (!best || m.score > best.score)) best = m;
     }
     if (best && best.score > 0) out.push({ value: opt.value, label: opt.label, ...best });
@@ -25263,12 +25279,13 @@ var LocalResolver = class {
   }
   /** Synchronous by design: tier 0 must settle before anything is painted. */
   scoreSync(text2, acts, ctx, optionsFor) {
-    const tokens2 = tokenize(text2);
+    const tokens3 = tokenize(text2);
     const scores = [];
+    const sentenceMood = mood(text2);
     for (const act of acts) {
       let phraseMatch = 0;
       for (const p of act.phrases ?? []) {
-        const m = matchPhrase(tokens2, p);
+        const m = matchPhrase(tokens3, p);
         if (m && m.score > phraseMatch) phraseMatch = m.score;
       }
       const evaluable = Object.entries(act.slots).filter(
@@ -25276,9 +25293,9 @@ var LocalResolver = class {
       );
       let covered = 0;
       for (const [name2, s] of evaluable) {
-        const cands = s.resolve ? s.resolve(text2, ctx, {}) : candidatesForOptions(tokens2, optionsFor(act, name2));
+        const cands = s.resolve ? s.resolve(text2, ctx, {}) : candidatesForOptions(tokens3, optionsFor(act, name2));
         if ((cands[0]?.score ?? 0) < this.routing.tauFill) continue;
-        covered += this.discrimination(act, name2, text2, acts, ctx, optionsFor, tokens2);
+        covered += this.discrimination(act, name2, text2, acts, ctx, optionsFor, tokens3);
       }
       const requiredCoverage = evaluable.length ? covered / evaluable.length : 0;
       let weight = 0;
@@ -25289,11 +25306,13 @@ var LocalResolver = class {
       }
       weight += this.routing.coverageWeight;
       total += this.routing.coverageWeight * (evaluable.length > 0 ? requiredCoverage : this.routing.uncheckableCoverage);
+      const asking = phraseMatch >= this.routing.phraseFloor || sentenceMood === "request";
+      const raw = weight > 0 ? total / weight : 0;
       scores.push({
         act: act.name,
         phraseMatch,
         requiredCoverage,
-        score: weight > 0 ? total / weight : 0
+        score: asking ? raw : raw * this.routing.tauAct * 0.8
       });
     }
     return scores.sort((a, b) => b.score - a.score);
@@ -25302,13 +25321,13 @@ var LocalResolver = class {
    * 1 when only this act could have matched those words, falling toward 0 as
    * more acts could have matched them just as well.
    */
-  discrimination(act, slot, text2, acts, ctx, optionsFor, tokens2) {
+  discrimination(act, slot, text2, acts, ctx, optionsFor, tokens3) {
     let rivals = 0;
     for (const other of acts) {
       if (other.name === act.name) continue;
       for (const [name2, sd] of Object.entries(other.slots)) {
         if (!sd.required || sd.primitive === "ghostField") continue;
-        const cands = sd.resolve ? sd.resolve(text2, ctx, {}) : candidatesForOptions(tokens2, optionsFor(other, name2));
+        const cands = sd.resolve ? sd.resolve(text2, ctx, {}) : candidatesForOptions(tokens3, optionsFor(other, name2));
         if ((cands[0]?.score ?? 0) >= this.routing.tauFill) {
           rivals++;
           break;
@@ -25318,7 +25337,7 @@ var LocalResolver = class {
     return 1 / (1 + rivals);
   }
   fillSync(text2, act, filled, ctx, optionsFor) {
-    const tokens2 = tokenize(text2);
+    const tokens3 = tokenize(text2);
     const out = {};
     for (const [name2, def] of Object.entries(act.slots)) {
       if (name2 in filled) continue;
@@ -25328,7 +25347,7 @@ var LocalResolver = class {
         if (c.length > 0) out[name2] = [...c].sort((a, b) => b.score - a.score);
         continue;
       }
-      const cands = candidatesForOptions(tokens2, optionsFor(act, name2));
+      const cands = candidatesForOptions(tokens3, optionsFor(act, name2));
       if (cands.length > 0) out[name2] = cands;
     }
     return arbitrateSpans(out);
@@ -25347,7 +25366,7 @@ function pickAct(scores, routing = DEFAULT_ROUTING) {
   return { kind: "start", act: top.act, scores: ranked };
 }
 
-// ../../packages/resolve/src/grammar.ts
+// ../../packages/resolve/src/numbers.ts
 var ONES = {
   zero: 0,
   one: 1,
@@ -25368,7 +25387,22 @@ var ONES = {
   sixteen: 16,
   seventeen: 17,
   eighteen: 18,
-  nineteen: 19
+  nineteen: 19,
+  // French. "un"/"une" are also articles ("une pizza"), so they count only inside a number.
+  deux: 2,
+  trois: 3,
+  quatre: 4,
+  cinq: 5,
+  sept: 7,
+  huit: 8,
+  neuf: 9,
+  dix: 10,
+  onze: 11,
+  douze: 12,
+  treize: 13,
+  quatorze: 14,
+  quinze: 15,
+  seize: 16
 };
 var TENS = {
   twenty: 20,
@@ -25379,10 +25413,20 @@ var TENS = {
   sixty: 60,
   seventy: 70,
   eighty: 80,
-  ninety: 90
+  ninety: 90,
+  vingt: 20,
+  vingts: 20,
+  trente: 30,
+  quarante: 40,
+  cinquante: 50,
+  soixante: 60,
+  septante: 70,
+  huitante: 80,
+  nonante: 90
 };
-var DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-var MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+var SCALE = { hundred: 100, cent: 100, cents: 100, thousand: 1e3, mille: 1e3 };
+var ARTICLE = /* @__PURE__ */ new Set(["a", "an", "un", "une"]);
+var JOIN = /* @__PURE__ */ new Set(["and", "et"]);
 var CURRENCY = {
   dollar: "USD",
   dollars: "USD",
@@ -25395,87 +25439,212 @@ var CURRENCY = {
   pound: "GBP",
   pounds: "GBP",
   quid: "GBP",
-  gbp: "GBP"
+  gbp: "GBP",
+  $: "USD",
+  "\u20AC": "EUR",
+  "\xA3": "GBP"
 };
-function wordsToNumber(words2) {
-  let total = null;
-  for (let i = 0; i < words2.length; i++) {
-    const w = words2[i];
-    if (TENS[w] !== void 0) {
-      let n = TENS[w];
-      const next = words2[i + 1];
-      if (next && ONES[next] !== void 0 && ONES[next] < 10) {
-        n += ONES[next];
-        i++;
+var SUBUNIT = /* @__PURE__ */ new Set(["cents", "cent", "penny", "pence", "centimes", "sous"]);
+var REVISION = ["no", "sorry", "i mean", "actually", "rather", "make that", "wait", "non", "pardon", "plutot", "je veux dire", "enfin"];
+function tokens(text2) {
+  const t = text2.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const out = [];
+  const re = /(\d+(?:[.,]\d{1,2})?)|([$€£])|([a-z]+)|([,;.!?]+)/g;
+  let m;
+  while ((m = re.exec(t)) !== null) {
+    if (m[1]) out.push({ kind: "num", n: parseFloat(m[1].replace(",", ".")), raw: m[1] });
+    else if (m[2]) out.push({ kind: "sym", code: CURRENCY[m[2]] });
+    else if (m[3]) out.push({ kind: "word", w: m[3] });
+    else out.push({ kind: "break" });
+  }
+  return out;
+}
+var isNumberWord = (w) => ONES[w] !== void 0 || TENS[w] !== void 0 || SCALE[w] !== void 0;
+function readWords(toks, i, subunit = false) {
+  let total = 0, current = 0, seen = false, last = null;
+  let j = i;
+  const word = (k) => toks[k]?.kind === "word" ? toks[k].w : void 0;
+  for (; j < toks.length; j++) {
+    const w = word(j);
+    if (w === void 0) break;
+    const nextW = word(j + 1);
+    if (ARTICLE.has(w)) {
+      if (!seen && nextW && SCALE[nextW] !== void 0) {
+        current = 1;
+        seen = true;
+        last = "ones";
+        continue;
       }
-      total = (total ?? 0) + n;
-    } else if (ONES[w] !== void 0) {
-      total = (total ?? 0) + ONES[w];
-    } else if (w === "hundred" && total !== null) {
-      total *= 100;
-    } else if (w === "a" || w === "an") {
-      if (words2[i + 1] === "hundred") {
-        total = 100;
-        i++;
+      if (seen && (w === "un" || w === "une") && last === "tens") {
+        current += 1;
+        last = "ones";
+        continue;
       }
-    } else if (total !== null) {
       break;
     }
+    if (JOIN.has(w)) {
+      if (seen && nextW && (isNumberWord(nextW) || nextW === "un" || nextW === "une")) continue;
+      break;
+    }
+    if (w === "quatre" && (nextW === "vingt" || nextW === "vingts")) {
+      current += 80;
+      j++;
+      seen = true;
+      last = "tens";
+      continue;
+    }
+    if (SCALE[w] !== void 0) {
+      if (subunit && (w === "cents" || w === "cent")) break;
+      if (!seen && (w === "cent" || w === "mille")) {
+        current = SCALE[w];
+        seen = true;
+        last = "scale";
+        if (w === "mille") {
+          total = 1e3;
+          current = 0;
+        }
+        continue;
+      }
+      if (!seen) break;
+      const s = SCALE[w];
+      if (s >= 1e3) {
+        total += (current || 1) * s;
+        current = 0;
+      } else {
+        current = (current || 1) * s;
+      }
+      last = "scale";
+      continue;
+    }
+    if (TENS[w] !== void 0) {
+      if (seen && (last === "tens" || last === "ones" && current % 100 !== 0)) {
+        return { n: total + current, end: j, juxtaposed: true };
+      }
+      current += TENS[w];
+      seen = true;
+      last = "tens";
+      continue;
+    }
+    if (ONES[w] !== void 0) {
+      const v = ONES[w];
+      if (seen && last === "tens") {
+        const tens = current % 100;
+        const ok = v < 10 || (tens === 60 || tens === 80) && v >= 10 && v < 20;
+        if (!ok) return { n: total + current, end: j, juxtaposed: true };
+      } else if (seen && last === "ones") {
+        if (!(current % 100 === 10 && v < 10)) return { n: total + current, end: j, juxtaposed: true };
+      }
+      current += v;
+      seen = true;
+      last = "ones";
+      continue;
+    }
+    break;
   }
-  return total;
+  return seen ? { n: total + current, end: j, juxtaposed: false } : null;
 }
+function amounts(text2) {
+  const toks = tokens(text2);
+  const found = [];
+  const currencyAt = (k) => {
+    const t = toks[k];
+    if (!t) return void 0;
+    if (t.kind === "sym") return t.code;
+    if (t.kind === "word") return CURRENCY[t.w];
+    return void 0;
+  };
+  for (let i = 0; i < toks.length; i++) {
+    const t = toks[i];
+    let a = null;
+    if (t.kind === "sym" && toks[i + 1]?.kind === "num") {
+      a = { n: toks[i + 1].n, code: t.code, start: i, end: i + 2 };
+    } else if (t.kind === "num") {
+      const nx = toks[i + 1];
+      if (nx?.kind === "word" && ["am", "pm", "h", "oclock"].includes(nx.w)) continue;
+      const code = currencyAt(i + 1);
+      a = { n: t.n, ...code ? { code } : {}, start: i, end: code ? i + 2 : i + 1 };
+    } else if (t.kind === "word" && (isNumberWord(t.w) || ARTICLE.has(t.w))) {
+      const r = readWords(toks, i);
+      if (!r || r.end === i) continue;
+      if (r.juxtaposed) {
+        const second = readWords(toks, r.end);
+        if (second && !second.juxtaposed && r.n < 100 && second.n < 100) {
+          const code2 = currencyAt(second.end);
+          found.push({
+            n: r.n,
+            ...code2 ? { code: code2 } : {},
+            start: i,
+            end: second.end + (code2 ? 1 : 0),
+            alternatives: [r.n + second.n / 100, r.n * 100 + second.n]
+          });
+          i = second.end - 1 + (code2 ? 1 : 0);
+          continue;
+        }
+      }
+      const code = currencyAt(r.end);
+      a = { n: r.n, ...code ? { code } : {}, start: i, end: code ? r.end + 1 : r.end };
+    }
+    if (!a) continue;
+    if (a.code) {
+      let k = a.end;
+      const w = toks[k]?.kind === "word" ? toks[k].w : void 0;
+      if (w && JOIN.has(w)) k++;
+      const sub = toks[k]?.kind === "num" ? { n: toks[k].n, end: k + 1 } : readWords(toks, k, true);
+      const after = toks[sub?.end ?? -1];
+      const named = after?.kind === "word" && SUBUNIT.has(after.w);
+      const french = !!sub && k === a.end && !named;
+      if (sub && sub.n > 0 && sub.n < 100 && Number.isInteger(a.n) && (named || french)) {
+        a = { ...a, n: a.n + sub.n / 100, end: sub.end + (named ? 1 : 0) };
+      }
+    }
+    found.push(a);
+    i = a.end - 1;
+  }
+  return { found, toks };
+}
+function revisedBetween(toks, from, to) {
+  const between = toks.slice(from, to).filter((t) => t.kind === "word").map((t) => t.w).join(" ");
+  return REVISION.some((r) => new RegExp(`(^|\\s)${r}(\\s|$)`).test(between));
+}
+function wordsToNumber(words2) {
+  const toks = words2.map((w) => ({ kind: "word", w }));
+  for (let i = 0; i < toks.length; i++) {
+    const r = readWords(toks, i);
+    if (r && r.end > i) return r.n;
+  }
+  return null;
+}
+
+// ../../packages/resolve/src/grammar.ts
+var DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+var JOURS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+var MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 function fmtMoney(n, code) {
   const sym = code === "EUR" ? "\u20AC" : code === "GBP" ? "\xA3" : "$";
   const body = Number.isInteger(n) ? String(n) : n.toFixed(2);
   return code ? sym + body : body;
 }
 function resolveQuantity(text2, _ctx) {
-  const t = normalize(text2);
-  const words2 = t.split(" ");
-  const symbol = /(?:^|\s)([$€£])\s?(\d+(?:[.,]\d{1,2})?)/.exec(text2);
-  if (symbol) {
-    const n = parseFloat(symbol[2].replace(",", "."));
-    const code = symbol[1] === "\u20AC" ? "EUR" : symbol[1] === "\xA3" ? "GBP" : "USD";
-    return [{
-      value: { n, label: fmtMoney(n, code), unit: code },
-      label: fmtMoney(n, code),
-      score: 1,
-      calibrated: true
-    }];
+  const { found, toks } = amounts(text2);
+  const cand = (n, code, score) => ({
+    value: { n, label: fmtMoney(n, code), ...code ? { unit: code } : {} },
+    label: fmtMoney(n, code),
+    score,
+    calibrated: true
+  });
+  if (!found.length) return [];
+  if (found.length === 1) {
+    const a = found[0];
+    if (a.alternatives) return a.alternatives.map((n) => cand(n, a.code, 0.5));
+    return [cand(a.n, a.code, 1)];
   }
-  const digits = /(?:^|\s)(\d+(?:[.,]\d{1,2})?)(?:\s|$)/.exec(" " + t + " ");
-  if (digits) {
-    const n = parseFloat(digits[1].replace(",", "."));
-    const after = words2[words2.indexOf(digits[1].replace(".", ".")) + 1];
-    const code = after ? CURRENCY[after] : void 0;
-    return [{
-      value: { n, label: fmtMoney(n, code), ...code ? { unit: code } : {} },
-      label: fmtMoney(n, code),
-      score: 1,
-      calibrated: true
-    }];
+  const last = found[found.length - 1], prev = found[found.length - 2];
+  if (revisedBetween(toks, prev.end, last.start) && !last.alternatives) {
+    return [cand(last.n, last.code, 0.7), cand(prev.n, prev.code, 0.2)];
   }
-  for (let i = 0; i < words2.length; i++) {
-    if (ONES[words2[i]] !== void 0 || TENS[words2[i]] !== void 0) {
-      const n = wordsToNumber(words2.slice(i));
-      if (n === null) continue;
-      let code;
-      for (let j = i; j < Math.min(words2.length, i + 4); j++) {
-        const c = CURRENCY[words2[j]];
-        if (c) {
-          code = c;
-          break;
-        }
-      }
-      return [{
-        value: { n, label: fmtMoney(n, code), ...code ? { unit: code } : {} },
-        label: fmtMoney(n, code),
-        score: 1,
-        calibrated: true
-      }];
-    }
-  }
-  return [];
+  const money = found.filter((a) => a.code && !a.alternatives);
+  if (money.length === 1) return [cand(money[0].n, money[0].code, 1)];
+  return found.flatMap((a) => a.alternatives ? a.alternatives.map((n) => cand(n, a.code, 0.5)) : [cand(a.n, a.code, 0.5)]);
 }
 var DAY_MS = 864e5;
 function atDay(base, offsetDays, label) {
@@ -25509,6 +25678,19 @@ function resolveWhen(text2, ctx) {
   if (/\btomorrow\b/.test(t)) push(atDay(now, 1, "tomorrow"));
   if (/\bday after tomorrow\b/.test(t)) push(atDay(now, 2, "the day after tomorrow"));
   if (/\byesterday\b/.test(t)) push(atDay(now, -1, "yesterday"));
+  if (/\baujourd[ '-]?hui\b/.test(t)) push(atDay(now, 0, "aujourd'hui"));
+  if (/\bapres[ -]?demain\b/.test(t)) push(atDay(now, 2, "apr\xE8s-demain"));
+  else if (/\bdemain\b/.test(t)) push(atDay(now, 1, "demain"));
+  if (/\bhier\b/.test(t)) push(atDay(now, -1, "hier"));
+  if (/\bce soir\b/.test(t)) {
+    const d = new Date(now.getTime());
+    d.setHours(20, 0, 0, 0);
+    push({ at: d.getTime(), label: "ce soir", granularity: "minute" });
+  }
+  for (let i = 0; i < JOURS.length; i++) {
+    const m = new RegExp("\\b" + JOURS[i] + "(\\s+prochain)?\\b").exec(t);
+    if (m) push(atDay(now, nextWeekday(now, i, !!m[1]), cap(JOURS[i]) + (m[1] ? " prochain" : "")));
+  }
   if (/\btonight\b/.test(t)) {
     const d = new Date(now.getTime());
     d.setHours(20, 0, 0, 0);
@@ -25592,7 +25774,7 @@ var DUR = {
 // ../../packages/resolve/src/free.ts
 var FILLER = /* @__PURE__ */ new Set(["a", "an", "the", "to", "my", "please", "can", "you", "could", "for", "me", "on", "in", "into", "list", "and", "i", "want", "need", "would", "like"]);
 var PREP = /* @__PURE__ */ new Set(["to", "on", "in", "into", "for", "at", "under", "onto", "by", "before", "after"]);
-var ARTICLE = /* @__PURE__ */ new Set(["the", "my", "a", "an", "our"]);
+var ARTICLE2 = /* @__PURE__ */ new Set(["the", "my", "a", "an", "our"]);
 var TEMPORAL = /* @__PURE__ */ new Set([
   "today",
   "tonight",
@@ -25655,7 +25837,7 @@ function remainder(phrases, siblingWords = () => /* @__PURE__ */ new Set()) {
       }
       if (sib.has(w)) {
         let k = j - 2;
-        while (k >= i && ARTICLE.has(lower[k])) k--;
+        while (k >= i && ARTICLE2.has(lower[k])) k--;
         if (k >= i && PREP.has(lower[k])) {
           j = k;
           continue;
@@ -26553,7 +26735,7 @@ var Graph = class {
     return c;
   }
 };
-var tokens = (s) => new Set(s.toLowerCase().split(/[^a-z0-9$€£]+/).filter((w) => w.length > 2));
+var tokens2 = (s) => new Set(s.toLowerCase().split(/[^a-z0-9$€£]+/).filter((w) => w.length > 2));
 function openMemory(store, now = () => Date.now()) {
   const g = new Graph(store, now);
   const reader = {
@@ -26561,7 +26743,7 @@ function openMemory(store, now = () => Date.now()) {
     branches: () => [...g.branches.keys()],
     history: (branch = MAIN) => Object.freeze(g.chain(branch).map((c) => Object.freeze({ ...c, records: [...c.records] }))),
     search(query, branch = MAIN) {
-      const q = tokens(query);
+      const q = tokens2(query);
       if (q.size === 0) return [];
       const v = g.view(branch);
       const items = [
@@ -26571,7 +26753,7 @@ function openMemory(store, now = () => Date.now()) {
         ...v.decisions.map((d) => ({ kind: "decision", text: `${d.act}: ${d.summary}${d.undone ? " (undone)" : ""}`, at: d.at })),
         ...v.thoughts.map((t) => ({ kind: "thought", text: `${t.topic}: ${t.text}`, at: t.at }))
       ];
-      return items.map((it) => ({ it, score: [...tokens(it.text)].filter((w) => q.has(w)).length })).filter((x) => x.score > 0).sort((a, b) => b.score - a.score || b.it.at - a.it.at).slice(0, 20).map((x) => x.it);
+      return items.map((it) => ({ it, score: [...tokens2(it.text)].filter((w) => q.has(w)).length })).filter((x) => x.score > 0).sort((a, b) => b.score - a.score || b.it.at - a.it.at).slice(0, 20).map((x) => x.it);
     }
   };
   const writer = {

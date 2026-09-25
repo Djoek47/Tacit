@@ -19,8 +19,8 @@ const PEOPLE: Option[] = [
   { value: { id: 'sam', label: 'Sam' }, label: 'Sam', aliases: ['sam'] },
 ];
 const CHORES: Option[] = [
-  { value: 'dishes', label: 'Dishes', aliases: ['the dishes'] },
-  { value: 'laundry', label: 'Laundry', aliases: ['the laundry'] },
+  { value: 'dishes', label: 'Dishes', aliases: ['the dishes', 'vaisselle'] },
+  { value: 'laundry', label: 'Laundry', aliases: ['the laundry', 'lessive'] },
 ];
 const ITEMS: Option[] = [
   { value: 'milk', label: 'Milk' }, { value: 'jam', label: 'Jam' },
@@ -43,7 +43,7 @@ const ui = createAIUIC({
 });
 
 ui.defineAct(defineAct({
-  name: 'assign_chore', domain: 'chores', phrases: ['for', 'assign', 'needs to do', 'should do', 'give'],
+  name: 'assign_chore', domain: 'chores', phrases: ['for', 'assign', 'needs to do', 'should do', 'give', 'pour'],
   slots: {
     chore: { primitive: 'chip', options: () => CHORES, required: true, order: 1 },
     assignee: { primitive: 'face', options: () => PEOPLE, required: true, order: 2 },
@@ -58,7 +58,7 @@ ui.defineAct(defineAct({
   radius: 'self', commit: () => ({ id: 'g1' }), undo: () => {},
 }));
 ui.defineAct(defineAct({
-  name: 'settle_up', domain: 'allowance', phrases: ['pay', 'send', 'settle up', 'should get'],
+  name: 'settle_up', domain: 'allowance', phrases: ['pay', 'send', 'settle up', 'should get', 'payer'],
   slots: {
     payee: { primitive: 'face', options: () => PEOPLE, required: true, order: 1 },
     amount: { primitive: 'quantity', resolve: resolveQuantity, required: true, order: 2 },

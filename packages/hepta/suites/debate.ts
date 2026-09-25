@@ -72,4 +72,48 @@ export const debate: DebateCase[] = [
     bluntness: 0,
     expect: 'end',
   },
+
+  // ---- the harder half
+  {
+    name: 'fr: contradicts a number said earlier',
+    before: ['mon budget courses est de 400'],
+    now: 'je pense que le budget courses va être de 650 et ça me va',
+    expect: 'cut',
+  },
+  {
+    name: 'a contradiction said in words',
+    before: ['my grocery budget is four hundred'],
+    now: 'I think the grocery budget is going to be six hundred and fifty and I am fine with that',
+    expect: 'cut',
+  },
+  {
+    name: 'the same number, said in words, is not cut at its first word',
+    before: ['my grocery budget is 400'],
+    now: 'the grocery budget is going to be four hundred like we said',
+    expect: 'quiet',
+  },
+  {
+    name: 'corrects itself back before it can be cut',
+    before: ['my grocery budget is 400'],
+    now: 'the grocery budget is 650, no sorry, 400 like we said',
+    expect: 'quiet',
+  },
+  {
+    name: 'a false start does not make a contradiction',
+    before: ['my grocery budget is 400'],
+    now: 'the the grocery budget is um 400 still',
+    expect: 'quiet',
+  },
+  {
+    name: 'someone else said it: raise it at the end, do not cut the speaker off',
+    before: ['my grocery budget is 400'],
+    now: 'Sam says the grocery budget should be 650 this month',
+    expect: 'end',
+  },
+  {
+    name: 'fr: an unrelated sentence leaves it quiet',
+    before: ['mon budget courses est de 400'],
+    now: 'rappelle-moi d appeler ma mère dimanche',
+    expect: 'quiet',
+  },
 ];

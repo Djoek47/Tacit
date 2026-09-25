@@ -87,7 +87,7 @@ export type JevTransport = (req: JevRequest, signal?: Abortable) => Promise<JevR
 export function optionKey(opt: Option, index: number): string {
   const slug = opt.label
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');

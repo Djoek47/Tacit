@@ -10,13 +10,14 @@ import { defineAct, type ActDef, type Ctx } from '@intermenu/aiuic-core';
 import { LocalResolver, pickAct, resolveQuantity, resolveWhen } from '@intermenu/aiuic-resolve';
 import { formatReport, runSuite, sweep, type Resolve } from './src/index.js';
 import { CHORES, PEOPLE, household } from './suites/household.js';
+import { harder } from './suites/harder.js';
 
 const optionsFor = (_a: ActDef, slot: string) =>
   slot === 'assignee' || slot === 'payee' ? PEOPLE : slot === 'chore' ? CHORES : [];
 
 const ACTS: ActDef[] = [
   defineAct({
-    name: 'assign_chore', phrases: ['for', 'assign', 'can do', 'should'],
+    name: 'assign_chore', phrases: ['for', 'assign', 'can do', 'should', 'pour'],
     slots: {
       assignee: { primitive: 'face', options: () => PEOPLE, required: true, order: 1 },
       chore: { primitive: 'chip', options: () => CHORES, required: true, order: 2 },
@@ -26,7 +27,7 @@ const ACTS: ActDef[] = [
     commit: () => ({ id: '1' }), undo: () => {},
   }),
   defineAct({
-    name: 'settle_up', phrases: ['pay', 'pay back', 'send', 'settle up'],
+    name: 'settle_up', phrases: ['pay', 'pay back', 'send', 'settle up', 'payer', 'rembourser', 'envoie'],
     slots: {
       payee: { primitive: 'face', options: () => PEOPLE, required: true, order: 1 },
       amount: { primitive: 'quantity', resolve: resolveQuantity, required: true, order: 2 },
@@ -51,19 +52,24 @@ const resolve: Resolve = {
   fill: (t, a, c, o) => local.fillSync(t, a, {}, c, o),
 };
 
-const report = runSuite(household, ACTS, resolve, optionsFor, ctx);
-console.log(formatReport(report));
-
-console.log('\nrouting misses:');
-for (const r of report.results.filter((x) => !x.routedRight)) {
-  console.log(`  "${r.case.text}"  -> ${r.routedTo ?? 'nothing'}  (want ${r.case.act ?? 'nothing'}, ${r.topScore.toFixed(2)})`);
+function show(title: string, cases: typeof household) {
+  const report = runSuite(cases, ACTS, resolve, optionsFor, ctx);
+  console.log(`\n=== ${title}\n` + formatReport(report));
+  if (process.env.EVAL_DETAIL) for (const r of report.results) for (const [n, v] of Object.entries(r.slots)) if (v.outcome !== 'confirmed-right') console.log(`  DETAIL "${r.case.text}" ${n}: ${v.outcome} got=${JSON.stringify(v.got)} score=${v.score.toFixed(2)}`);
+  const misses = report.results.filter((x) => !x.routedRight);
+  console.log(`\nrouting misses${misses.length ? ':' : ': none'}`);
+  for (const r of misses) console.log(`  "${r.case.text}"  -> ${r.routedTo ?? 'nothing'}  (want ${r.case.act ?? 'nothing'}, ${r.topScore.toFixed(2)})`);
+  return report;
 }
 
-console.log('\nthreshold sweep  (tau / delta -> false-confirm, confirmed-right, extra beats)');
+show('seed (household)', household);
+show('harder (French, revisions, false starts, number words, two people, no request)', harder);
+
+console.log('\nthreshold sweep, both suites  (tau / delta -> false-confirm, confirmed-right, extra beats)');
 const grid = [0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1].flatMap((tauFill) =>
   [0.1, 0.15, 0.25].map((deltaFill) => ({ tauFill, deltaFill })),
 );
-for (const row of sweep(household, ACTS, resolve, optionsFor, ctx, grid)) {
+for (const row of sweep([...household, ...harder], ACTS, resolve, optionsFor, ctx, grid)) {
   console.log(
     `  ${row.tauFill.toFixed(2)} / ${row.deltaFill.toFixed(2)}` +
     `   ${(row.falseConfirmRate * 100).toFixed(1).padStart(5)}%` +

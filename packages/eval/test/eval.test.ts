@@ -96,6 +96,20 @@ describe('running a suite', () => {
     expect(formatReport(r)).toMatch(/confident and wrong/);
   });
 
+  it('counts a confident guess on a slot marked unsure as a false confirm, whatever it guessed', () => {
+    // A resolver that confirms Maya for anything: the old scoring called this "spurious" when the
+    // case left the slot unlabelled, so a misheard name never reached the false-confirm rate.
+    const eager: Resolve = { ...resolve, fill: (t, a, c, o) => ({ ...local.fillSync(t, a, {}, c, o), assignee: [{ value: MAYA, score: 0.99, calibrated: true, source: 'x' } as never] }) };
+    const r = runSuite([{ text: 'dishes for Maia', act: 'assign_chore', slots: { chore: 'dishes' }, unsure: ['assignee'] }], ACTS, eager, optionsFor, ctx);
+    expect(r.results[0]!.slots.assignee!.outcome).toBe('confirmed-wrong');
+    expect(r.falseConfirmRate).toBeGreaterThan(0);
+    const row = sweep([{ text: 'dishes for Maia', act: 'assign_chore', slots: { chore: 'dishes' }, unsure: ['assignee'] }], ACTS, eager, optionsFor, ctx, [{ tauFill: 0.85, deltaFill: 0.15 }])[0]!;
+    expect(row.falseConfirmRate).toBeGreaterThan(0);
+    // Holding back is right: an empty or provisional slot is not a miss.
+    const shy = runSuite([{ text: 'dishes for Zed', act: 'assign_chore', slots: { chore: 'dishes' }, unsure: ['assignee'] }], ACTS, resolve, optionsFor, ctx);
+    expect(['narrowed', 'provisional-right']).toContain(shy.results[0]!.slots.assignee!.outcome);
+  });
+
   it('flags a slot found where none was expected', () => {
     const r = runSuite(
       [{ text: 'dishes for Maya', act: 'assign_chore', slots: { chore: 'dishes' } }],

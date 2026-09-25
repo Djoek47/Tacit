@@ -12,7 +12,7 @@ const PUNCT = /[.,!?;:'"`()[\]{}<>/\\|@#$%^&*_+=~]/g;
 export function normalize(s: string): string {
   return s
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '') // strip diacritics: "Amélie" matches "amelie"
+    .replace(/[\u0300-\u036f]/g, '') // strip diacritics: "Amélie" matches "amelie"
     .toLowerCase()
     .replace(PUNCT, ' ')
     .replace(/\s+/g, ' ')
