@@ -9,3 +9,4 @@ export { toolSchema, applyToolCall, describeAct } from '../../packages/tools/src
 export { toView, attachPresenters } from '../../packages/present/src/index.js';
 export { StagePresenter, stylesheet, DOMAINS, domainColour, beatOf, BudgetMonitor, BUDGET_MS, ORB_TINT }
   from '../../packages/eui/src/index.js';
+export { Lines } from '../../packages/hepta/src/lines.js';

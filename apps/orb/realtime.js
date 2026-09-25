@@ -19,6 +19,7 @@ export const EVENTS = {
   speechStarted: 'input_audio_buffer.speech_started',
   speechStopped: 'input_audio_buffer.speech_stopped',
   responseDone: 'response.done',
+  responseCreated: 'response.created',
   error: 'error',
   /**
    * Supplementary only. The `.delta` sibling is documented in GA prose; the
@@ -32,6 +33,7 @@ export const EVENTS = {
   itemCreate: 'conversation.item.create',
   responseCreate: 'response.create',
   responseCancel: 'response.cancel',
+  audioClear: 'output_audio_buffer.clear',
 };
 
 export class RealtimeVoice {
@@ -56,6 +58,7 @@ export class RealtimeVoice {
     this.partial = '';
     /** call_ids already handed to the contract. Two events can carry the same one. */
     this.seenCalls = new Set();
+    this.responding = false;
   }
 
   get live() {
@@ -156,6 +159,10 @@ export class RealtimeVoice {
               threshold: 0.5,
               prefix_padding_ms: 300,
               silence_duration_ms: 500,
+              // The server would otherwise cut the model off at the first
+              // sound you make, "yeah" included. Off, so the decision is
+              // Hepta's: a nod keeps the floor, "wait" takes it. See lines.ts.
+              interrupt_response: false,
             },
             transcription: { model: 'gpt-4o-mini-transcribe' },
           },
@@ -185,9 +192,47 @@ export class RealtimeVoice {
     this.send({ type: EVENTS.responseCreate });
   }
 
-  /** The user started talking over it. Stop speaking rather than talking through them. */
-  bargeIn() {
+  /** True between response.created and response.done: the model has the floor. */
+  get speaking() {
+    return this.responding;
+  }
+
+  /**
+   * They took the turn. Stop generating AND drop what is already buffered —
+   * over WebRTC, cancelling the response alone leaves queued audio playing,
+   * which sounds like talking over someone who has just said "wait".
+   */
+  stopSpeaking() {
     this.send({ type: EVENTS.responseCancel });
+    this.send({ type: EVENTS.audioClear });
+    this.responding = false;
+  }
+
+  /** Kept for callers that want the old behaviour: stop on any sound. */
+  bargeIn() {
+    this.stopSpeaking();
+  }
+
+  /**
+   * Take the floor with one point from a line of thought.
+   *
+   * UNVERIFIED LIVE: whether the model begins speaking while input audio is
+   * still arriving. The API accepts response.create at any time; whether a
+   * turn-based model will talk over an open input buffer is the thing the
+   * first live run has to answer. If it waits for silence, this still lands —
+   * as the first thing said when they pause, which is a queued point, not a
+   * cut-in. Full-duplex models (Moshi-class) do this natively, and this call
+   * is the same either way.
+   */
+  interject(point, mode = 'cut') {
+    const how = mode === 'cut'
+      ? 'Cut in now, the way a person would: one short sentence, then stop and let them answer.'
+      : 'When they finish, raise this first, in one short sentence.';
+    this.send({
+      type: EVENTS.itemCreate,
+      item: { type: 'message', role: 'system', content: [{ type: 'input_text', text: `${how} Point: ${point}` }] },
+    });
+    if (mode === 'cut') this.send({ type: EVENTS.responseCreate });
   }
 
   handle(raw) {
@@ -219,7 +264,12 @@ export class RealtimeVoice {
       // The documented path. A response carrying a function call arrives as
       // response.done with the call in output[], and that is what is wired to
       // the contract.
+      case EVENTS.responseCreated:
+        this.responding = true;
+        break;
+
       case EVENTS.responseDone: {
+        this.responding = false;
         for (const item of e.response?.output ?? []) {
           if (item?.type !== 'function_call') continue;
           if (this.seenCalls.has(item.call_id)) continue;

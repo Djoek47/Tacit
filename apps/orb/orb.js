@@ -104,6 +104,19 @@ ui.defineAct(A.defineAct({
 const local = new A.LocalResolver();
 const spec = new A.Speculator(ui, local, optionsFor);
 
+/*
+ * Lines of thought run beside the speculator on every partial. The speculator
+ * reads what you are saying now; the lines hold what you said before, what it
+ * thinks, and what it left open. ?bluntness=0..1 sets how readily it cuts in.
+ */
+const bluntness = Math.max(0, Math.min(1, Number(new URLSearchParams(location.search).get('bluntness') ?? 0.5)));
+const lines = new A.Lines({ bluntness });
+const stageBusy = () => {
+  const r = spec.currentRun ?? ui.act;
+  return !!r && ['resolving', 'speculating', 'hold', 'explicit', 'frozen'].includes(r.status);
+};
+window.lines = lines;
+
 const INSTRUCTIONS = [
   'You are the voice of an app that does things rather than talking about them.',
   '',
@@ -145,7 +158,27 @@ function reportState() {
 function onTranscript(text, final) {
   if (!$('heard').textContent || final) { budget.reset(); budget.mark('heard'); }
   $('heard').textContent = text;
+  const atMs = performance.now();
+
+  // It has the floor and you made a sound. A nod, or a turn?
+  if (voice?.speaking) {
+    const f = lines.hear({ text, final, atMs }, { leader: null, leaderRadius: null, speaking: true });
+    if (f.kind === 'yield') { voice.stopSpeaking(); log('yielded the floor on ' + f.why, 'repair'); }
+    else if (f.kind === 'keep') { log('kept talking through "' + text + '"', 'voice'); return; }
+  }
+
   const s = spec.feed({ text, final }, { ...ctx(), now: new Date() });
+  const lead = spec.currentRun;
+  const d = lines.hear({ text, final, atMs }, {
+    leader: spec.leaderName, leaderRadius: lead ? lead.state().radius : null,
+  });
+  if (d.kind === 'interrupt') {
+    log('CUT IN (' + d.at + ', ' + d.urge.reason + '): ' + d.urge.say, 'cut');
+    voice?.interject(d.urge.say, 'cut');
+  } else if (d.kind === 'queue') {
+    log('will raise: ' + d.urge.say, 'think');
+    voice?.interject(d.urge.say, 'queue');
+  }
   renderTracks(s);
   render();
   reportState();
@@ -167,7 +200,8 @@ function onToolCall(name, argsJson, callId) {
 
 function onSpeechStart() {
   state.listening = true;
-  voice?.bargeIn();
+  // No blanket barge-in: whether a sound takes the floor is decided on its
+  // words, in onTranscript, by the lines of thought.
   const run = spec.currentRun ?? ui.act;
   if (run && run.status === 'hold') { run.freeze('you started talking again'); log('HOLD cancelled', 'repair'); }
   setStatus('listening', 'live');
@@ -337,6 +371,15 @@ $('form').addEventListener('submit', (e) => {
 
 // The weekend test needs no mic and no key: drive it from the console.
 window.speak = speak;
+
+// Wandering: when you have gone quiet and nothing is on stage, it may go back
+// to something left open. Checked once a second; rests between wanders.
+setInterval(() => {
+  const u = lines.wander(performance.now(), stageBusy());
+  if (!u) return;
+  log('went back to ' + u.thread.topic + ': ' + u.say, 'think');
+  voice?.interject(u.say, 'cut');
+}, 1000);
 
 $('tools').textContent = JSON.stringify(tools(), null, 2);
 log('engine ready — ' + ui.definitions.length + ' acts, tools generated', 'boot');

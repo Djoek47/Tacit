@@ -11,6 +11,8 @@ import { LocalResolver, resolveQuantity, resolveWhen } from '@intermenu/aiuic-re
 import { Speculator } from './src/index.js';
 import { formatSpeculation, formatTrace, replay, speculationReport, type Trace } from './src/replay.js';
 import { speech } from './suites/speech.js';
+import { debate } from './suites/debate.js';
+import { debateReport, formatDebate, replayDebate } from './src/debate-replay.js';
 
 const PEOPLE: Option[] = [
   { value: { id: 'maya', label: 'Maya' }, label: 'Maya', aliases: ['maya'] },
@@ -78,3 +80,6 @@ console.log(formatSpeculation(report));
 
 console.log('\n--- every sentence, word by word ---\n');
 for (const t of traces) console.log(formatTrace(t) + '\n');
+
+console.log('\n=== lines of thought: when to cut in ===\n');
+console.log(formatDebate(debateReport(debate.map((c) => replayDebate(c)))));
