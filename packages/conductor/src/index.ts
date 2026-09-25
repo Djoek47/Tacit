@@ -55,6 +55,14 @@ export type OrderSpec = {
   goal?: string;
   /** Or an act to run with these values. */
   act?: { name: string; fill: Filled };
+  /**
+   * Acts this order may commit on its own, by name. An `act` order covers its
+   * own act. A `goal` order covers nothing unless it lists something here:
+   * whatever the loop proposes from a goal waits for the person, because
+   * letting a model choose WHICH act to commit unattended is letting it write
+   * its own orders.
+   */
+  allow?: string[];
 };
 
 export type Order = { id: string; text: string; spec: OrderSpec; at: number };
@@ -116,6 +124,15 @@ export function authorise(run: ActRun, order: Order): Verdict {
   const s = run.state();
   const radius = s.radius ?? 'external';
 
+  // Found by independent review: a goal order let a model propose "let this
+  // tool go ahead" or a new standing order, and both are cheap, undoable acts
+  // that passed every other check. An order covers only the acts it names,
+  // and nothing that grants authority is ever committed unattended.
+  if (run.def.grantsAuthority) why.push('it changes what may happen without you, so only you can say yes to it');
+  const allowed = order.spec.act ? [order.spec.act.name, ...(order.spec.allow ?? [])] : (order.spec.allow ?? []);
+  if (!allowed.includes(run.def.name)) {
+    why.push(order.spec.act ? `this order covers ${order.spec.act.name}, not ${run.def.name}` : `this order is a question; it does not cover doing ${run.def.name.replace(/_/g, ' ')}`);
+  }
   if (radius === 'external') why.push('it is external: money and anything irreversible always wait for you');
   if (radiusRank(radius) > radiusRank(order.spec.ceiling)) why.push(`it reaches "${radius}", above what this order allows ("${order.spec.ceiling}")`);
   if (radiusRank(order.spec.ceiling) > radiusRank(MAX_CEILING)) why.push('the order itself asks for more than any order may');
@@ -305,7 +322,10 @@ export class Conductor {
       this.push({ orderId: o.id, kind: 'waiting', title, detail: o.text, act: run.def.name, fill, why: v.why });
       return;
     }
-    await run.assent();
+    // Not assent(): that is a person's tap, and it counts as the person
+    // engaging. This is the order's assent, given in advance, and the core
+    // refuses it for anything that grants authority.
+    await run.assentUnattended();
     if (run.status === 'settled' && run.result) {
       this.push({ orderId: o.id, kind: 'done', title, detail: o.text, act: run.def.name, fill: { ...run.filled }, result: run.result });
     } else {
@@ -372,6 +392,9 @@ export function scoreActs(): ActDef[] {
   return [defineAct({
     name: 'set_standing_order',
     domain: 'teaching',
+    // Writing the score is permission to act while the person is away. Only
+    // the person may commit it — never the conductor, never a model.
+    grantsAuthority: true,
     phrases: ['every morning', 'every evening', 'every hour', 'every week', 'each morning', 'from now on'],
     slots: {
       often: {

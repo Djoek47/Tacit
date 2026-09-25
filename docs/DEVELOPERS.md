@@ -68,18 +68,21 @@ import { connect, delegationAct } from '@intermenu/aiuic-mcp';
 
 const client = new Client({ name: 'my-app', version: '1.0.0' });
 await client.connect(new StdioClientTransport({ command: 'node', args: ['tasks-server.mjs'] }));
-const tasks = await connect(client);
+const tasks = await connect(client);          // calls nothing yet
 
 tasks.preview();
 // "Connect Tasks. It can do 1 thing and look up 2. It asks you first. 1 can be undone,
-//  so you may later let it go ahead on silence. The 2 look-ups are trusted to only read,
-//  because the server says so."
-// (remove_task is add_task's undo, so it is not offered as something to ask for.)
+//  so you may later let it go ahead on silence. It looks things up with list_tasks,
+//  list_lists. The server says those only read; approving means trusting that."
+
+await tasks.approve();                        // the person said yes: now it may be called
 
 const app = createApp({ ctx, acts: [...tasks.acts, delegationAct([tasks])], domains: tasks.shape.domains });
 ```
 
-Write tools become acts. Read-only tools become sources the aggregator can ask. Show `preview()` to the person before trusting anything from the server.
+Write tools become acts. Read-only tools become sources the aggregator can ask. A tool named as another tool's undo is kept out of sight.
+
+**`connect()` calls nothing.** Show `preview()` to the person; it names every tool that will be trusted to only read. Until `approve()`, sources return nothing and acts refuse to commit. Give each connection your own `id`: a delegation belongs to the connection you named, never to whatever name a server gives itself.
 
 ---
 
@@ -88,8 +91,11 @@ Write tools become acts. Read-only tools become sources the aggregator can ask. 
 ```bash
 cd apps/hepta
 cp hepta.config.example.json hepta.config.json      # list your MCP servers here
+node hepta.mjs approve tasks                         # see what it would be trusted with; approve it
 node hepta.mjs                                       # always on; MCP over HTTP on 127.0.0.1:8790
 ```
+
+A server nobody has approved is connected only long enough to show what approving it would mean. Approval is stored with a fingerprint of what the server offers, so a server that changes its tools has to be approved again.
 
 **Claude Desktop, Cursor, or any MCP client that launches servers over stdio:**
 
@@ -216,7 +222,8 @@ conductor.start();
 
 The person writes the **score**: standing orders like "every morning, tell me what is due", each written through an act they approved. The conductor runs them around the clock. It may commit on the person's behalf only when all of these hold:
 
-- an active order covers it
+- the order names that act: an act order covers its own act, and a goal order covers only what its `allow` list names, so a model never chooses what gets committed
+- it does not change what may happen without the person: letting a tool go ahead and writing orders are only ever committed by the person
 - its radius is at or under that order's ceiling
 - the ceiling is not `external`: money and anything irreversible are never done unattended
 - it has an undo
@@ -369,6 +376,12 @@ Each of these is a test in the repository, not a promise in a document.
 | Money and the irreversible are never done unattended | `authorise()` in the conductor; order ceilings capped below `external` |
 | Nothing real is hypothetical | memory refuses facts, decisions, delegations and orders on branches |
 | Only the person's words become facts | memory refuses facts without their words, or from any role but the congregator |
+| Nothing can grant itself permission | acts marked `grantsAuthority` are refused by `assentUnattended()` in the core |
+| A hold that started legitimately must still be legitimate when it ends | the hold re-checks cost and attention when it fires |
+| Speaking again stops a hold | more speech puts the act back to speculating |
+| No server is called before it is approved | `connect()` calls nothing; `approve()` turns it on; the daemon stores approval per fingerprint |
+
+The last four came from an independent review — an agent that had not seen the code being written — which found eight ways around the rules above. Each is fixed and kept as a regression test.
 
 ## Not yet verified
 

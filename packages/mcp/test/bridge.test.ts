@@ -13,6 +13,7 @@ const attention = { foreground: true, unlocked: true, proximityClear: true, list
 async function appFor(opts: Parameters<typeof tasksServer>[0] = {}) {
   const s = await tasksServer(opts);
   const conn = await connect(s.client);
+  await conn.approve(); // what a host does once the person says yes to preview()
   const clock = new FakeClock(T0);
   const app = createApp({
     clock, acts: conn.acts, speculate: false,
@@ -36,6 +37,9 @@ describe('connecting', () => {
     expect(p).toContain('do 3 things and look up 2');
     expect(p).toContain('All 3 ask you first');
     expect(p).toContain('1 can be undone');
+    // it names what it will trust to only read, and says what trusting it means
+    expect(p).toContain('It looks things up with list_tasks, list_lists');
+    expect(p).toMatch(/approving means trusting that/);
   });
 
   it('reads the shape the server publishes', async () => {

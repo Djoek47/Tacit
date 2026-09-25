@@ -119,7 +119,10 @@ async function begin(key) {
   renderApps();
 }
 
-function approve(key) {
+async function approve(key) {
+  // Nothing from the server has been called until now: approving is what
+  // turns its sources on and loads its option lists.
+  await apps[key].conn.approve();
   apps[key].status = 'connected';
   // Delegations the person made before survive a reconnect.
   A.applyDelegations([apps[key].conn], memory.reader.view().delegations);
@@ -358,7 +361,7 @@ requestAnimationFrame(frame);
 // Tasks is connected for the demo; Bank waits for you to approve it.
 renderTheme();
 await begin('tasks');
-approve('tasks');
+await approve('tasks');
 $('say').value = CATALOG[0].scenes[0];
 await hear(CATALOG[0].scenes[0]);
 })();

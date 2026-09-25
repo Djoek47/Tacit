@@ -70,6 +70,7 @@ describe('the scaffold runs', () => {
     try {
       await client.connect(new StdioClientTransport({ command: process.execPath, args: [join(dir, 'server.mjs')], stderr: 'ignore' }));
       const conn = await connect(client);
+      await conn.approve(); // option lists load only once the person has approved
       expect(conn.shapeProblems).toEqual([]);
       expect(conn.shape.app.name).toBe('Family Tasks');
       const tools = Object.fromEntries(conn.tools().map((t) => [t.tool, t]));

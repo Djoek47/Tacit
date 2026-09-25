@@ -45,7 +45,24 @@ export type ToolStatus = {
 };
 
 export type Connection = {
+  /**
+   * Who this connection is, as the HOST named it — a config entry, a prefix.
+   * Never the name the server reports about itself: two servers can both
+   * call themselves "tasks", and a delegation must not go to whichever one
+   * happened to be listed first.
+   */
+  id: string;
   server: { name: string; version: string };
+  /**
+   * A hash of what the server offers — its tools, their annotations and
+   * schemas, its shape. An approval is for this fingerprint: a server that
+   * changes what it offers has to be approved again.
+   */
+  fingerprint: string;
+  /** False until approve(). Until then nothing from the server is called. */
+  readonly approved: boolean;
+  /** The person said yes to preview(). Loads option lists and turns sources on. */
+  approve(): Promise<void>;
   shape: Shape;
   /** Present when the server offered a shape and it was refused. The app still works, plainly. */
   shapeProblems: string[];
@@ -63,7 +80,21 @@ export type Connection = {
 export type ConnectOptions = {
   /** Prefix act names, so two servers with an `add` tool do not collide. */
   prefix?: string;
+  /** The host's name for this connection. Defaults to prefix + the server's name. */
+  id?: string;
 };
+
+/** FNV-1a, twice, for a short stable fingerprint without a crypto dependency. */
+function fingerprintOf(v: unknown): string {
+  const text = JSON.stringify(v);
+  let a = 0x811c9dc5, b = 0x01000193 ^ text.length;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    a = Math.imul(a ^ c, 0x01000193) >>> 0;
+    b = Math.imul(b ^ (c + i), 0x01000193) >>> 0;
+  }
+  return a.toString(16).padStart(8, '0') + b.toString(16).padStart(8, '0');
+}
 
 type CallResult = {
   isError?: boolean;
@@ -161,6 +192,8 @@ function toFacts(t: Tool): ToolFacts {
 export async function connect(client: Client, opts: ConnectOptions = {}): Promise<Connection> {
   const info = client.getServerVersion() ?? { name: 'server', version: '0' };
   const server = { name: info.name, version: info.version };
+  const id = opts.id ?? `${opts.prefix ?? ''}${server.name}`;
+  let approved = false;
   const tools = await allTools(client);
   const facts = tools.map(toFacts);
   const { shape, problems } = await loadShape(client, server.name, facts, tools);
@@ -172,6 +205,7 @@ export async function connect(client: Client, opts: ConnectOptions = {}): Promis
   // ---------------------------------------------------------------- catalogs
   const catalogs = new Map<string, Option[]>(); // key: tool.slot
   async function refreshCatalogs(): Promise<void> {
+    if (!approved) return;
     for (const [tool, ts] of Object.entries(shape.tools ?? {})) {
       for (const [slot, o] of Object.entries(ts.options ?? {})) {
         try {
@@ -188,7 +222,9 @@ export async function connect(client: Client, opts: ConnectOptions = {}): Promis
       }
     }
   }
-  await refreshCatalogs();
+  // No tool is called here. Option lists are loaded by approve(): a server
+  // whose "read-only" list tool is not read-only must not get to run before
+  // the person has seen, in the preview, that it will be trusted to.
 
   // -------------------------------------------------------------------- acts
   // A tool named as another tool's undo is machinery, not something a person
@@ -229,6 +265,7 @@ export async function connect(client: Client, opts: ConnectOptions = {}): Promis
         slots: plan.slots,
         radius: { max: 'external', of: () => delegated.get(t.name) ?? (c.kind === 'write' ? c.start : 'external') },
         commit: async (filled): Promise<CommitResult> => {
+          if (!approved) throw new Error(`${server.name} has not been approved yet`);
           const args: Record<string, unknown> = {};
           for (const [k, v] of Object.entries(filled)) {
             if (k === 'go' || v === undefined) continue;
@@ -275,6 +312,7 @@ export async function connect(client: Client, opts: ConnectOptions = {}): Promis
       name: `${server.name}/${t.name}`,
       local: false,
       async read(query: string): Promise<Finding[]> {
+        if (!approved) return [];
         // Only asked when the question is about what this tool knows. A
         // source that answers every query with its whole table is noise.
         const q = meaningful(query);
@@ -303,8 +341,18 @@ export async function connect(client: Client, opts: ConnectOptions = {}): Promis
     };
   });
 
+  const fingerprint = fingerprintOf({
+    tools: tools.map((t) => ({ n: t.name, a: t.annotations ?? {}, s: t.inputSchema ?? {} })).sort((x, y) => x.n.localeCompare(y.n)),
+    shape,
+  });
+
   return {
-    server, shape, shapeProblems: [...problems, ...skipped], acts, sources,
+    id, server, fingerprint, shape, shapeProblems: [...problems, ...skipped], acts, sources,
+    get approved() { return approved; },
+    async approve() {
+      approved = true;
+      await refreshCatalogs();
+    },
     tools: status,
     preview() {
       const st = status();
@@ -318,9 +366,9 @@ export async function connect(client: Client, opts: ConnectOptions = {}): Promis
         quietable
           ? `${quietable} can be undone, so you may later let ${quietable === 1 ? 'it' : 'them'} go ahead on silence.`
           : writes.length === 1 ? 'It cannot be undone, so it will always ask.' : 'None can be undone, so they will always ask.',
-        reads.length === 1
-          ? 'The look-up is trusted to only read, because the server says so.'
-          : `The ${reads.length} look-ups are trusted to only read, because the server says so.`,
+        reads.length === 0
+          ? 'It looks nothing up.'
+          : `It looks things up with ${reads.map((r) => r.tool).join(', ')}. The server says ${reads.length === 1 ? 'that tool only reads' : 'those only read'}; approving means trusting that, and they may be asked about anything you ask about.`,
       ];
       if (problems.length) parts.push(`Its layout was refused (${problems.length} problem${problems.length === 1 ? '' : 's'}), so it will look plain.`);
       return parts.join(' ');

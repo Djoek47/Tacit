@@ -19,14 +19,23 @@ const LEVELS: { value: Radius; label: string; aliases: string[] }[] = [
 ];
 
 export function delegationAct(connections: Connection[]): ActDef {
-  const lowerable = () => connections.flatMap((c) => c.tools()
+  // A delegation names a connection by the host's id. Two connections with
+  // one id would make "which one did the person mean" a guess.
+  const ids = connections.map((c) => c.id);
+  const dup = ids.find((x, i) => ids.indexOf(x) !== i);
+  if (dup) throw new Error(`two connections are both called "${dup}"; give each its own id before offering delegations`);
+
+  const lowerable = () => connections.filter((c) => c.approved).flatMap((c) => c.tools()
     .filter((t) => t.kind === 'write' && t.lowerable)
-    .map((t) => ({ value: { server: c.server.name, tool: t.tool }, label: `${c.shape.app.name}: ${t.tool.replace(/_/g, ' ')}`, aliases: [t.tool.replace(/_/g, ' ')] })));
-  const find = (v: { server: string; tool: string }) => connections.find((c) => c.server.name === v.server);
+    .map((t) => ({ value: { server: c.id, tool: t.tool }, label: `${c.shape.app.name}: ${t.tool.replace(/_/g, ' ')}`, aliases: [t.tool.replace(/_/g, ' ')] })));
+  const find = (v: { server: string; tool: string }) => connections.find((c) => c.id === v.server);
 
   return defineAct({
     name: 'set_delegation',
     domain: 'household',
+    // Lowering what a tool costs is permission to act without the person.
+    // Only the person may commit it — never a standing order.
+    grantsAuthority: true,
     phrases: ['let it', 'without asking', 'stop asking', 'always ask', 'ask me first'],
     slots: {
       tool: { primitive: 'chip', options: () => lowerable(), required: true, order: 1 },
@@ -61,7 +70,7 @@ export function applyDelegations(connections: Connection[], remembered: Record<s
   const skipped: string[] = [];
   for (const [key, radius] of Object.entries(remembered)) {
     const [server, tool] = key.split('/');
-    const conn = connections.find((c) => c.server.name === server);
+    const conn = connections.find((c) => c.id === server);
     try {
       if (!conn || !tool) throw new Error('not connected');
       conn.delegate(tool, radius as Radius);

@@ -368,6 +368,20 @@ export class ActRun {
     this.holdEndsAt = this.clock.now() + ms;
     this.holdTimer = this.clock.setTimeout(() => {
       this.holdTimer = null;
+      // The hold was granted for the world as it was when it started. Check
+      // again at the moment it fires: if what it costs has changed (a
+      // delegation revoked, an effect now reaching someone) or silence no
+      // longer counts (the device locked, the app went to the background),
+      // it goes back through evaluate() instead of committing.
+      const ctx = this.ctxOf();
+      const now = effectiveRadius(this.def, this.filled, ctx);
+      const gate = attentionGate(ctx.attention, this.engaged);
+      if (now !== radius || !gate.pass || this.speculative) {
+        this.emit({ type: 'hold-cancel', act: this.def.name,
+          reason: !gate.pass ? 'silence no longer counts' : now !== radius ? `the cost changed to "${now}"` : 'speech resumed' });
+        this.evaluate();
+        return;
+      }
       void this.commit('silence');
     }, ms);
     this.emit({ type: 'hold-start', act: this.def.name, ms, radius });
@@ -387,11 +401,46 @@ export class ActRun {
     return this.holdMs;
   }
 
+  /**
+   * The person started talking again after a sentence that had ended. What
+   * is on the stage goes back to being a reading of speech in progress: the
+   * hold stops, and nothing commits until the new sentence ends too.
+   */
+  resumeSpeculation(): void {
+    if (this.speculative) return;
+    if (this.status === 'settled' || this.status === 'committing' || this.status === 'discarded' || this.status === 'failed') return;
+    this.speculative = true;
+    this.cancelHold('speech resumed');
+    this.evaluate();
+  }
+
   /** Speech settled. The act may now be judged on the contract like any other. */
   settleSpeculation(): void {
     if (!this.speculative) return;
     this.speculative = false;
     this.evaluate();
+  }
+
+  /**
+   * Assent given in advance, by a standing order the person wrote — used by
+   * the conductor, never by a person's tap. It does not count as the person
+   * engaging with this act, and it refuses outright for an act that grants
+   * authority: permission to act without the person is the one thing that
+   * can never be granted without the person.
+   */
+  async assentUnattended(): Promise<void> {
+    if (this.def.grantsAuthority) {
+      throw new Error(`[${this.def.name}] changes what may happen without the person, so only the person can commit it`);
+    }
+    if (this.speculative) throw new Error(`[${this.def.name}] cannot assent to a speculative act`);
+    if (this.status !== 'explicit' && this.status !== 'hold') {
+      throw new Error(`[${this.def.name}] nothing to assent to (status "${this.status}")`);
+    }
+    if (this.missingRequired.length > 0) {
+      throw new Error(`[${this.def.name}] required slots unfilled: ${this.missingRequired.join(', ')}`);
+    }
+    this.cancelHold('assent from a standing order', true);
+    await this.commit('explicit');
   }
 
   /** Explicit assent: a tap or a yes-word. The only path for `external`. */

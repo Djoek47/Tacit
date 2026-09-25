@@ -4,6 +4,7 @@
  *   node hepta.mjs                      always on; MCP over HTTP on 127.0.0.1
  *   node hepta.mjs --stdio              MCP over stdio, for Claude / Cursor to launch
  *   node hepta.mjs --once               one beat of the conductor, then exit
+ *   node hepta.mjs approve <name>       show what a server would be trusted with, and approve it
  *   node hepta.mjs --config path.json   default: ./hepta.config.json
  *
  * What it does, in order: reads the config; connects every MCP server listed
@@ -97,24 +98,59 @@ export async function start(argv: string[]) {
   const dataDir = expand(cfg.dataDir ?? '~/.hepta');
   mkdirSync(dataDir, { recursive: true });
 
-  // INSIDE: your servers become acts and sources.
+  // INSIDE: your servers become acts and sources — once approved.
+  //
+  // Approval is per server and per fingerprint of what it offers. Found by
+  // independent review: the daemon used to log the preview and carry on, so
+  // nobody ever approved anything. Now a server nobody has approved is
+  // connected only long enough to show what approving it would mean, and a
+  // server that changes its tools needs approving again.
+  const approvalsPath = join(dataDir, 'approvals.json');
+  const approvals: Record<string, string> = existsSync(approvalsPath) ? JSON.parse(readFileSync(approvalsPath, 'utf8')) : {};
+  const approving = argv[0] === 'approve' ? argv[1] : undefined;
   const connections: Connection[] = [];
   const clients: Client[] = [];
+  const seen = new Set<string>();
   for (const s of cfg.servers ?? []) {
+    // The host names each server. What a server calls itself is not an identity.
+    const id = s.name ?? s.command.split('/').pop()!.replace(/\.[a-z]+$/, '');
+    if (seen.has(id)) { log(`two servers are both called "${id}" in ${configPath}; the second is skipped. Give each its own name.`); continue; }
+    seen.add(id);
+    if (approving && approving !== id) continue;
     try {
       const client = new Client({ name: 'hepta', version: '1.0.0' });
       await client.connect(new StdioClientTransport({
         command: s.command, args: s.args ?? [], stderr: 'ignore',
         ...(s.env ? { env: { ...process.env as Record<string, string>, ...s.env } } : {}),
       }));
-      const conn = await connect(client, s.prefix ? { prefix: s.prefix } : {});
+      const conn = await connect(client, { id, ...(s.prefix ? { prefix: s.prefix } : {}) });
+      for (const p of conn.shapeProblems) log(`  ${id} shape: ${p}`);
+      if (approving) {
+        log(conn.preview());
+        approvals[id] = conn.fingerprint;
+        writeFileSync(approvalsPath, JSON.stringify(approvals, null, 2), { mode: 0o600 });
+        log(`approved ${id}`);
+        await client.close().catch(() => {});
+        continue;
+      }
+      if (approvals[id] !== conn.fingerprint) {
+        log(`${id} is not approved${approvals[id] ? ' (what it offers has changed since you approved it)' : ''}. It would mean:`);
+        log(`  ${conn.preview()}`);
+        log(`  To approve: node hepta.mjs approve ${id}${argv.includes('--config') ? ` --config ${configPath}` : ''}`);
+        await client.close().catch(() => {});
+        continue;
+      }
+      await conn.approve();
       connections.push(conn);
       clients.push(client);
-      log(`connected ${conn.shape.app.name}: ${conn.preview()}`);
-      for (const p of conn.shapeProblems) log(`  shape: ${p}`);
+      log(`connected ${id}: ${conn.preview()}`);
     } catch (e) {
-      log(`could not connect ${s.name ?? s.command}: ${(e as Error).message}`);
+      log(`could not connect ${id}: ${(e as Error).message}`);
     }
+  }
+  if (approving) {
+    if (!seen.has(approving)) log(`no server called "${approving}" in ${configPath}`);
+    return { app: null as never, memory: null as never, conductor: null as never, connections };
   }
 
   const memory = openMemory(new FileStore(join(dataDir, 'memory.json')));

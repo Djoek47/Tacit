@@ -107,15 +107,17 @@ import { connect, delegationAct } from '@intermenu/aiuic-mcp';
 
 const client = new Client({ name: 'my-app', version: '1.0.0' });
 await client.connect(new StdioClientTransport({ command: 'node', args: ['tasks-server.mjs'] }));
-const tasks = await connect(client);
+const tasks = await connect(client);          // calls nothing yet
 
 tasks.preview();
 // "Connect Tasks. It can do 1 thing and look up 2. It asks you first. 1 can be undone,
-//  so you may later let it go ahead on silence. The 2 look-ups are trusted to only read,
-//  because the server says so."
+//  so you may later let it go ahead on silence. It looks things up with list_tasks,
+//  list_lists. The server says those only read; approving means trusting that."
+
+await tasks.approve();                        // the person said yes: now it may be called
 
 const app = createApp({ ctx, acts: [...tasks.acts, delegationAct([tasks])], domains: tasks.shape.domains });</code></pre></div>
-      <p>Write tools become acts. Read-only tools become sources the aggregator can ask. A tool named as another tool's undo is kept out of sight: it is reached from the card that made the change. Show <code>preview()</code> to the person before trusting anything the server says.</p>
+      <p>Write tools become acts. Read-only tools become sources the aggregator can ask. A tool named as another tool's undo is kept out of sight: it is reached from the card that made the change.</p><p><b><code>connect()</code> calls nothing.</b> Show <code>preview()</code> to the person; it names every tool that will be trusted to only read. Until <code>approve()</code>, sources return nothing and acts refuse to commit. Give each connection your own <code>id</code>: a delegation belongs to the connection you named, never to whatever name a server gives itself.</p>
     </section>
 
     <section id="outside">
@@ -123,7 +125,9 @@ const app = createApp({ ctx, acts: [...tasks.acts, delegationAct([tasks])], doma
       <h2>Five minutes, outside</h2>
       <div class="code"><span class="lang">sh</span><pre><code>cd apps/hepta
 cp hepta.config.example.json hepta.config.json    # list your MCP servers
+node hepta.mjs approve tasks                       # see what it would be trusted with; approve it
 node hepta.mjs                                     # always on; MCP over HTTP on 127.0.0.1:8790</code></pre></div>
+      <p>A server nobody has approved is connected only long enough to show what approving it would mean. Approval is stored with a fingerprint of what the server offers, so a server that changes its tools has to be approved again.</p>
       <h3>From Claude Desktop, Cursor, or any client that launches servers</h3>
       <div class="code"><span class="lang">json</span><pre><code>{
   "mcpServers": {
@@ -243,7 +247,8 @@ await pyramid.pursue('plan my month');</code></pre></div>
 conductor.start();</code></pre></div>
       <p>The person writes the <b>score</b>: standing orders such as "every morning, tell me what is due", each written through an act they approved. The conductor runs them around the clock and may commit on the person's behalf only when all of these hold:</p>
       <ul>
-        <li>an active order covers it</li>
+        <li>the order names that act: an act order covers its own act, and a goal order covers only what its <code>allow</code> list names, so a model never chooses what gets committed</li>
+        <li>it does not change what may happen without the person: letting a tool go ahead and writing orders are only ever committed by the person</li>
         <li>its cost is at or under that order's ceiling</li>
         <li>the ceiling is not external: money and anything irreversible are never done unattended</li>
         <li>it can be undone</li>
@@ -367,7 +372,7 @@ Audience: parents with kids under 14
     <section id="guarantees">
       <span class="eyebrow">Reference</span>
       <h2>Guarantees, and what holds them</h2>
-      <p>Each is a test in the repository.</p>
+      <p>Each is a test in the repository. The last four came from an independent review, run by an agent that had not seen the code being written, which found eight ways around the rules above; each is fixed and kept as a regression test.</p>
       <div class="tbl"><table>
         <thead><tr><th>Guarantee</th><th>Held by</th></tr></thead>
         <tbody>
@@ -380,6 +385,10 @@ Audience: parents with kids under 14
           <tr><td>Money and the irreversible are never done unattended</td><td>the conductor's <code>authorise()</code>; order ceilings below external</td></tr>
           <tr><td>Nothing real is hypothetical</td><td>memory refuses facts, decisions and orders on branches</td></tr>
           <tr><td>Only the person's words become facts</td><td>memory refuses a fact without its words, or from any role but the congregator</td></tr>
+          <tr><td>Nothing can grant itself permission</td><td>acts marked <code>grantsAuthority</code> are refused by <code>assentUnattended()</code> in the core</td></tr>
+          <tr><td>A hold that started legitimately still has to be legitimate when it ends</td><td>the hold checks cost and attention again when it fires</td></tr>
+          <tr><td>Speaking again stops a hold</td><td>more speech puts the act back to speculating</td></tr>
+          <tr><td>No server is called before it is approved</td><td><code>connect()</code> calls nothing; <code>approve()</code> turns it on; the daemon stores approval per fingerprint</td></tr>
         </tbody>
       </table></div>
     </section>

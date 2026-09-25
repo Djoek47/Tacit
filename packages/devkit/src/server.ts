@@ -11,7 +11,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { parseBrief } from './brief.js';
 import { mapMenus, mermaid } from './menus.js';
@@ -34,16 +34,35 @@ const fail = (t: string) => ({ isError: true, content: [{ type: 'text' as const,
 
 export function createDevServer(cfg: DevServerConfig): McpServer {
   const server = new McpServer({ name: 'hepta-dev', version: '1.0.0' });
-  const root = resolve(cfg.root);
+  const root = realpathSync(resolve(cfg.root));
+  const outside = (p: string) => new Error(`${p} is outside ${root}; hepta-dev only reads and writes inside the project`);
+  /**
+   * Inside the project, physically — not just by how the path is spelled.
+   * Found by independent review: a symlinked folder inside the project, or a
+   * dangling link where the output file would go, let a write land anywhere.
+   * So the deepest part of the path that exists is resolved to where it
+   * really is, and that must be inside the project.
+   */
   const inRoot = (p: string) => {
     const abs = resolve(root, p);
-    const rel = relative(root, abs);
-    if (rel.startsWith('..') || isAbsolute(rel)) throw new Error(`${p} is outside ${root}; hepta-dev only reads and writes inside the project`);
+    const lexical = relative(root, abs);
+    if (lexical.startsWith('..') || isAbsolute(lexical)) throw outside(p);
+    let probe = abs;
+    while (!existsSync(probe) && probe !== root) {
+      // A dangling link is not "missing": it points somewhere.
+      try { if (lstatSync(probe).isSymbolicLink()) throw outside(p); } catch (e) { if (e instanceof Error && e.message.includes('outside')) throw e; }
+      probe = dirname(probe);
+    }
+    const real = relative(root, realpathSync(probe));
+    if (real.startsWith('..') || isAbsolute(real)) throw outside(p);
     return abs;
   };
   const brief = (p: string) => parseBrief(readFileSync(inRoot(p), 'utf8'));
   const write = (p: string, body: string, overwrite: boolean) => {
     const abs = inRoot(p);
+    let isLink = false;
+    try { isLink = lstatSync(abs).isSymbolicLink(); } catch { /* does not exist */ }
+    if (isLink) throw new Error(`${p} is a link; hepta-dev does not write through links`);
     if (existsSync(abs) && !overwrite) throw new Error(`${p} exists. Pass overwrite: true to replace it.`);
     mkdirSync(dirname(abs), { recursive: true });
     writeFileSync(abs, body);
@@ -107,17 +126,27 @@ export function createDevServer(cfg: DevServerConfig): McpServer {
     description: 'Opens a URL at phone, tablet and desktop sizes, runs optional steps, and reports console errors, sideways scrolling, small tap targets, cut-off text and more, in sentences.',
     inputSchema: {
       url: z.string(),
+      /** A new or empty folder for one screenshot per screen size. */
       steps: z.array(z.union([
         z.object({ click: z.string() }), z.object({ fill: z.tuple([z.string(), z.string()]) }),
         z.object({ press: z.string() }), z.object({ wait: z.number().max(10_000) }),
       ])).max(40).optional(),
       screenshots: z.string().optional(),
     },
-    annotations: { readOnlyHint: true, openWorldHint: true },
+    // Not read-only: it can write screenshots. Found by independent review —
+    // it claimed readOnlyHint while overwriting files, and clients run
+    // read-only tools without asking.
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
   }, async ({ url, steps, screenshots }) => guard(async () => {
+    let shots: string | undefined;
+    if (screenshots) {
+      shots = inRoot(screenshots);
+      if (existsSync(shots) && readdirSync(shots).length) throw new Error(`${screenshots} is not empty. Screenshots go into a new or empty folder, so nothing is overwritten.`);
+      mkdirSync(shots, { recursive: true });
+    }
     const r = await testApp(url, {
       ...(steps ? { steps: steps as Step[] } : {}),
-      ...(screenshots ? { screenshotDir: inRoot(screenshots) } : {}),
+      ...(shots ? { screenshotDir: shots } : {}),
       ...(cfg.executablePath ? { executablePath: cfg.executablePath } : {}),
     });
     return text(formatTest(r), r as unknown as Record<string, unknown>);

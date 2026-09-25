@@ -24918,6 +24918,18 @@ var ActRun = class {
     this.holdEndsAt = this.clock.now() + ms;
     this.holdTimer = this.clock.setTimeout(() => {
       this.holdTimer = null;
+      const ctx = this.ctxOf();
+      const now = effectiveRadius(this.def, this.filled, ctx);
+      const gate = attentionGate(ctx.attention, this.engaged);
+      if (now !== radius || !gate.pass || this.speculative) {
+        this.emit({
+          type: "hold-cancel",
+          act: this.def.name,
+          reason: !gate.pass ? "silence no longer counts" : now !== radius ? `the cost changed to "${now}"` : "speech resumed"
+        });
+        this.evaluate();
+        return;
+      }
       void this.commit("silence");
     }, ms);
     this.emit({ type: "hold-start", act: this.def.name, ms, radius });
@@ -24934,11 +24946,44 @@ var ActRun = class {
   get holdDurationMsValue() {
     return this.holdMs;
   }
+  /**
+   * The person started talking again after a sentence that had ended. What
+   * is on the stage goes back to being a reading of speech in progress: the
+   * hold stops, and nothing commits until the new sentence ends too.
+   */
+  resumeSpeculation() {
+    if (this.speculative) return;
+    if (this.status === "settled" || this.status === "committing" || this.status === "discarded" || this.status === "failed") return;
+    this.speculative = true;
+    this.cancelHold("speech resumed");
+    this.evaluate();
+  }
   /** Speech settled. The act may now be judged on the contract like any other. */
   settleSpeculation() {
     if (!this.speculative) return;
     this.speculative = false;
     this.evaluate();
+  }
+  /**
+   * Assent given in advance, by a standing order the person wrote — used by
+   * the conductor, never by a person's tap. It does not count as the person
+   * engaging with this act, and it refuses outright for an act that grants
+   * authority: permission to act without the person is the one thing that
+   * can never be granted without the person.
+   */
+  async assentUnattended() {
+    if (this.def.grantsAuthority) {
+      throw new Error(`[${this.def.name}] changes what may happen without the person, so only the person can commit it`);
+    }
+    if (this.speculative) throw new Error(`[${this.def.name}] cannot assent to a speculative act`);
+    if (this.status !== "explicit" && this.status !== "hold") {
+      throw new Error(`[${this.def.name}] nothing to assent to (status "${this.status}")`);
+    }
+    if (this.missingRequired.length > 0) {
+      throw new Error(`[${this.def.name}] required slots unfilled: ${this.missingRequired.join(", ")}`);
+    }
+    this.cancelHold("assent from a standing order", true);
+    await this.commit("explicit");
   }
   /** Explicit assent: a tap or a yes-word. The only path for `external`. */
   async assent() {
@@ -25666,6 +25711,7 @@ var Speculator = class {
       this.alive = [];
       return { text: text2, final: interim.final, tracks: [], leader: null, switched: false, pruned: pruned2, run: null };
     }
+    if (!interim.final && this.run) this.run.resumeSpeculation();
     const scores = this.local.scoreSync(text2, defs, ctx, this.optionsFor);
     const kept = scores.filter((s) => s.score >= this.floor).slice(0, this.tongues);
     const tracks = kept.map((s) => ({
@@ -26434,6 +26480,19 @@ var Graph = class {
       orders: {},
       thoughts: []
     };
+    const decidedIn = /* @__PURE__ */ new Map();
+    const delegations = {};
+    const orderCommit = /* @__PURE__ */ new Map();
+    const revoked = /* @__PURE__ */ new Set();
+    for (const c of this.chain(branch)) {
+      for (const r of c.records) {
+        if (r.kind === "decision") decidedIn.set(`${r.act}/${r.id}`, c.id);
+        if (r.kind === "undone") {
+          const cid = decidedIn.get(`${r.act}/${r.id}`);
+          if (cid) revoked.add(cid);
+        }
+      }
+    }
     for (const c of this.chain(branch)) {
       for (const r of c.records) {
         switch (r.kind) {
@@ -26455,9 +26514,10 @@ var Graph = class {
             break;
           }
           case "delegation":
-            v.delegations[r.tool] = r.radius;
+            (delegations[r.tool] ??= []).push({ radius: r.radius, commit: c.id });
             break;
           case "order":
+            orderCommit.set(r.id, c.id);
             v.orders[r.id] = { text: r.text, active: r.active, ...r.spec !== void 0 ? { spec: r.spec } : {}, at: c.at };
             break;
           case "thought":
@@ -26466,6 +26526,11 @@ var Graph = class {
         }
       }
     }
+    for (const [tool, stack] of Object.entries(delegations)) {
+      const standing = stack.filter((d) => !revoked.has(d.commit));
+      if (standing.length) v.delegations[tool] = standing[standing.length - 1].radius;
+    }
+    for (const [id, cid] of orderCommit) if (revoked.has(cid) && v.orders[id]) v.orders[id].active = false;
     v.findings = v.findings.slice(-MAX_FINDINGS);
     v.thoughts = v.thoughts.slice(-MAX_THOUGHTS);
     return v;
@@ -26784,6 +26849,11 @@ function authorise(run, order) {
   const why = [];
   const s = run.state();
   const radius = s.radius ?? "external";
+  if (run.def.grantsAuthority) why.push("it changes what may happen without you, so only you can say yes to it");
+  const allowed = order.spec.act ? [order.spec.act.name, ...order.spec.allow ?? []] : order.spec.allow ?? [];
+  if (!allowed.includes(run.def.name)) {
+    why.push(order.spec.act ? `this order covers ${order.spec.act.name}, not ${run.def.name}` : `this order is a question; it does not cover doing ${run.def.name.replace(/_/g, " ")}`);
+  }
   if (radius === "external") why.push("it is external: money and anything irreversible always wait for you");
   if (radiusRank(radius) > radiusRank(order.spec.ceiling)) why.push(`it reaches "${radius}", above what this order allows ("${order.spec.ceiling}")`);
   if (radiusRank(order.spec.ceiling) > radiusRank(MAX_CEILING)) why.push("the order itself asks for more than any order may");
@@ -26933,7 +27003,7 @@ var Conductor = class {
       this.push({ orderId: o.id, kind: "waiting", title, detail: o.text, act: run.def.name, fill, why: v.why });
       return;
     }
-    await run.assent();
+    await run.assentUnattended();
     if (run.status === "settled" && run.result) {
       this.push({ orderId: o.id, kind: "done", title, detail: o.text, act: run.def.name, fill: { ...run.filled }, result: run.result });
     } else {
@@ -26992,6 +27062,9 @@ function scoreActs() {
   return [defineAct({
     name: "set_standing_order",
     domain: "teaching",
+    // Writing the score is permission to act while the person is away. Only
+    // the person may commit it — never the conductor, never a model.
+    grantsAuthority: true,
     phrases: ["every morning", "every evening", "every hour", "every week", "each morning", "from now on"],
     slots: {
       often: {
@@ -31372,6 +31445,16 @@ function deriveShape(appName, tools) {
 }
 
 // ../../packages/mcp/src/bridge.ts
+function fingerprintOf(v) {
+  const text2 = JSON.stringify(v);
+  let a = 2166136261, b = 16777619 ^ text2.length;
+  for (let i = 0; i < text2.length; i++) {
+    const c = text2.charCodeAt(i);
+    a = Math.imul(a ^ c, 16777619) >>> 0;
+    b = Math.imul(b ^ c + i, 16777619) >>> 0;
+  }
+  return a.toString(16).padStart(8, "0") + b.toString(16).padStart(8, "0");
+}
 function textOf(r) {
   return (r.content ?? []).filter((c) => c.type === "text").map((c) => c.text ?? "").join("\n").trim();
 }
@@ -31444,6 +31527,8 @@ function toFacts(t) {
 async function connect(client, opts = {}) {
   const info = client.getServerVersion() ?? { name: "server", version: "0" };
   const server = { name: info.name, version: info.version };
+  const id = opts.id ?? `${opts.prefix ?? ""}${server.name}`;
+  let approved = false;
   const tools = await allTools(client);
   const facts = tools.map(toFacts);
   const { shape, problems } = await loadShape(client, server.name, facts, tools);
@@ -31452,6 +31537,7 @@ async function connect(client, opts = {}) {
   const delegated = /* @__PURE__ */ new Map();
   const catalogs = /* @__PURE__ */ new Map();
   async function refreshCatalogs() {
+    if (!approved) return;
     for (const [tool, ts] of Object.entries(shape.tools ?? {})) {
       for (const [slot, o] of Object.entries(ts.options ?? {})) {
         try {
@@ -31465,7 +31551,6 @@ async function connect(client, opts = {}) {
       }
     }
   }
-  await refreshCatalogs();
   const undoTools = new Set(Object.values(shape.tools ?? {}).map((ts) => ts.undo?.tool).filter((x) => !!x));
   const acts = [];
   const skipped = [];
@@ -31497,6 +31582,7 @@ async function connect(client, opts = {}) {
         slots: plan.slots,
         radius: { max: "external", of: () => delegated.get(t.name) ?? (c.kind === "write" ? c.start : "external") },
         commit: async (filled) => {
+          if (!approved) throw new Error(`${server.name} has not been approved yet`);
           const args = {};
           for (const [k, v] of Object.entries(filled)) {
             if (k === "go" || v === void 0) continue;
@@ -31505,8 +31591,8 @@ async function connect(client, opts = {}) {
           const r = await client.callTool({ name: t.name, arguments: args });
           if (r.isError) throw new Error(`${t.name}: ${textOf(r) || "the server refused"}`);
           const s = structured(r);
-          const id = undo && s?.[undo.from] !== void 0 ? String(s[undo.from]) : `${t.name}:${++counter}`;
-          return { id, result: s ?? textOf(r) };
+          const id2 = undo && s?.[undo.from] !== void 0 ? String(s[undo.from]) : `${t.name}:${++counter}`;
+          return { id: id2, result: s ?? textOf(r) };
         },
         ...undo ? {
           undo: async (res) => {
@@ -31540,6 +31626,7 @@ async function connect(client, opts = {}) {
       name: `${server.name}/${t.name}`,
       local: false,
       async read(query) {
+        if (!approved) return [];
         const q = meaningful(query);
         if (![...q].some((w) => about.has(w) || [...about].some((a) => a.startsWith(w) || w.startsWith(a)))) return [];
         const r = await client.callTool({ name: t.name, arguments: queryParam ? { [queryParam]: query } : {} });
@@ -31569,12 +31656,25 @@ async function connect(client, opts = {}) {
       why: c.why
     };
   });
+  const fingerprint = fingerprintOf({
+    tools: tools.map((t) => ({ n: t.name, a: t.annotations ?? {}, s: t.inputSchema ?? {} })).sort((x, y) => x.n.localeCompare(y.n)),
+    shape
+  });
   return {
+    id,
     server,
+    fingerprint,
     shape,
     shapeProblems: [...problems, ...skipped],
     acts,
     sources,
+    get approved() {
+      return approved;
+    },
+    async approve() {
+      approved = true;
+      await refreshCatalogs();
+    },
     tools: status,
     preview() {
       const st = status();
@@ -31586,7 +31686,7 @@ async function connect(client, opts = {}) {
         `It can do ${writes.length} thing${writes.length === 1 ? "" : "s"} and look up ${reads.length}.`,
         writes.length === 1 ? "It asks you first." : writes.length === 2 ? "Both ask you first." : `All ${writes.length} ask you first.`,
         quietable ? `${quietable} can be undone, so you may later let ${quietable === 1 ? "it" : "them"} go ahead on silence.` : writes.length === 1 ? "It cannot be undone, so it will always ask." : "None can be undone, so they will always ask.",
-        reads.length === 1 ? "The look-up is trusted to only read, because the server says so." : `The ${reads.length} look-ups are trusted to only read, because the server says so.`
+        reads.length === 0 ? "It looks nothing up." : `It looks things up with ${reads.map((r) => r.tool).join(", ")}. The server says ${reads.length === 1 ? "that tool only reads" : "those only read"}; approving means trusting that, and they may be asked about anything you ask about.`
       ];
       if (problems.length) parts.push(`Its layout was refused (${problems.length} problem${problems.length === 1 ? "" : "s"}), so it will look plain.`);
       return parts.join(" ");
@@ -31609,11 +31709,17 @@ var LEVELS = [
   { value: "external", label: "only when I say yes", aliases: ["ask me", "ask first", "always ask"] }
 ];
 function delegationAct(connections) {
-  const lowerable = () => connections.flatMap((c) => c.tools().filter((t) => t.kind === "write" && t.lowerable).map((t) => ({ value: { server: c.server.name, tool: t.tool }, label: `${c.shape.app.name}: ${t.tool.replace(/_/g, " ")}`, aliases: [t.tool.replace(/_/g, " ")] })));
-  const find = (v) => connections.find((c) => c.server.name === v.server);
+  const ids = connections.map((c) => c.id);
+  const dup = ids.find((x, i) => ids.indexOf(x) !== i);
+  if (dup) throw new Error(`two connections are both called "${dup}"; give each its own id before offering delegations`);
+  const lowerable = () => connections.filter((c) => c.approved).flatMap((c) => c.tools().filter((t) => t.kind === "write" && t.lowerable).map((t) => ({ value: { server: c.id, tool: t.tool }, label: `${c.shape.app.name}: ${t.tool.replace(/_/g, " ")}`, aliases: [t.tool.replace(/_/g, " ")] })));
+  const find = (v) => connections.find((c) => c.id === v.server);
   return defineAct({
     name: "set_delegation",
     domain: "household",
+    // Lowering what a tool costs is permission to act without the person.
+    // Only the person may commit it — never a standing order.
+    grantsAuthority: true,
     phrases: ["let it", "without asking", "stop asking", "always ask", "ask me first"],
     slots: {
       tool: { primitive: "chip", options: () => lowerable(), required: true, order: 1 },
@@ -31647,7 +31753,7 @@ function applyDelegations(connections, remembered) {
   const skipped = [];
   for (const [key, radius] of Object.entries(remembered)) {
     const [server, tool] = key.split("/");
-    const conn = connections.find((c) => c.server.name === server);
+    const conn = connections.find((c) => c.id === server);
     try {
       if (!conn || !tool) throw new Error("not connected");
       conn.delegate(tool, radius);
@@ -45958,9 +46064,20 @@ async function start(argv) {
   const cfg = existsSync(configPath) ? JSON.parse(readFileSync(configPath, "utf8")) : {};
   const dataDir = expand(cfg.dataDir ?? "~/.hepta");
   mkdirSync(dataDir, { recursive: true });
+  const approvalsPath = join(dataDir, "approvals.json");
+  const approvals = existsSync(approvalsPath) ? JSON.parse(readFileSync(approvalsPath, "utf8")) : {};
+  const approving = argv[0] === "approve" ? argv[1] : void 0;
   const connections = [];
   const clients = [];
+  const seen = /* @__PURE__ */ new Set();
   for (const s of cfg.servers ?? []) {
+    const id = s.name ?? s.command.split("/").pop().replace(/\.[a-z]+$/, "");
+    if (seen.has(id)) {
+      log(`two servers are both called "${id}" in ${configPath}; the second is skipped. Give each its own name.`);
+      continue;
+    }
+    seen.add(id);
+    if (approving && approving !== id) continue;
     try {
       const client = new Client({ name: "hepta", version: "1.0.0" });
       await client.connect(new StdioClientTransport({
@@ -45969,14 +46086,36 @@ async function start(argv) {
         stderr: "ignore",
         ...s.env ? { env: { ...process.env, ...s.env } } : {}
       }));
-      const conn = await connect(client, s.prefix ? { prefix: s.prefix } : {});
+      const conn = await connect(client, { id, ...s.prefix ? { prefix: s.prefix } : {} });
+      for (const p of conn.shapeProblems) log(`  ${id} shape: ${p}`);
+      if (approving) {
+        log(conn.preview());
+        approvals[id] = conn.fingerprint;
+        writeFileSync(approvalsPath, JSON.stringify(approvals, null, 2), { mode: 384 });
+        log(`approved ${id}`);
+        await client.close().catch(() => {
+        });
+        continue;
+      }
+      if (approvals[id] !== conn.fingerprint) {
+        log(`${id} is not approved${approvals[id] ? " (what it offers has changed since you approved it)" : ""}. It would mean:`);
+        log(`  ${conn.preview()}`);
+        log(`  To approve: node hepta.mjs approve ${id}${argv.includes("--config") ? ` --config ${configPath}` : ""}`);
+        await client.close().catch(() => {
+        });
+        continue;
+      }
+      await conn.approve();
       connections.push(conn);
       clients.push(client);
-      log(`connected ${conn.shape.app.name}: ${conn.preview()}`);
-      for (const p of conn.shapeProblems) log(`  shape: ${p}`);
+      log(`connected ${id}: ${conn.preview()}`);
     } catch (e) {
-      log(`could not connect ${s.name ?? s.command}: ${e.message}`);
+      log(`could not connect ${id}: ${e.message}`);
     }
+  }
+  if (approving) {
+    if (!seen.has(approving)) log(`no server called "${approving}" in ${configPath}`);
+    return { app: null, memory: null, conductor: null, connections };
   }
   const memory = openMemory(new FileStore(join(dataDir, "memory.json")));
   for (const s of applyDelegations(connections, memory.reader.view().delegations)) log(`delegation skipped: ${s}`);

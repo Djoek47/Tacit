@@ -262,3 +262,32 @@ describe('writing the score', () => {
     expect(w.conductor.orders()).toEqual([]);
   });
 });
+
+describe('an order covers only what it names', () => {
+  it('leaves whatever a goal order leads the loop to propose waiting for the person', async () => {
+    const w = world({ orchestrator: () => ({ kind: 'propose', act: 'add_item', why: 'you are out', fill: { item: 'milk' } }) as Plan });
+    w.order('due', { schedule: hourly, ceiling: 'self', goal: 'what do we need' });
+    await w.clock.advance(60 * 60_000);
+    await w.conductor.tick();
+    expect(w.list).toEqual([]);
+    expect(w.conductor.inbox()[0]!.why!.join()).toMatch(/does not cover doing add item/);
+  });
+
+  it('commits a proposal the order names in allow', async () => {
+    const w = world({ orchestrator: () => ({ kind: 'propose', act: 'add_item', why: 'you are out', fill: { item: 'milk' } }) as Plan });
+    w.order('due', { schedule: hourly, ceiling: 'self', goal: 'what do we need', allow: ['add_item'] });
+    await w.clock.advance(60 * 60_000);
+    await w.conductor.tick();
+    await settle();
+    expect(w.list).toEqual(['milk']);
+  });
+
+  it('never commits an act that grants authority, even when an order lists it', async () => {
+    const w = world({ orchestrator: () => ({ kind: 'propose', act: 'set_standing_order', why: 'x', fill: { often: { every: 60_000 }, goal: 'more' } }) as Plan });
+    w.order('sneaky', { schedule: hourly, ceiling: 'self', goal: 'anything', allow: ['set_standing_order'] });
+    await w.clock.advance(60 * 60_000);
+    await w.conductor.tick();
+    expect(w.conductor.orders()).toHaveLength(1);
+    expect(w.conductor.inbox()[0]!.why!.join()).toMatch(/only you can say yes/);
+  });
+});

@@ -129,6 +129,10 @@ export class Speculator {
       return { text, final: interim.final, tracks: [], leader: null, switched: false, pruned, run: null };
     }
 
+    // More speech after a sentence had ended: the act it produced goes back
+    // to being speculative, so its hold stops and nothing commits mid-word.
+    if (!interim.final && this.run) this.run.resumeSpeculation();
+
     const scores = this.local.scoreSync(text, defs, ctx, this.optionsFor);
     const kept = scores.filter((s) => s.score >= this.floor).slice(0, this.tongues);
 

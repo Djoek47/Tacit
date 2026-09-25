@@ -174,6 +174,13 @@ export type ActDef = {
    * layer owns the meaning; this is only the tag it hangs on.
    */
   domain?: string;
+  /**
+   * This act changes what may happen without the person — letting a tool go
+   * ahead on silence, writing a standing order. Only a person may commit it:
+   * `assentUnattended()` refuses, so no conductor, schedule or model can use
+   * one act to grant itself the next.
+   */
+  grantsAuthority?: boolean;
   slots: Record<string, SlotDef>;
   radius: RadiusSpec;
   commit: (filled: Filled, ctx: Ctx) => CommitResult | Promise<CommitResult>;

@@ -27530,22 +27530,40 @@ var EMPTY_COMPLETION_RESULT = {
 };
 
 // ../../packages/devkit/src/server.ts
-import { existsSync, mkdirSync, readFileSync as readFileSync3, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readdirSync as readdirSync3, readFileSync as readFileSync3, realpathSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative as relative2, resolve } from "node:path";
 var text = (t, data) => ({ content: [{ type: "text", text: t }], ...data ? { structuredContent: data } : {} });
 var fail = (t) => ({ isError: true, content: [{ type: "text", text: t }] });
 function createDevServer(cfg) {
   const server = new McpServer({ name: "hepta-dev", version: "1.0.0" });
-  const root = resolve(cfg.root);
+  const root = realpathSync(resolve(cfg.root));
+  const outside = (p) => new Error(`${p} is outside ${root}; hepta-dev only reads and writes inside the project`);
   const inRoot = (p) => {
     const abs = resolve(root, p);
-    const rel = relative2(root, abs);
-    if (rel.startsWith("..") || isAbsolute(rel)) throw new Error(`${p} is outside ${root}; hepta-dev only reads and writes inside the project`);
+    const lexical = relative2(root, abs);
+    if (lexical.startsWith("..") || isAbsolute(lexical)) throw outside(p);
+    let probe = abs;
+    while (!existsSync(probe) && probe !== root) {
+      try {
+        if (lstatSync(probe).isSymbolicLink()) throw outside(p);
+      } catch (e) {
+        if (e instanceof Error && e.message.includes("outside")) throw e;
+      }
+      probe = dirname(probe);
+    }
+    const real = relative2(root, realpathSync(probe));
+    if (real.startsWith("..") || isAbsolute(real)) throw outside(p);
     return abs;
   };
   const brief = (p) => parseBrief(readFileSync3(inRoot(p), "utf8"));
   const write2 = (p, body, overwrite) => {
     const abs = inRoot(p);
+    let isLink = false;
+    try {
+      isLink = lstatSync(abs).isSymbolicLink();
+    } catch {
+    }
+    if (isLink) throw new Error(`${p} is a link; hepta-dev does not write through links`);
     if (existsSync(abs) && !overwrite) throw new Error(`${p} exists. Pass overwrite: true to replace it.`);
     mkdirSync(dirname(abs), { recursive: true });
     writeFileSync(abs, body);
@@ -27613,6 +27631,7 @@ function createDevServer(cfg) {
     description: "Opens a URL at phone, tablet and desktop sizes, runs optional steps, and reports console errors, sideways scrolling, small tap targets, cut-off text and more, in sentences.",
     inputSchema: {
       url: external_exports.string(),
+      /** A new or empty folder for one screenshot per screen size. */
       steps: external_exports.array(external_exports.union([
         external_exports.object({ click: external_exports.string() }),
         external_exports.object({ fill: external_exports.tuple([external_exports.string(), external_exports.string()]) }),
@@ -27621,11 +27640,20 @@ function createDevServer(cfg) {
       ])).max(40).optional(),
       screenshots: external_exports.string().optional()
     },
-    annotations: { readOnlyHint: true, openWorldHint: true }
+    // Not read-only: it can write screenshots. Found by independent review —
+    // it claimed readOnlyHint while overwriting files, and clients run
+    // read-only tools without asking.
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true }
   }, async ({ url, steps, screenshots }) => guard(async () => {
+    let shots;
+    if (screenshots) {
+      shots = inRoot(screenshots);
+      if (existsSync(shots) && readdirSync3(shots).length) throw new Error(`${screenshots} is not empty. Screenshots go into a new or empty folder, so nothing is overwritten.`);
+      mkdirSync(shots, { recursive: true });
+    }
     const r = await testApp(url, {
       ...steps ? { steps } : {},
-      ...screenshots ? { screenshotDir: inRoot(screenshots) } : {},
+      ...shots ? { screenshotDir: shots } : {},
       ...cfg.executablePath ? { executablePath: cfg.executablePath } : {}
     });
     return text(formatTest(r), r);

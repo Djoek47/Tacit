@@ -127,6 +127,19 @@ class Graph {
       branch, head: this.branches.get(branch) ?? null,
       facts: {}, findings: [], decisions: [], delegations: {}, orders: {}, thoughts: [],
     };
+    // Undoing a decision also takes back what that decision wrote: a
+    // delegation it granted, an order it created. Otherwise an undone
+    // "let it go ahead" comes back the next time anything reads memory.
+    const decidedIn = new Map<string, string>();       // act/id -> commit id
+    const delegations: Record<string, { radius: string; commit: string }[]> = {};
+    const orderCommit = new Map<string, string>();     // order id -> commit id
+    const revoked = new Set<string>();                 // commit ids whose decision was undone
+    for (const c of this.chain(branch)) {
+      for (const r of c.records) {
+        if (r.kind === 'decision') decidedIn.set(`${r.act}/${r.id}`, c.id);
+        if (r.kind === 'undone') { const cid = decidedIn.get(`${r.act}/${r.id}`); if (cid) revoked.add(cid); }
+      }
+    }
     for (const c of this.chain(branch)) {
       for (const r of c.records) {
         switch (r.kind) {
@@ -135,12 +148,17 @@ class Graph {
           case 'finding': v.findings.push({ source: r.source, claim: r.claim, ...(r.value !== undefined ? { value: r.value } : {}), at: c.at }); break;
           case 'decision': v.decisions.push({ act: r.act, id: r.id, summary: r.summary, at: c.at, undone: false }); break;
           case 'undone': { const d = [...v.decisions].reverse().find((x) => x.act === r.act && x.id === r.id); if (d) d.undone = true; break; }
-          case 'delegation': v.delegations[r.tool] = r.radius; break;
-          case 'order': v.orders[r.id] = { text: r.text, active: r.active, ...(r.spec !== undefined ? { spec: r.spec } : {}), at: c.at }; break;
+          case 'delegation': (delegations[r.tool] ??= []).push({ radius: r.radius, commit: c.id }); break;
+          case 'order': orderCommit.set(r.id, c.id); v.orders[r.id] = { text: r.text, active: r.active, ...(r.spec !== undefined ? { spec: r.spec } : {}), at: c.at }; break;
           case 'thought': v.thoughts.push({ topic: r.topic, text: r.text, at: c.at }); break;
         }
       }
     }
+    for (const [tool, stack] of Object.entries(delegations)) {
+      const standing = stack.filter((d) => !revoked.has(d.commit));
+      if (standing.length) v.delegations[tool] = standing[standing.length - 1]!.radius;
+    }
+    for (const [id, cid] of orderCommit) if (revoked.has(cid) && v.orders[id]) v.orders[id]!.active = false;
     v.findings = v.findings.slice(-MAX_FINDINGS);
     v.thoughts = v.thoughts.slice(-MAX_THOUGHTS);
     return v;

@@ -80,16 +80,41 @@ describe('lines of thought as branches', () => {
 describe('what everyone reads', () => {
   it('folds decisions, undos, delegations and orders', () => {
     const { reader, writer } = mem();
+    writer.commit(MAIN, 'congregator', 'c', [{ kind: 'decision', act: 'add_task', id: 't1', summary: 'buy milk' }]);
+    writer.commit(MAIN, 'congregator', 'c', [{ kind: 'undone', act: 'add_task', id: 't1' }]);
     writer.commit(MAIN, 'congregator', 'c', [
-      { kind: 'decision', act: 'add_task', id: 't1', summary: 'buy milk' },
-      { kind: 'undone', act: 'add_task', id: 't1' },
-      { kind: 'delegation', tool: 'add_task', radius: 'self' },
+      { kind: 'decision', act: 'set_delegation', id: 'tasks/add_task', summary: 'let it go ahead' },
+      { kind: 'delegation', tool: 'tasks/add_task', radius: 'self' },
+    ]);
+    writer.commit(MAIN, 'congregator', 'c', [
+      { kind: 'decision', act: 'set_standing_order', id: 'morning', summary: 'every morning' },
       { kind: 'order', id: 'morning', text: 'every morning, list what is due', active: true },
     ]);
     const v = reader.view();
     expect(v.decisions[0]!.undone).toBe(true);
-    expect(v.delegations).toEqual({ add_task: 'self' });
+    expect(v.delegations).toEqual({ 'tasks/add_task': 'self' });
     expect(v.orders.morning!.active).toBe(true);
+  });
+
+  it('takes back what an undone decision wrote: the delegation it granted, the order it created', () => {
+    // Found by independent review: undo reverted the live radius, but memory
+    // still said "self", and a restart silently re-applied it.
+    const { reader, writer } = mem();
+    writer.commit(MAIN, 'congregator', 'before', [
+      { kind: 'decision', act: 'set_delegation', id: 'tasks/add_task', summary: 'ask first' },
+      { kind: 'delegation', tool: 'tasks/add_task', radius: 'other-person' },
+    ]);
+    writer.commit(MAIN, 'congregator', 'granted', [
+      { kind: 'decision', act: 'set_delegation', id: 'tasks/add_task#2', summary: 'go ahead' },
+      { kind: 'delegation', tool: 'tasks/add_task', radius: 'self' },
+      { kind: 'decision', act: 'set_standing_order', id: 'o1', summary: 'hourly' },
+      { kind: 'order', id: 'o1', text: 'every hour', active: true },
+    ]);
+    expect(reader.view().delegations['tasks/add_task']).toBe('self');
+    writer.commit(MAIN, 'congregator', 'undo', [{ kind: 'undone', act: 'set_delegation', id: 'tasks/add_task#2' }]);
+    const v = reader.view();
+    expect(v.delegations['tasks/add_task']).toBe('other-person'); // back to what it was, not gone, not "self"
+    expect(v.orders.o1!.active).toBe(false);                     // written in the same undone commit
   });
 
   it('finds things by their words', () => {
