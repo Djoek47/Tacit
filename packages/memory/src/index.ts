@@ -164,3 +164,5 @@ export function memoryActs(mem: Memory): ActDef[] {
 
   return [remember, forget];
 }
+
+export * from './graph.js';
