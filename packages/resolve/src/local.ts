@@ -104,8 +104,12 @@ export class LocalResolver implements Resolver {
       // quantity or a date has no option list, so the option matcher can say
       // nothing about it either way; counting it as a miss would depress every
       // act that mentions a number, which is nearly all of them.
+      // Free text is left out too: the rest of a sentence always matches
+      // something, so it is never evidence of which act was meant. Counting
+      // it as coverage made every act whose only slot is free text lose to
+      // its own trigger phrase.
       const evaluable = Object.entries(act.slots).filter(
-        ([name, s]) => s.required && (s.resolve || optionsFor(act, name).length > 0),
+        ([name, s]) => s.required && s.primitive !== 'ghostField' && (s.resolve || optionsFor(act, name).length > 0),
       );
       let covered = 0;
       for (const [name, s] of evaluable) {
@@ -134,10 +138,8 @@ export class LocalResolver implements Resolver {
         weight += this.routing.phraseWeight;
         total += this.routing.phraseWeight * phraseMatch;
       }
-      if (evaluable.length > 0) {
-        weight += this.routing.coverageWeight;
-        total += this.routing.coverageWeight * requiredCoverage;
-      }
+      weight += this.routing.coverageWeight;
+      total += this.routing.coverageWeight * (evaluable.length > 0 ? requiredCoverage : this.routing.uncheckableCoverage);
 
       scores.push({
         act: act.name,
@@ -167,7 +169,7 @@ export class LocalResolver implements Resolver {
     for (const other of acts) {
       if (other.name === act.name) continue;
       for (const [name, sd] of Object.entries(other.slots)) {
-        if (!sd.required) continue;
+        if (!sd.required || sd.primitive === 'ghostField') continue;
         const cands = sd.resolve
           ? sd.resolve(text, ctx, {})
           : candidatesForOptions(tokens, optionsFor(other, name));

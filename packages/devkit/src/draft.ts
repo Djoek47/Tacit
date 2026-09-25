@@ -115,7 +115,16 @@ function draftAct(f: Feature, taken: Set<string>): ActDraft {
 
   const phrase = words.slice(0, Math.min(3, words.length)).join(' ').toLowerCase();
   const phrases = [...new Set([verb, phrase].filter((p) => p.length > 1))];
-  const preview = [words[0], ...Object.keys(slots).map((k) => `{${k}}`)].join(' ');
+  // The order a person would say it: the thing, who for, when, how much.
+  const byKind = (p: SlotDraft['primitive']) => Object.entries(slots).filter(([, s]) => s.primitive === p).map(([k]) => k);
+  const preview = [
+    words[0]!.charAt(0).toUpperCase() + words[0]!.slice(1),
+    ...byKind('ghostField').map((k) => `{${k}}`),
+    ...byKind('chip').map((k) => `{${k}}`),
+    ...byKind('face').map((k) => `for {${k}}`),
+    ...byKind('when').map((k) => `{${k}}`),
+    ...byKind('quantity').map((k) => `{${k}}`),
+  ].join(' ');
   return { name, feature: f.text, phrases, domain, radius, slots, preview, why };
 }
 

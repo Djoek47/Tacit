@@ -60,6 +60,17 @@ export type RoutingConfig = {
    * partial evidence routes "play something" to a payment act.
    */
   phraseFloor: number;
+  /**
+   * Coverage given to an act with nothing checkable to cover — only free
+   * text, or no required slots. Scoring it on its phrase alone gave it a
+   * perfect score, so "add milk" (groceries: asks only for free text) beat
+   * "add the dishes for Maya tomorrow" (chores: a person and a time, both
+   * found) whenever the two shared the word "add". Absence of evidence is
+   * weak evidence against, not none. 0.35 still lost the chores case by a
+   * hundredth once rival acts discounted its evidence; 0.25 is the value the
+   * routing test in test/uncheckable.test.ts holds in place.
+   */
+  uncheckableCoverage: number;
 };
 
 export const DEFAULT_ROUTING: RoutingConfig = {
@@ -69,6 +80,7 @@ export const DEFAULT_ROUTING: RoutingConfig = {
   phraseWeight: 0.4,
   coverageWeight: 0.6,
   phraseFloor: 0.9,
+  uncheckableCoverage: 0.25,
 };
 
 export type RouteDecision =

@@ -186,7 +186,19 @@ export class Composer {
       if (!raw.options && !raw.catalog) {
         if (raw.primitive === 'when') slot.resolve = (t, c) => resolveWhen(t, c);
         else if (raw.primitive === 'quantity') slot.resolve = (t) => resolveQuantity(t);
-        else if (raw.primitive === 'ghostField') { slot.resolve = remainder(spec.phrases ?? []); slot.fill = 'either'; }
+        else if (raw.primitive === 'ghostField') {
+          const siblings = () => {
+            const out = new Set<string>();
+            for (const [k, sd] of Object.entries(slots)) {
+              if (k === name || !sd.options) continue;
+              const opts = sd.options({} as never, {});
+              if (Array.isArray(opts)) for (const o of opts) for (const n of [o.label, ...(o.aliases ?? [])]) for (const w of String(n).toLowerCase().split(/\s+/)) out.add(w);
+            }
+            return out;
+          };
+          slot.resolve = remainder(spec.phrases ?? [], siblings);
+          slot.fill = 'either';
+        }
       }
       if (raw.required) slot.required = true;
       if (raw.params) slot.params = raw.params;
