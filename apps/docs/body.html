@@ -1,0 +1,423 @@
+<header class="top">
+  <a class="brand" href="#top"><span class="dot" aria-hidden="true"></span>Hepta</a>
+  <span class="tag">Developers · V1</span>
+  <nav aria-label="Primary">
+    <a href="#inside">Inside</a>
+    <a href="#outside">Outside</a>
+    <a href="#concepts">Concepts</a>
+    <a href="#shape">Shape</a>
+    <a href="#devtools">hepta-dev</a>
+    <a href="#guarantees">Guarantees</a>
+  </nav>
+</header>
+
+<div class="hero" id="top">
+  <div>
+    <h1>Your app, something people talk to.</h1>
+    <p class="lede">People say what they want. One card shows what was heard, holds for a moment, and <b>silence lets it happen</b>. A word or a tap corrects it; undo is one tap away. Every action declares <b>what it costs to be wrong</b>, and that decides whether it may happen on silence, needs a yes, or may never happen while you are away.</p>
+    <div class="ways">
+      <a class="way" href="#inside"><span class="k">Inside</span><b>Add it to your app</b><span>Define acts, or connect the MCP servers you already have. <code>hear(text)</code> does the rest.</span></a>
+      <a class="way" href="#outside"><span class="k">Outside</span><b>Run it next to your tools</b><span>An always-on conductor and a shared memory, as an MCP server for Claude, Cursor or any client.</span></a>
+    </div>
+  </div>
+  <div class="device" aria-label="A live stage">
+    <div class="bar"><span class="live" aria-hidden="true"></span>A live stage · runs in this page</div>
+    <div id="stage"></div>
+    <p class="said" id="said" aria-live="polite"></p>
+    <form id="demo" autocomplete="off">
+      <input id="demoSay" aria-label="Say something to the demo" placeholder="add milk and eggs">
+      <button class="go" type="submit">Say</button>
+    </form>
+    <div class="tries" id="tries"></div>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="toc" aria-label="On this page">
+    <ol>
+      <li class="grp">Start</li>
+      <li><a href="#inside">Inside your app</a></li>
+      <li><a href="#connect">Connect MCP servers</a></li>
+      <li><a href="#outside">Outside, as a server</a></li>
+      <li class="grp">Concepts</li>
+      <li><a href="#concepts">Acts and slots</a></li>
+      <li><a href="#radius">What it costs</a></li>
+      <li><a href="#hold">The hold</a></li>
+      <li><a href="#pyramid">The pyramid</a></li>
+      <li><a href="#memory">Memory</a></li>
+      <li><a href="#conductor">The conductor</a></li>
+      <li><a href="#hepta">Speaking and listening</a></li>
+      <li class="grp">Reference</li>
+      <li><a href="#shape">The shape</a></li>
+      <li><a href="#bridge">What tools cost</a></li>
+      <li><a href="#devtools">hepta-dev</a></li>
+      <li><a href="#guarantees">Guarantees</a></li>
+      <li><a href="#unverified">Not yet verified</a></li>
+      <li><a href="#packages">Packages</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <div class="note"><b>Status.</b> V1. The packages are not on npm yet: use them from the repository (<code>packages/*</code>) or the bundled files in <code>apps/</code>. Everything on this page is covered by the test suite, except the section <a href="#unverified">Not yet verified</a>.</div>
+
+    <section id="inside">
+      <span class="eyebrow">Start · Inside</span>
+      <h2>Five minutes, inside your app</h2>
+      <p>Declare what your app can do. Hand it text. That is the whole surface.</p>
+      <div class="code"><span class="lang">ts</span><pre><code>import { createApp, defineAct } from '@intermenu/aiuic-kit';
+import { StagePresenter, stylesheet } from '@intermenu/aiuic-eui';
+import { resolveWhen } from '@intermenu/aiuic-resolve';
+
+const app = createApp({
+  ctx: () =&gt; ({
+    actor: { id: 'me' },
+    // All four must be true for silence to count as a yes. Unknown counts as false.
+    attention: { foreground: true, unlocked: true, proximityClear: true, listening: true },
+  }),
+  presenters: [new StagePresenter(document.getElementById('stage'), document)],
+  acts: [
+    defineAct({
+      name: 'add_chore',
+      domain: 'chores',                    // the colour, and the rules for that part of the app
+      phrases: ['add', 'assign', 'needs to do'],
+      slots: {
+        chore:    { primitive: 'chip', options: () =&gt; CHORES, required: true, order: 1 },
+        assignee: { primitive: 'face', options: () =&gt; PEOPLE, required: true, order: 2 },
+        due:      { primitive: 'when', resolve: resolveWhen, order: 3 },
+      },
+      radius: 'other-person',              // what it costs to be wrong
+      commit: (f) =&gt; db.chores.insert(f),
+      undo:   (r) =&gt; db.chores.remove(r.id),
+    }),
+  ],
+});
+
+app.hear('the dishes for Maya tomorrow');        // card up, filled, holding
+app.hear('the dishes for', { final: false });    // still speaking: it speculates, and cannot commit</code></pre></div>
+      <p><code>hear()</code> routes the sentence to an act, fills its slots from the same words, speculates while <code>final</code> is false, and draws the card. Speech-to-text stays outside: pass the transcript as it arrives.</p>
+      <p>The one thing to get right: <b><code>final: false</code> means the person has not stopped talking</b>, and nothing commits on an unfinished sentence.</p>
+    </section>
+
+    <section id="connect">
+      <span class="eyebrow">Start · Inside</span>
+      <h2>Connect the MCP servers you already have</h2>
+      <div class="code"><span class="lang">ts</span><pre><code>import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { connect, delegationAct } from '@intermenu/aiuic-mcp';
+
+const client = new Client({ name: 'my-app', version: '1.0.0' });
+await client.connect(new StdioClientTransport({ command: 'node', args: ['tasks-server.mjs'] }));
+const tasks = await connect(client);
+
+tasks.preview();
+// "Connect Tasks. It can do 1 thing and look up 2. It asks you first. 1 can be undone,
+//  so you may later let it go ahead on silence. The 2 look-ups are trusted to only read,
+//  because the server says so."
+
+const app = createApp({ ctx, acts: [...tasks.acts, delegationAct([tasks])], domains: tasks.shape.domains });</code></pre></div>
+      <p>Write tools become acts. Read-only tools become sources the aggregator can ask. A tool named as another tool's undo is kept out of sight: it is reached from the card that made the change. Show <code>preview()</code> to the person before trusting anything the server says.</p>
+    </section>
+
+    <section id="outside">
+      <span class="eyebrow">Start · Outside</span>
+      <h2>Five minutes, outside</h2>
+      <div class="code"><span class="lang">sh</span><pre><code>cd apps/hepta
+cp hepta.config.example.json hepta.config.json    # list your MCP servers
+node hepta.mjs                                     # always on; MCP over HTTP on 127.0.0.1:8790</code></pre></div>
+      <h3>From Claude Desktop, Cursor, or any client that launches servers</h3>
+      <div class="code"><span class="lang">json</span><pre><code>{
+  "mcpServers": {
+    "hepta": {
+      "command": "node",
+      "args": ["/absolute/path/to/apps/hepta/hepta.mjs", "--stdio",
+               "--config", "/absolute/path/to/hepta.config.json"]
+    }
+  }
+}</code></pre></div>
+      <h3>Over HTTP</h3>
+      <p><code>http://127.0.0.1:8790/mcp</code> with <code>Authorization: Bearer &lt;token&gt;</code>. The token is created on first run at <code>~/.hepta/token</code>. The endpoint serves your memory, so it listens on localhost only and refuses requests without the token.</p>
+      <div class="code"><span class="lang">json</span><pre><code>{
+  "dataDir": "~/.hepta",
+  "servers": [{ "name": "tasks", "command": "node", "args": ["tasks-server.mjs"] }],
+  "http": { "port": 8790 },
+  "notify": { "url": "https://ntfy.sh/your-own-topic" }
+}</code></pre></div>
+      <p><code>notify.url</code> receives a plain-text POST when the conductor does something, waits for you, or cannot do something.</p>
+      <h3>What an outside caller can do</h3>
+      <div class="tbl"><table>
+        <thead><tr><th>Tool</th><th>Does</th></tr></thead>
+        <tbody>
+          <tr><td><code>stage</code></td><td>What is on the person's stage now.</td></tr>
+          <tr><td><code>why_not_committing</code></td><td>The reasons, in order: missing, guessed, cost, attention.</td></tr>
+          <tr><td><code>acts</code></td><td>Everything the app can do.</td></tr>
+          <tr><td><code>propose</code></td><td>Puts an act on the stage with values filled, waiting for the person.</td></tr>
+          <tr><td><code>pursue</code></td><td>Runs the loop on a goal. Ends in an answer or a proposal, never a commit.</td></tr>
+          <tr><td><code>think</code></td><td>Adds a line of thought to a memory branch, never to <code>main</code>.</td></tr>
+          <tr><td><code>memory_search</code>, <code>memory_branches</code></td><td>Reads the shared memory.</td></tr>
+          <tr><td><code>inbox</code>, <code>score</code></td><td>The conductor's inbox and standing orders.</td></tr>
+        </tbody>
+      </table></div>
+      <p>There is no tool that says yes, and none that speaks as the person. Whoever calls in is a model: a proposal from outside waits on the stage until the person answers it.</p>
+    </section>
+
+    <section id="concepts">
+      <span class="eyebrow">Concepts</span>
+      <h2>Acts, slots and primitives</h2>
+      <p>An <b>act</b> is one thing a person can ask for. It has <b>slots</b> to fill, each drawn by a <b>primitive</b>:</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Primitive</th><th>For</th><th>Filled on the device by</th></tr></thead>
+        <tbody>
+          <tr><td><code>chip</code></td><td>a choice from a list</td><td>matching the options and their aliases</td></tr>
+          <tr><td><code>face</code></td><td>a person</td><td>matching names</td></tr>
+          <tr><td><code>when</code></td><td>a time</td><td>"tomorrow at 9:30am", "friday"</td></tr>
+          <tr><td><code>quantity</code></td><td>an amount</td><td>"$12", "twelve dollars"</td></tr>
+          <tr><td><code>ghostField</code></td><td>free text</td><td>the rest of the sentence, always marked as a guess</td></tr>
+        </tbody>
+      </table></div>
+      <p>A slot filled by a weak or uncalibrated match is <b>provisional</b>: the card shows it with a ✓ the person taps to make it theirs.</p>
+    </section>
+
+    <section id="radius">
+      <span class="eyebrow">Concepts</span>
+      <h2>What it costs to be wrong</h2>
+      <div class="tbl"><table>
+        <thead><tr><th>Radius</th><th>Means</th><th>Silence may commit?</th></tr></thead>
+        <tbody>
+          <tr><td><span class="r self">self</span></td><td>only the person asking</td><td>yes, after the hold</td></tr>
+          <tr><td><span class="r shared">shared</span></td><td>something shared and reversible</td><td>yes, after the hold</td></tr>
+          <tr><td><span class="r op">other-person</span></td><td>reaches someone else</td><td>after a longer hold, and never on a guess</td></tr>
+          <tr><td><span class="r ext">external</span></td><td>money, sending, anything irreversible</td><td>never: it asks for a yes</td></tr>
+        </tbody>
+      </table></div>
+      <p>An act costs the most of its own radius and every effect's. An effect that cannot be undone counts as external. <b>An act with no <code>undo()</code> is external at runtime, whatever it declares</b>: nothing commits on silence that cannot be taken back.</p>
+    </section>
+
+    <section id="hold">
+      <span class="eyebrow">Concepts</span>
+      <h2>The hold, and when silence counts</h2>
+      <p>A complete act below external <b>holds</b>: 850 ms for an adult, 1300 ms for a child, longer when it reaches another person. If the person stays quiet through it, it happens. A word or a tap stops it.</p>
+      <p>Silence only counts as a yes when the app is in front, the device is unlocked, nothing covers the screen, the microphone is live, and <b>the person touched or spoke during this act</b>. That last check is why a card built from defaults, a card the system started, and a card a model proposed all wait for a yes.</p>
+    </section>
+
+    <section id="pyramid">
+      <span class="eyebrow">Concepts</span>
+      <h2>The pyramid: authority, not votes</h2>
+      <div class="tbl"><table>
+        <thead><tr><th>Role</th><th>May</th><th>In code</th></tr></thead>
+        <tbody>
+          <tr><td><b>Conductor</b></td><td>keep the rhythm, always on; commit only what the score allows</td><td><code>Conductor</code></td></tr>
+          <tr><td><b>Congregator</b></td><td>write to memory, and only what happened</td><td><code>pyramid.congregator</code></td></tr>
+          <tr><td><b>Orchestrator</b></td><td>propose: copies in, a plan out; nothing to write with</td><td>your function</td></tr>
+          <tr><td><b>Aggregator</b></td><td>read sources and memory</td><td><code>Aggregator</code></td></tr>
+        </tbody>
+      </table></div>
+      <p>Three agents on the same model make the same mistakes, so three votes read as one confident wrong answer. Each role holds a different authority instead, and a mistake has to get past three different kinds of gate.</p>
+      <div class="code"><span class="lang">ts</span><pre><code>const pyramid = new Pyramid({
+  app, ctx, memory,
+  aggregator: new Aggregator([...tasks.sources, ...bank.sources]),
+  orchestrator: async ({ goal, findings, memory, parts }) =&gt; {
+    // Call a model here if you like. Return one of:
+    //   { kind: 'answer', answer }
+    //   { kind: 'propose', act, fill, why }   a card on the stage, waiting for a yes
+    //   { kind: 'look', query }               look again with a sharper question
+    //   { kind: 'split', goals }              each part goes round the loop one level down
+  },
+});
+await pyramid.pursue('plan my month');</code></pre></div>
+      <p>The loop stops at a depth of 3, after 2 requests to look again, and on any goal already being pursued higher up.</p>
+    </section>
+
+    <section id="memory">
+      <span class="eyebrow">Concepts</span>
+      <h2>Memory: one pen, and branches</h2>
+      <div class="code"><span class="lang">ts</span><pre><code>const { reader, writer } = openMemory(store);   // every role gets reader; the congregator gets writer</code></pre></div>
+      <p><b>Versions are branches.</b> A line of thought can explore "what if the budget were 650" on its own branch, then be merged or dropped. A branch holds only thoughts and findings; facts, decisions, delegations and standing orders are real, and go to <code>main</code> or nowhere.</p>
+      <p>A fact is only ever something the person said, and it carries the words it came from. A figure from a bank feed stays a finding.</p>
+    </section>
+
+    <section id="conductor">
+      <span class="eyebrow">Concepts</span>
+      <h2>The conductor: always on</h2>
+      <div class="code"><span class="lang">ts</span><pre><code>const conductor = new Conductor({ app, memory: reader, clock, store, ctx,
+  pursue: (goal) =&gt; pyramid.pursue(goal), notifier });
+conductor.start();</code></pre></div>
+      <p>The person writes the <b>score</b>: standing orders such as "every morning, tell me what is due", each written through an act they approved. The conductor runs them around the clock and may commit on the person's behalf only when all of these hold:</p>
+      <ul>
+        <li>an active order covers it</li>
+        <li>its cost is at or under that order's ceiling</li>
+        <li>the ceiling is not external: money and anything irreversible are never done unattended</li>
+        <li>it can be undone</li>
+        <li>nothing is missing and nothing is a guess</li>
+      </ul>
+      <p>Everything else goes to the <b>inbox</b>, waiting for a yes. What it did on its own is there too, with an undo. With no orders, it does nothing.</p>
+    </section>
+
+    <section id="hepta">
+      <span class="eyebrow">Concepts</span>
+      <h2>Speaking and listening at once</h2>
+      <p><b>The seven tongues</b> keep up to seven possible acts alive while someone is still talking and put the likeliest card up early. None may commit until the sentence ends.</p>
+      <p><b>Lines of thought</b> run beside them on every word: numbers said earlier, views held, things left open.</p>
+      <ul>
+        <li><b>Cutting in</b> happens at the end of a clause or a breath, never mid-word, unless waiting would cost more than the rudeness.</li>
+        <li><b>Holding the floor</b>: "yeah" keeps it talking; "wait" or a real sentence stops it.</li>
+        <li><b>Arguing</b>: a reason lowers its confidence until it concedes; "do it anyway" ends it. Once per disagreement by default, twice when turned up, never more.</li>
+        <li><b>Wandering</b>: when you are quiet and nothing is on the stage, it goes back to something left open.</li>
+      </ul>
+      <p><code>npm run hepta</code> scores both. Two numbers must stay at zero: early commits, and wrong interruptions.</p>
+    </section>
+
+    <section id="shape">
+      <span class="eyebrow">Reference</span>
+      <h2>The shape: <code>aiuic://shape</code></h2>
+      <p>An MCP server says what its app should look like by exposing one resource:</p>
+      <div class="code"><span class="lang">json</span><pre><code>{
+  "schema": "aiuic.shape/1",
+  "app": { "name": "Tasks", "brand": { "colour": "#5B6CFF", "mark": "T" } },
+  "domains": { "tasks": { "kicker": "TASKS", "colour": "#7C8BFF" } },
+  "tools": {
+    "add_task": {
+      "domain": "tasks",
+      "phrases": ["add", "remind me to", "new task"],
+      "preview": "Add {title} to {list}",
+      "undo": { "tool": "remove_task", "arg": "id", "from": "id" },
+      "options": { "list": { "from": "list_lists", "value": "id", "label": "name" } }
+    }
+  },
+  "settings": [{ "key": "weekly", "label": "Weekly review", "type": "toggle", "default": true }],
+  "notifications": [{ "key": "due", "label": "A task is due", "default": true, "watch": "list_tasks" }],
+  "home": ["add_task"]
+}</code></pre></div>
+      <p>A shape describes; it never decides. It is refused, and the app falls back to a plain look, if it:</p>
+      <ul>
+        <li>sets <code>radius</code>, <code>commit</code>, <code>reversible</code>, <code>effects</code>, <code>assent</code> or <code>silence</code> anywhere</li>
+        <li>names an undo tool that does not exist, or one that says it only reads</li>
+        <li>uses a colour that means something everywhere: success, warning, danger, or the assistant's own</li>
+        <li>puts a parameter in <code>preview</code> that the tool does not have</li>
+        <li>lists options from a tool that is not read-only</li>
+      </ul>
+      <p>Every problem is reported at once, in <code>connection.shapeProblems</code>.</p>
+    </section>
+
+    <section id="bridge">
+      <span class="eyebrow">Reference</span>
+      <h2>How the bridge decides what a tool costs</h2>
+      <p>MCP annotations are hints; the MCP SDK itself says never to make decisions on them for untrusted servers. So a server's hints can only make its tools look <b>more</b> dangerous.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>The server says</th><th>The bridge does</th></tr></thead>
+        <tbody>
+          <tr><td><code>readOnlyHint: true</code></td><td>a source for the aggregator, never an act</td></tr>
+          <tr><td>nothing at all</td><td><span class="r ext">external</span>, always (MCP assumes destructive and open-world)</td></tr>
+          <tr><td><code>destructiveHint: true</code></td><td><span class="r ext">external</span>, always</td></tr>
+          <tr><td>no undo in the shape</td><td><span class="r ext">external</span>, always: it cannot be taken back</td></tr>
+          <tr><td><code>destructiveHint: false</code> and an undo</td><td>starts <span class="r ext">external</span>; the person may let it go ahead, down to <span class="r op">other-person</span>, or <span class="r self">self</span> with <code>openWorldHint: false</code></td></tr>
+        </tbody>
+      </table></div>
+      <p>Letting a tool go ahead is the person's own act: previewed, held, undoable, and remembered.</p>
+    </section>
+
+    <section id="devtools">
+      <span class="eyebrow">Reference</span>
+      <h2>hepta-dev: tools for building with it</h2>
+      <p>Explain the app, and get a structure, a prototype and a tester. Shaped on the same pyramid: context, evolution, proposal, reconstruction, testing.</p>
+      <div class="code"><span class="lang">sh</span><pre><code>node hepta-dev.mjs init            # write BRIEF.md to start from
+node hepta-dev.mjs brief           # read it; check how the menus connect
+node hepta-dev.mjs draft           # the acts it implies, and why
+node hepta-dev.mjs scaffold        # a runnable MCP server in ./app
+node hepta-dev.mjs prototype       # a clickable prototype.html
+node hepta-dev.mjs test &lt;url&gt;      # use it like a person; say what is wrong
+node hepta-dev.mjs search &lt;words&gt;  # the code, its history, the chats
+node hepta-dev.mjs evolution       # how the project got here
+node hepta-dev.mjs dossier         # what a rebuild starts from
+node hepta-dev.mjs mcp             # all of it as an MCP server, for Cursor or Claude</code></pre></div>
+      <h3>The brief</h3>
+      <p>Markdown, written the way notes already are. French headings work too.</p>
+      <div class="code"><span class="lang">md</span><pre><code># Family Tasks
+A calm app that runs the house by voice.
+Audience: parents with kids under 14
+
+## Features
+- Add a chore for someone — asks who, what, when
+- Pay allowance — asks who, amount
+
+## Menus
+- Home -&gt; Chores, Calendar, Settings
+
+## Design
+- mood: calm, glass
+- colour: #5B6CFF
+
+## Exceptions
+- kids cannot approve their own allowance
+
+## Expectations
+- adding a chore takes one sentence</code></pre></div>
+      <p>"— asks who, when" shapes the act: who becomes a person, when a time, amount a quantity, what free text, and anything else a choice from a list you provide. Every guess is written down with its reason, and costs lean careful: money and sending are external; anything involving another person is at least other-person.</p>
+      <h3>Testing like a person</h3>
+      <p><code>hepta-dev test</code> opens the app at phone (390), tablet (820) and desktop (1440) widths, runs optional steps, and reports in sentences:</p>
+      <div class="code"><span class="lang">text</span><pre><code>phone — 390×844
+  ✗ On a phone (390 px), the page scrolls sideways: it is 520 px wide.
+    Too wide: div.hero reaches 520 px.
+  ! On a phone (390 px), 1 thing is smaller than a fingertip (44 px):
+    button#send "Go" is 30×24.
+  ! On a phone (390 px), text is cut off inside div.clip "This sentence does not fit…".
+  ✗ The console shows an error: Cannot read properties of undefined (reading "title")</code></pre></div>
+      <p>Steps are JSON: <code>[{"click":"text=Add"}, {"fill":["#say","buy milk"]}, {"press":"Enter"}]</code>. It needs Chromium through Playwright, or <code>HEPTA_CHROMIUM</code> pointing at a Chromium binary.</p>
+    </section>
+
+    <section id="guarantees">
+      <span class="eyebrow">Reference</span>
+      <h2>Guarantees, and what holds them</h2>
+      <p>Each is a test in the repository.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Guarantee</th><th>Held by</th></tr></thead>
+        <tbody>
+          <tr><td>Nothing commits on a sentence still being spoken</td><td>speculative runs; the replay suite's early-commit count</td></tr>
+          <tr><td>Nothing commits on silence that cannot be undone</td><td>any act without <code>undo()</code> is external at runtime</td></tr>
+          <tr><td>Nothing commits on silence the person did not engage with</td><td>the attention gate's engagement check</td></tr>
+          <tr><td>A model cannot lower what an act costs</td><td>composed acts take their cost from the capability</td></tr>
+          <tr><td>A server cannot lower what its tools cost</td><td>annotations only raise; a shape may not set a radius</td></tr>
+          <tr><td>An outside caller cannot say yes</td><td>the Hepta server has no such tool, and cannot speak as the person</td></tr>
+          <tr><td>Money and the irreversible are never done unattended</td><td>the conductor's <code>authorise()</code>; order ceilings below external</td></tr>
+          <tr><td>Nothing real is hypothetical</td><td>memory refuses facts, decisions and orders on branches</td></tr>
+          <tr><td>Only the person's words become facts</td><td>memory refuses a fact without its words, or from any role but the congregator</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="unverified">
+      <span class="eyebrow">Reference</span>
+      <h2>Not yet verified</h2>
+      <ul>
+        <li><b>Voice, live.</b> The OpenAI Realtime wiring follows the current documentation but has not yet connected to a live session. Two details could not be confirmed: whether input transcription must be enabled explicitly in a speech-to-speech session, and whether the model will start speaking while input audio is still arriving, which cutting in depends on.</li>
+        <li><b>Thresholds.</b> Routing and hold thresholds are tuned on 28 written sentences and 15 replayed conversations. They need a few hundred real ones.</li>
+        <li><b>Detectors.</b> Every detector in the lines of thought matches words and numbers. The <code>Detector</code> interface is where a fast classifier replaces them.</li>
+      </ul>
+    </section>
+
+    <section id="packages">
+      <span class="eyebrow">Reference</span>
+      <h2>Packages</h2>
+      <div class="tbl"><table>
+        <thead><tr><th>Package</th><th>For</th></tr></thead>
+        <tbody>
+          <tr><td><code>aiuic-core</code></td><td>acts, slots, radius, hold, attention gate, outbox, undo. No dependencies.</td></tr>
+          <tr><td><code>aiuic-resolve</code></td><td>matching, grammar (when, quantity, free text), routing</td></tr>
+          <tr><td><code>hepta</code></td><td>the seven tongues, and lines of thought</td></tr>
+          <tr><td><code>aiuic-kit</code></td><td><code>createApp()</code> and <code>hear()</code></td></tr>
+          <tr><td><code>aiuic-present</code></td><td>the one view every renderer draws</td></tr>
+          <tr><td><code>aiuic-eui</code></td><td>the visual language: tokens, domains as rules, the stage</td></tr>
+          <tr><td><code>aiuic-mcp</code></td><td>any MCP server as acts, sources and a shape</td></tr>
+          <tr><td><code>aiuic-memory</code></td><td>one memory, one pen, branches</td></tr>
+          <tr><td><code>aiuic-pyramid</code></td><td>aggregator, orchestrator, congregator</td></tr>
+          <tr><td><code>aiuic-conductor</code></td><td>always on; the score; the inbox</td></tr>
+          <tr><td><code>aiuic-server</code></td><td>Hepta as an MCP server</td></tr>
+          <tr><td><code>aiuic-devkit</code></td><td>brief, drafts, scaffold, prototype, tester, context, dossier</td></tr>
+          <tr><td><code>aiuic-compose</code>, <code>aiuic-tools</code></td><td>acts composed by a model; tool schemas from acts</td></tr>
+          <tr><td><code>aiuic-devtools</code>, <code>aiuic-eval</code></td><td>why an act is waiting; the false-confirm rate</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+  </main>
+</div>
+
+<footer>Hepta and AIUIC, by InterMenu. The demo at the top runs entirely in this page; nothing you type leaves it.</footer>

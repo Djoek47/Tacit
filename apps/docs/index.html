@@ -1,0 +1,733 @@
+<title>Hepta for Developers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#F4F5F8; --surface:#FFFFFF; --sunk:#ECEEF3; --ink:#101626; --dim:#586174; --faint:#8A92A3;
+    --line:rgba(16,22,38,.10); --accent:#3F52E6; --accent-ink:#FFFFFF; --code-bg:#0F1524; --code-ink:#E3E8F4;
+    --ok:#0E9F6E; --warn:#C2410C; --bad:#DC2626;
+    --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+    --body:"IBM Plex Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --ground:#0B1020; --surface:#121829; --sunk:#0E1424; --ink:#E6EAF4; --dim:#9BA5BA; --faint:#6E7890;
+      --line:rgba(230,234,244,.10); --accent:#8B98FF; --accent-ink:#0B1020; --code-bg:#080C18; --code-ink:#DCE2F0;
+      --ok:#34D399; --warn:#FB923C; --bad:#F87171;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --ground:#0B1020; --surface:#121829; --sunk:#0E1424; --ink:#E6EAF4; --dim:#9BA5BA; --faint:#6E7890;
+    --line:rgba(230,234,244,.10); --accent:#8B98FF; --accent-ink:#0B1020; --code-bg:#080C18; --code-ink:#DCE2F0;
+    --ok:#34D399; --warn:#FB923C; --bad:#F87171;
+  }
+  *{box-sizing:border-box}
+  html,body{background:var(--ground);color:var(--ink)}
+  body{font:16px/1.65 var(--body);-webkit-font-smoothing:antialiased;padding:0 16px}
+  a{color:var(--accent);text-underline-offset:3px}
+  h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:-.015em;line-height:1.15}
+  code,pre,kbd{font-family:var(--mono)}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+  .top{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:14px;padding-block:18px;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:10px;font:700 18px var(--display);color:var(--ink);text-decoration:none}
+  .dot{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 34% 30%,#fff,#06B6D4 45%,#0B3A48 100%)}
+  .top .tag{font:500 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint);border:1px solid var(--line);border-radius:999px;padding:5px 9px}
+  .top nav{margin-left:auto;display:flex;gap:16px;flex-wrap:wrap;font-size:14px}
+  .top nav a{color:var(--dim);text-decoration:none}.top nav a:hover{color:var(--ink)}
+
+  .hero{max-width:1180px;margin:0 auto;display:grid;gap:28px;padding-block:44px 36px;grid-template-columns:1fr}
+  @media(min-width:960px){.hero{grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);align-items:center}}
+  .hero h1{font-size:clamp(34px,5.2vw,58px);font-weight:700;letter-spacing:-.03em}
+  .hero .lede{font-size:18.5px;color:var(--dim);max-width:52ch;margin:18px 0 0}
+  .hero .lede b{color:var(--ink);font-weight:600}
+  .ways{display:grid;gap:12px;margin-top:26px;grid-template-columns:1fr}
+  @media(min-width:560px){.ways{grid-template-columns:1fr 1fr}}
+  .way{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;text-decoration:none;color:var(--ink)}
+  .way:hover{border-color:var(--accent)}
+  .way .k{font:500 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+  .way b{font:600 17px/1.25 var(--display)}
+  .way span{font-size:14px;color:var(--dim)}
+
+  /* the device: the stage is its own dark world in either theme */
+  .device{background:#0B1220;border-radius:30px;padding:18px;box-shadow:0 30px 60px -30px rgba(11,18,32,.55),0 0 0 1px rgba(255,255,255,.06) inset;color:#E9EEF7;display:flex;flex-direction:column;gap:12px;min-width:0}
+  .device .bar{display:flex;align-items:center;gap:8px;font:500 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:#6C7689}
+  .device .bar .live{width:7px;height:7px;border-radius:50%;background:#34D399}
+  .device #stage{min-height:230px;display:flex;flex-direction:column;justify-content:center}
+  .device form{display:flex;gap:8px}
+  .device input{flex:1;min-width:0;min-height:44px;border-radius:14px;border:1px solid rgba(233,238,247,.12);background:#111827;color:#E9EEF7;padding:0 12px;font:15px var(--body)}
+  .device .go{min-height:44px;border-radius:999px;border:0;background:#E9EEF7;color:#0B1220;font:600 14px var(--body);padding:0 16px;cursor:pointer}
+  .device .tries{display:flex;gap:6px;flex-wrap:wrap}
+  .device .try{min-height:36px;border-radius:999px;border:1px solid rgba(233,238,247,.14);background:transparent;color:#9AA6BB;font:13px var(--body);padding:0 12px;cursor:pointer}
+  .device .try:hover{color:#E9EEF7}
+  .device .said{font:12.5px/1.5 var(--mono);color:#9AA6BB;min-height:1.5em;margin:0}
+
+  .layout{max-width:1180px;margin:0 auto;display:grid;gap:40px;grid-template-columns:1fr;padding-block:18px 64px}
+  @media(min-width:960px){.layout{grid-template-columns:220px minmax(0,1fr)}}
+  .toc{display:none}
+  @media(min-width:960px){.toc{display:block;position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px);align-self:start;font-size:14px}}
+  .toc ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+  .toc a{display:block;color:var(--dim);text-decoration:none;padding:5px 10px;border-radius:8px;border-left:2px solid transparent}
+  .toc a:hover{color:var(--ink);background:var(--sunk)}
+  .toc a[aria-current="true"]{color:var(--ink);border-left-color:var(--accent);background:var(--sunk)}
+  .toc .grp{font:500 10.5px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint);padding:14px 10px 6px}
+
+  main{min-width:0}
+  main section{padding-block:10px 26px;border-bottom:1px solid var(--line);scroll-margin-top:16px}
+  main section:last-child{border-bottom:0}
+  main h2{font-size:clamp(24px,3vw,30px);font-weight:700;margin:22px 0 10px}
+  main h3{font-size:18px;font-weight:600;margin:24px 0 6px}
+  main p,main li{max-width:72ch}
+  main p{margin:10px 0}
+  .eyebrow{font:500 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-top:26px;display:block}
+  code{font-size:.9em;background:var(--sunk);border:1px solid var(--line);border-radius:6px;padding:1px 5px}
+  .code{position:relative;margin:14px 0}
+  .code pre{margin:0;background:var(--code-bg);color:var(--code-ink);border-radius:14px;padding:16px 18px;overflow-x:auto;font-size:13.5px;line-height:1.6}
+  .code pre code{background:none;border:0;padding:0;font-size:inherit;color:inherit}
+  .code .copy{position:absolute;top:8px;right:8px;min-height:32px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#C9D1E3;font:12px var(--body);padding:0 10px;cursor:pointer}
+  .code .lang{position:absolute;top:10px;left:18px;font:500 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:#6C7689}
+  .code .lang + pre{padding-top:30px}
+  .c-k{color:#9DB0FF}.c-s{color:#8FE3C0}.c-c{color:#6C7894;font-style:italic}
+
+  .tbl{overflow-x:auto;margin:14px 0;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+  table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:520px}
+  th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  th{font:500 11px/1.4 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint);background:var(--sunk)}
+  td code{white-space:nowrap}
+  .r{font:500 12px var(--mono);white-space:nowrap}
+  .r.self,.r.shared{color:var(--ok)}.r.op{color:var(--warn)}.r.ext{color:var(--bad)}
+
+  .note{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin:16px 0;font-size:15px}
+  .note b{font-weight:600}
+  .rule{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:14px 0}
+  footer{max-width:1180px;margin:0 auto;border-top:1px solid var(--line);padding-block:22px 40px;color:var(--faint);font-size:13.5px}
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+</style>
+<header class="top">
+  <a class="brand" href="#top"><span class="dot" aria-hidden="true"></span>Hepta</a>
+  <span class="tag">Developers · V1</span>
+  <nav aria-label="Primary">
+    <a href="#inside">Inside</a>
+    <a href="#outside">Outside</a>
+    <a href="#concepts">Concepts</a>
+    <a href="#shape">Shape</a>
+    <a href="#devtools">hepta-dev</a>
+    <a href="#guarantees">Guarantees</a>
+  </nav>
+</header>
+
+<div class="hero" id="top">
+  <div>
+    <h1>Your app, something people talk to.</h1>
+    <p class="lede">People say what they want. One card shows what was heard, holds for a moment, and <b>silence lets it happen</b>. A word or a tap corrects it; undo is one tap away. Every action declares <b>what it costs to be wrong</b>, and that decides whether it may happen on silence, needs a yes, or may never happen while you are away.</p>
+    <div class="ways">
+      <a class="way" href="#inside"><span class="k">Inside</span><b>Add it to your app</b><span>Define acts, or connect the MCP servers you already have. <code>hear(text)</code> does the rest.</span></a>
+      <a class="way" href="#outside"><span class="k">Outside</span><b>Run it next to your tools</b><span>An always-on conductor and a shared memory, as an MCP server for Claude, Cursor or any client.</span></a>
+    </div>
+  </div>
+  <div class="device" aria-label="A live stage">
+    <div class="bar"><span class="live" aria-hidden="true"></span>A live stage · runs in this page</div>
+    <div id="stage"></div>
+    <p class="said" id="said" aria-live="polite"></p>
+    <form id="demo" autocomplete="off">
+      <input id="demoSay" aria-label="Say something to the demo" placeholder="add milk and eggs">
+      <button class="go" type="submit">Say</button>
+    </form>
+    <div class="tries" id="tries"></div>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="toc" aria-label="On this page">
+    <ol>
+      <li class="grp">Start</li>
+      <li><a href="#inside">Inside your app</a></li>
+      <li><a href="#connect">Connect MCP servers</a></li>
+      <li><a href="#outside">Outside, as a server</a></li>
+      <li class="grp">Concepts</li>
+      <li><a href="#concepts">Acts and slots</a></li>
+      <li><a href="#radius">What it costs</a></li>
+      <li><a href="#hold">The hold</a></li>
+      <li><a href="#pyramid">The pyramid</a></li>
+      <li><a href="#memory">Memory</a></li>
+      <li><a href="#conductor">The conductor</a></li>
+      <li><a href="#hepta">Speaking and listening</a></li>
+      <li class="grp">Reference</li>
+      <li><a href="#shape">The shape</a></li>
+      <li><a href="#bridge">What tools cost</a></li>
+      <li><a href="#devtools">hepta-dev</a></li>
+      <li><a href="#guarantees">Guarantees</a></li>
+      <li><a href="#unverified">Not yet verified</a></li>
+      <li><a href="#packages">Packages</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <div class="note"><b>Status.</b> V1. The packages are not on npm yet: use them from the repository (<code>packages/*</code>) or the bundled files in <code>apps/</code>. Everything on this page is covered by the test suite, except the section <a href="#unverified">Not yet verified</a>.</div>
+
+    <section id="inside">
+      <span class="eyebrow">Start · Inside</span>
+      <h2>Five minutes, inside your app</h2>
+      <p>Declare what your app can do. Hand it text. That is the whole surface.</p>
+      <div class="code"><span class="lang">ts</span><pre><code>import { createApp, defineAct } from '@intermenu/aiuic-kit';
+import { StagePresenter, stylesheet } from '@intermenu/aiuic-eui';
+import { resolveWhen } from '@intermenu/aiuic-resolve';
+
+const app = createApp({
+  ctx: () =&gt; ({
+    actor: { id: 'me' },
+    // All four must be true for silence to count as a yes. Unknown counts as false.
+    attention: { foreground: true, unlocked: true, proximityClear: true, listening: true },
+  }),
+  presenters: [new StagePresenter(document.getElementById('stage'), document)],
+  acts: [
+    defineAct({
+      name: 'add_chore',
+      domain: 'chores',                    // the colour, and the rules for that part of the app
+      phrases: ['add', 'assign', 'needs to do'],
+      slots: {
+        chore:    { primitive: 'chip', options: () =&gt; CHORES, required: true, order: 1 },
+        assignee: { primitive: 'face', options: () =&gt; PEOPLE, required: true, order: 2 },
+        due:      { primitive: 'when', resolve: resolveWhen, order: 3 },
+      },
+      radius: 'other-person',              // what it costs to be wrong
+      commit: (f) =&gt; db.chores.insert(f),
+      undo:   (r) =&gt; db.chores.remove(r.id),
+    }),
+  ],
+});
+
+app.hear('the dishes for Maya tomorrow');        // card up, filled, holding
+app.hear('the dishes for', { final: false });    // still speaking: it speculates, and cannot commit</code></pre></div>
+      <p><code>hear()</code> routes the sentence to an act, fills its slots from the same words, speculates while <code>final</code> is false, and draws the card. Speech-to-text stays outside: pass the transcript as it arrives.</p>
+      <p>The one thing to get right: <b><code>final: false</code> means the person has not stopped talking</b>, and nothing commits on an unfinished sentence.</p>
+    </section>
+
+    <section id="connect">
+      <span class="eyebrow">Start · Inside</span>
+      <h2>Connect the MCP servers you already have</h2>
+      <div class="code"><span class="lang">ts</span><pre><code>import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { connect, delegationAct } from '@intermenu/aiuic-mcp';
+
+const client = new Client({ name: 'my-app', version: '1.0.0' });
+await client.connect(new StdioClientTransport({ command: 'node', args: ['tasks-server.mjs'] }));
+const tasks = await connect(client);
+
+tasks.preview();
+// "Connect Tasks. It can do 1 thing and look up 2. It asks you first. 1 can be undone,
+//  so you may later let it go ahead on silence. The 2 look-ups are trusted to only read,
+//  because the server says so."
+
+const app = createApp({ ctx, acts: [...tasks.acts, delegationAct([tasks])], domains: tasks.shape.domains });</code></pre></div>
+      <p>Write tools become acts. Read-only tools become sources the aggregator can ask. A tool named as another tool's undo is kept out of sight: it is reached from the card that made the change. Show <code>preview()</code> to the person before trusting anything the server says.</p>
+    </section>
+
+    <section id="outside">
+      <span class="eyebrow">Start · Outside</span>
+      <h2>Five minutes, outside</h2>
+      <div class="code"><span class="lang">sh</span><pre><code>cd apps/hepta
+cp hepta.config.example.json hepta.config.json    # list your MCP servers
+node hepta.mjs                                     # always on; MCP over HTTP on 127.0.0.1:8790</code></pre></div>
+      <h3>From Claude Desktop, Cursor, or any client that launches servers</h3>
+      <div class="code"><span class="lang">json</span><pre><code>{
+  "mcpServers": {
+    "hepta": {
+      "command": "node",
+      "args": ["/absolute/path/to/apps/hepta/hepta.mjs", "--stdio",
+               "--config", "/absolute/path/to/hepta.config.json"]
+    }
+  }
+}</code></pre></div>
+      <h3>Over HTTP</h3>
+      <p><code>http://127.0.0.1:8790/mcp</code> with <code>Authorization: Bearer &lt;token&gt;</code>. The token is created on first run at <code>~/.hepta/token</code>. The endpoint serves your memory, so it listens on localhost only and refuses requests without the token.</p>
+      <div class="code"><span class="lang">json</span><pre><code>{
+  "dataDir": "~/.hepta",
+  "servers": [{ "name": "tasks", "command": "node", "args": ["tasks-server.mjs"] }],
+  "http": { "port": 8790 },
+  "notify": { "url": "https://ntfy.sh/your-own-topic" }
+}</code></pre></div>
+      <p><code>notify.url</code> receives a plain-text POST when the conductor does something, waits for you, or cannot do something.</p>
+      <h3>What an outside caller can do</h3>
+      <div class="tbl"><table>
+        <thead><tr><th>Tool</th><th>Does</th></tr></thead>
+        <tbody>
+          <tr><td><code>stage</code></td><td>What is on the person's stage now.</td></tr>
+          <tr><td><code>why_not_committing</code></td><td>The reasons, in order: missing, guessed, cost, attention.</td></tr>
+          <tr><td><code>acts</code></td><td>Everything the app can do.</td></tr>
+          <tr><td><code>propose</code></td><td>Puts an act on the stage with values filled, waiting for the person.</td></tr>
+          <tr><td><code>pursue</code></td><td>Runs the loop on a goal. Ends in an answer or a proposal, never a commit.</td></tr>
+          <tr><td><code>think</code></td><td>Adds a line of thought to a memory branch, never to <code>main</code>.</td></tr>
+          <tr><td><code>memory_search</code>, <code>memory_branches</code></td><td>Reads the shared memory.</td></tr>
+          <tr><td><code>inbox</code>, <code>score</code></td><td>The conductor's inbox and standing orders.</td></tr>
+        </tbody>
+      </table></div>
+      <p>There is no tool that says yes, and none that speaks as the person. Whoever calls in is a model: a proposal from outside waits on the stage until the person answers it.</p>
+    </section>
+
+    <section id="concepts">
+      <span class="eyebrow">Concepts</span>
+      <h2>Acts, slots and primitives</h2>
+      <p>An <b>act</b> is one thing a person can ask for. It has <b>slots</b> to fill, each drawn by a <b>primitive</b>:</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Primitive</th><th>For</th><th>Filled on the device by</th></tr></thead>
+        <tbody>
+          <tr><td><code>chip</code></td><td>a choice from a list</td><td>matching the options and their aliases</td></tr>
+          <tr><td><code>face</code></td><td>a person</td><td>matching names</td></tr>
+          <tr><td><code>when</code></td><td>a time</td><td>"tomorrow at 9:30am", "friday"</td></tr>
+          <tr><td><code>quantity</code></td><td>an amount</td><td>"$12", "twelve dollars"</td></tr>
+          <tr><td><code>ghostField</code></td><td>free text</td><td>the rest of the sentence, always marked as a guess</td></tr>
+        </tbody>
+      </table></div>
+      <p>A slot filled by a weak or uncalibrated match is <b>provisional</b>: the card shows it with a ✓ the person taps to make it theirs.</p>
+    </section>
+
+    <section id="radius">
+      <span class="eyebrow">Concepts</span>
+      <h2>What it costs to be wrong</h2>
+      <div class="tbl"><table>
+        <thead><tr><th>Radius</th><th>Means</th><th>Silence may commit?</th></tr></thead>
+        <tbody>
+          <tr><td><span class="r self">self</span></td><td>only the person asking</td><td>yes, after the hold</td></tr>
+          <tr><td><span class="r shared">shared</span></td><td>something shared and reversible</td><td>yes, after the hold</td></tr>
+          <tr><td><span class="r op">other-person</span></td><td>reaches someone else</td><td>after a longer hold, and never on a guess</td></tr>
+          <tr><td><span class="r ext">external</span></td><td>money, sending, anything irreversible</td><td>never: it asks for a yes</td></tr>
+        </tbody>
+      </table></div>
+      <p>An act costs the most of its own radius and every effect's. An effect that cannot be undone counts as external. <b>An act with no <code>undo()</code> is external at runtime, whatever it declares</b>: nothing commits on silence that cannot be taken back.</p>
+    </section>
+
+    <section id="hold">
+      <span class="eyebrow">Concepts</span>
+      <h2>The hold, and when silence counts</h2>
+      <p>A complete act below external <b>holds</b>: 850 ms for an adult, 1300 ms for a child, longer when it reaches another person. If the person stays quiet through it, it happens. A word or a tap stops it.</p>
+      <p>Silence only counts as a yes when the app is in front, the device is unlocked, nothing covers the screen, the microphone is live, and <b>the person touched or spoke during this act</b>. That last check is why a card built from defaults, a card the system started, and a card a model proposed all wait for a yes.</p>
+    </section>
+
+    <section id="pyramid">
+      <span class="eyebrow">Concepts</span>
+      <h2>The pyramid: authority, not votes</h2>
+      <div class="tbl"><table>
+        <thead><tr><th>Role</th><th>May</th><th>In code</th></tr></thead>
+        <tbody>
+          <tr><td><b>Conductor</b></td><td>keep the rhythm, always on; commit only what the score allows</td><td><code>Conductor</code></td></tr>
+          <tr><td><b>Congregator</b></td><td>write to memory, and only what happened</td><td><code>pyramid.congregator</code></td></tr>
+          <tr><td><b>Orchestrator</b></td><td>propose: copies in, a plan out; nothing to write with</td><td>your function</td></tr>
+          <tr><td><b>Aggregator</b></td><td>read sources and memory</td><td><code>Aggregator</code></td></tr>
+        </tbody>
+      </table></div>
+      <p>Three agents on the same model make the same mistakes, so three votes read as one confident wrong answer. Each role holds a different authority instead, and a mistake has to get past three different kinds of gate.</p>
+      <div class="code"><span class="lang">ts</span><pre><code>const pyramid = new Pyramid({
+  app, ctx, memory,
+  aggregator: new Aggregator([...tasks.sources, ...bank.sources]),
+  orchestrator: async ({ goal, findings, memory, parts }) =&gt; {
+    // Call a model here if you like. Return one of:
+    //   { kind: 'answer', answer }
+    //   { kind: 'propose', act, fill, why }   a card on the stage, waiting for a yes
+    //   { kind: 'look', query }               look again with a sharper question
+    //   { kind: 'split', goals }              each part goes round the loop one level down
+  },
+});
+await pyramid.pursue('plan my month');</code></pre></div>
+      <p>The loop stops at a depth of 3, after 2 requests to look again, and on any goal already being pursued higher up.</p>
+    </section>
+
+    <section id="memory">
+      <span class="eyebrow">Concepts</span>
+      <h2>Memory: one pen, and branches</h2>
+      <div class="code"><span class="lang">ts</span><pre><code>const { reader, writer } = openMemory(store);   // every role gets reader; the congregator gets writer</code></pre></div>
+      <p><b>Versions are branches.</b> A line of thought can explore "what if the budget were 650" on its own branch, then be merged or dropped. A branch holds only thoughts and findings; facts, decisions, delegations and standing orders are real, and go to <code>main</code> or nowhere.</p>
+      <p>A fact is only ever something the person said, and it carries the words it came from. A figure from a bank feed stays a finding.</p>
+    </section>
+
+    <section id="conductor">
+      <span class="eyebrow">Concepts</span>
+      <h2>The conductor: always on</h2>
+      <div class="code"><span class="lang">ts</span><pre><code>const conductor = new Conductor({ app, memory: reader, clock, store, ctx,
+  pursue: (goal) =&gt; pyramid.pursue(goal), notifier });
+conductor.start();</code></pre></div>
+      <p>The person writes the <b>score</b>: standing orders such as "every morning, tell me what is due", each written through an act they approved. The conductor runs them around the clock and may commit on the person's behalf only when all of these hold:</p>
+      <ul>
+        <li>an active order covers it</li>
+        <li>its cost is at or under that order's ceiling</li>
+        <li>the ceiling is not external: money and anything irreversible are never done unattended</li>
+        <li>it can be undone</li>
+        <li>nothing is missing and nothing is a guess</li>
+      </ul>
+      <p>Everything else goes to the <b>inbox</b>, waiting for a yes. What it did on its own is there too, with an undo. With no orders, it does nothing.</p>
+    </section>
+
+    <section id="hepta">
+      <span class="eyebrow">Concepts</span>
+      <h2>Speaking and listening at once</h2>
+      <p><b>The seven tongues</b> keep up to seven possible acts alive while someone is still talking and put the likeliest card up early. None may commit until the sentence ends.</p>
+      <p><b>Lines of thought</b> run beside them on every word: numbers said earlier, views held, things left open.</p>
+      <ul>
+        <li><b>Cutting in</b> happens at the end of a clause or a breath, never mid-word, unless waiting would cost more than the rudeness.</li>
+        <li><b>Holding the floor</b>: "yeah" keeps it talking; "wait" or a real sentence stops it.</li>
+        <li><b>Arguing</b>: a reason lowers its confidence until it concedes; "do it anyway" ends it. Once per disagreement by default, twice when turned up, never more.</li>
+        <li><b>Wandering</b>: when you are quiet and nothing is on the stage, it goes back to something left open.</li>
+      </ul>
+      <p><code>npm run hepta</code> scores both. Two numbers must stay at zero: early commits, and wrong interruptions.</p>
+    </section>
+
+    <section id="shape">
+      <span class="eyebrow">Reference</span>
+      <h2>The shape: <code>aiuic://shape</code></h2>
+      <p>An MCP server says what its app should look like by exposing one resource:</p>
+      <div class="code"><span class="lang">json</span><pre><code>{
+  "schema": "aiuic.shape/1",
+  "app": { "name": "Tasks", "brand": { "colour": "#5B6CFF", "mark": "T" } },
+  "domains": { "tasks": { "kicker": "TASKS", "colour": "#7C8BFF" } },
+  "tools": {
+    "add_task": {
+      "domain": "tasks",
+      "phrases": ["add", "remind me to", "new task"],
+      "preview": "Add {title} to {list}",
+      "undo": { "tool": "remove_task", "arg": "id", "from": "id" },
+      "options": { "list": { "from": "list_lists", "value": "id", "label": "name" } }
+    }
+  },
+  "settings": [{ "key": "weekly", "label": "Weekly review", "type": "toggle", "default": true }],
+  "notifications": [{ "key": "due", "label": "A task is due", "default": true, "watch": "list_tasks" }],
+  "home": ["add_task"]
+}</code></pre></div>
+      <p>A shape describes; it never decides. It is refused, and the app falls back to a plain look, if it:</p>
+      <ul>
+        <li>sets <code>radius</code>, <code>commit</code>, <code>reversible</code>, <code>effects</code>, <code>assent</code> or <code>silence</code> anywhere</li>
+        <li>names an undo tool that does not exist, or one that says it only reads</li>
+        <li>uses a colour that means something everywhere: success, warning, danger, or the assistant's own</li>
+        <li>puts a parameter in <code>preview</code> that the tool does not have</li>
+        <li>lists options from a tool that is not read-only</li>
+      </ul>
+      <p>Every problem is reported at once, in <code>connection.shapeProblems</code>.</p>
+    </section>
+
+    <section id="bridge">
+      <span class="eyebrow">Reference</span>
+      <h2>How the bridge decides what a tool costs</h2>
+      <p>MCP annotations are hints; the MCP SDK itself says never to make decisions on them for untrusted servers. So a server's hints can only make its tools look <b>more</b> dangerous.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>The server says</th><th>The bridge does</th></tr></thead>
+        <tbody>
+          <tr><td><code>readOnlyHint: true</code></td><td>a source for the aggregator, never an act</td></tr>
+          <tr><td>nothing at all</td><td><span class="r ext">external</span>, always (MCP assumes destructive and open-world)</td></tr>
+          <tr><td><code>destructiveHint: true</code></td><td><span class="r ext">external</span>, always</td></tr>
+          <tr><td>no undo in the shape</td><td><span class="r ext">external</span>, always: it cannot be taken back</td></tr>
+          <tr><td><code>destructiveHint: false</code> and an undo</td><td>starts <span class="r ext">external</span>; the person may let it go ahead, down to <span class="r op">other-person</span>, or <span class="r self">self</span> with <code>openWorldHint: false</code></td></tr>
+        </tbody>
+      </table></div>
+      <p>Letting a tool go ahead is the person's own act: previewed, held, undoable, and remembered.</p>
+    </section>
+
+    <section id="devtools">
+      <span class="eyebrow">Reference</span>
+      <h2>hepta-dev: tools for building with it</h2>
+      <p>Explain the app, and get a structure, a prototype and a tester. Shaped on the same pyramid: context, evolution, proposal, reconstruction, testing.</p>
+      <div class="code"><span class="lang">sh</span><pre><code>node hepta-dev.mjs init            # write BRIEF.md to start from
+node hepta-dev.mjs brief           # read it; check how the menus connect
+node hepta-dev.mjs draft           # the acts it implies, and why
+node hepta-dev.mjs scaffold        # a runnable MCP server in ./app
+node hepta-dev.mjs prototype       # a clickable prototype.html
+node hepta-dev.mjs test &lt;url&gt;      # use it like a person; say what is wrong
+node hepta-dev.mjs search &lt;words&gt;  # the code, its history, the chats
+node hepta-dev.mjs evolution       # how the project got here
+node hepta-dev.mjs dossier         # what a rebuild starts from
+node hepta-dev.mjs mcp             # all of it as an MCP server, for Cursor or Claude</code></pre></div>
+      <h3>The brief</h3>
+      <p>Markdown, written the way notes already are. French headings work too.</p>
+      <div class="code"><span class="lang">md</span><pre><code># Family Tasks
+A calm app that runs the house by voice.
+Audience: parents with kids under 14
+
+## Features
+- Add a chore for someone — asks who, what, when
+- Pay allowance — asks who, amount
+
+## Menus
+- Home -&gt; Chores, Calendar, Settings
+
+## Design
+- mood: calm, glass
+- colour: #5B6CFF
+
+## Exceptions
+- kids cannot approve their own allowance
+
+## Expectations
+- adding a chore takes one sentence</code></pre></div>
+      <p>"— asks who, when" shapes the act: who becomes a person, when a time, amount a quantity, what free text, and anything else a choice from a list you provide. Every guess is written down with its reason, and costs lean careful: money and sending are external; anything involving another person is at least other-person.</p>
+      <h3>Testing like a person</h3>
+      <p><code>hepta-dev test</code> opens the app at phone (390), tablet (820) and desktop (1440) widths, runs optional steps, and reports in sentences:</p>
+      <div class="code"><span class="lang">text</span><pre><code>phone — 390×844
+  ✗ On a phone (390 px), the page scrolls sideways: it is 520 px wide.
+    Too wide: div.hero reaches 520 px.
+  ! On a phone (390 px), 1 thing is smaller than a fingertip (44 px):
+    button#send "Go" is 30×24.
+  ! On a phone (390 px), text is cut off inside div.clip "This sentence does not fit…".
+  ✗ The console shows an error: Cannot read properties of undefined (reading "title")</code></pre></div>
+      <p>Steps are JSON: <code>[{"click":"text=Add"}, {"fill":["#say","buy milk"]}, {"press":"Enter"}]</code>. It needs Chromium through Playwright, or <code>HEPTA_CHROMIUM</code> pointing at a Chromium binary.</p>
+    </section>
+
+    <section id="guarantees">
+      <span class="eyebrow">Reference</span>
+      <h2>Guarantees, and what holds them</h2>
+      <p>Each is a test in the repository.</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Guarantee</th><th>Held by</th></tr></thead>
+        <tbody>
+          <tr><td>Nothing commits on a sentence still being spoken</td><td>speculative runs; the replay suite's early-commit count</td></tr>
+          <tr><td>Nothing commits on silence that cannot be undone</td><td>any act without <code>undo()</code> is external at runtime</td></tr>
+          <tr><td>Nothing commits on silence the person did not engage with</td><td>the attention gate's engagement check</td></tr>
+          <tr><td>A model cannot lower what an act costs</td><td>composed acts take their cost from the capability</td></tr>
+          <tr><td>A server cannot lower what its tools cost</td><td>annotations only raise; a shape may not set a radius</td></tr>
+          <tr><td>An outside caller cannot say yes</td><td>the Hepta server has no such tool, and cannot speak as the person</td></tr>
+          <tr><td>Money and the irreversible are never done unattended</td><td>the conductor's <code>authorise()</code>; order ceilings below external</td></tr>
+          <tr><td>Nothing real is hypothetical</td><td>memory refuses facts, decisions and orders on branches</td></tr>
+          <tr><td>Only the person's words become facts</td><td>memory refuses a fact without its words, or from any role but the congregator</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="unverified">
+      <span class="eyebrow">Reference</span>
+      <h2>Not yet verified</h2>
+      <ul>
+        <li><b>Voice, live.</b> The OpenAI Realtime wiring follows the current documentation but has not yet connected to a live session. Two details could not be confirmed: whether input transcription must be enabled explicitly in a speech-to-speech session, and whether the model will start speaking while input audio is still arriving, which cutting in depends on.</li>
+        <li><b>Thresholds.</b> Routing and hold thresholds are tuned on 28 written sentences and 15 replayed conversations. They need a few hundred real ones.</li>
+        <li><b>Detectors.</b> Every detector in the lines of thought matches words and numbers. The <code>Detector</code> interface is where a fast classifier replaces them.</li>
+      </ul>
+    </section>
+
+    <section id="packages">
+      <span class="eyebrow">Reference</span>
+      <h2>Packages</h2>
+      <div class="tbl"><table>
+        <thead><tr><th>Package</th><th>For</th></tr></thead>
+        <tbody>
+          <tr><td><code>aiuic-core</code></td><td>acts, slots, radius, hold, attention gate, outbox, undo. No dependencies.</td></tr>
+          <tr><td><code>aiuic-resolve</code></td><td>matching, grammar (when, quantity, free text), routing</td></tr>
+          <tr><td><code>hepta</code></td><td>the seven tongues, and lines of thought</td></tr>
+          <tr><td><code>aiuic-kit</code></td><td><code>createApp()</code> and <code>hear()</code></td></tr>
+          <tr><td><code>aiuic-present</code></td><td>the one view every renderer draws</td></tr>
+          <tr><td><code>aiuic-eui</code></td><td>the visual language: tokens, domains as rules, the stage</td></tr>
+          <tr><td><code>aiuic-mcp</code></td><td>any MCP server as acts, sources and a shape</td></tr>
+          <tr><td><code>aiuic-memory</code></td><td>one memory, one pen, branches</td></tr>
+          <tr><td><code>aiuic-pyramid</code></td><td>aggregator, orchestrator, congregator</td></tr>
+          <tr><td><code>aiuic-conductor</code></td><td>always on; the score; the inbox</td></tr>
+          <tr><td><code>aiuic-server</code></td><td>Hepta as an MCP server</td></tr>
+          <tr><td><code>aiuic-devkit</code></td><td>brief, drafts, scaffold, prototype, tester, context, dossier</td></tr>
+          <tr><td><code>aiuic-compose</code>, <code>aiuic-tools</code></td><td>acts composed by a model; tool schemas from acts</td></tr>
+          <tr><td><code>aiuic-devtools</code>, <code>aiuic-eval</code></td><td>why an act is waiting; the false-confirm rate</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+  </main>
+</div>
+
+<footer>Hepta and AIUIC, by InterMenu. The demo at the top runs entirely in this page; nothing you type leaves it.</footer>
+<script>
+"use strict";var HeptaRuntime=(()=>{var E=Object.defineProperty;var Ue=Object.getOwnPropertyDescriptor;var ze=Object.getOwnPropertyNames;var Be=Object.prototype.hasOwnProperty;var Ve=(n,e,t)=>e in n?E(n,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):n[e]=t;var He=(n,e)=>{for(var t in e)E(n,t,{get:e[t],enumerable:!0})},We=(n,e,t,s)=>{if(e&&typeof e=="object"||typeof e=="function")for(let o of ze(e))!Be.call(n,o)&&o!==t&&E(n,o,{get:()=>e[o],enumerable:!(s=Ue(e,o))||s.enumerable});return n};var Ge=n=>We(E({},"__esModule",{value:!0}),n);var d=(n,e,t)=>Ve(n,typeof e!="symbol"?e+"":e,t);var Dt={};He(Dt,{Composer:()=>U,StagePresenter:()=>j,createApp:()=>Pe,stylesheet:()=>Me});var Je=["self","shared","other-person","external"];function b(n){return Je.indexOf(n)}function re(...n){let e="self";for(let t of n)b(t)>b(e)&&(e=t);return e}var ae={now:()=>Date.now(),setTimeout:(n,e)=>setTimeout(n,e),clearTimeout:n=>clearTimeout(n)};function le(n){return typeof n=="string"?n:n.max}function Qe(n,e,t){return typeof n.radius=="string"?n.radius:n.radius.of(e,t)}function ce(n,e,t){let s=Qe(n,e,t),o=t.reachLimit??1,i=[],a=s,r;return!n.undo&&b(a)<b("external")&&(a="external",r="no undo() \u2014 nothing could take it back, so it cannot commit on silence"),(n.effects??[]).forEach((l,c)=>{let u=l.name??`effect[${c}]`;if(l.when&&!l.when(e,t)){i.push({name:u,radius:"self",why:"skipped by when()"});return}let p=l.radius,h;if(!l.reversible&&b(p)<b("external")&&(p="external",h="effect is irreversible"),l.reach){let g=l.reach(e,t);g>o&&(p="external",h=`reach ${g} exceeds reachLimit ${o}`)}i.push(h?{name:u,radius:p,why:h}:{name:u,radius:p}),a=re(a,p)}),r?{radius:a,commit:s,effects:i,why:r}:{radius:a,commit:s,effects:i}}function ue(n,e,t){return ce(n,e,t).radius}var Ye={self:1,shared:1,"other-person":1.6,external:0},Xe=850;function z(n,e){let t=e.actor.basePauseMs??Xe;return Math.round(t*Ye[n])}var B=class extends Error{constructor(t,s){super(`[${t}] ${s}`);d(this,"act");this.name="ActDefinitionError",this.act=t}},Ke=b("external");function O(n){let e=a=>{throw new B(n.name,a)};n.name||e("act needs a name"),n.commit||e("act needs a commit function"),typeof n.radius!="string"&&((!n.radius||typeof n.radius.of!="function")&&e("a function-valued radius needs { max, of }"),n.radius.max||e("a function-valued radius must declare a static max, or it cannot be checked here"));let t=le(n.radius),s=b(t)<Ke,o=Object.entries(n.slots??{});o.length===0&&e("act needs at least one slot");let i=new Set;for(let[a,r]of o){let l=r;l.primitive||e(`slot "${a}" needs a primitive`),typeof l.order!="number"&&e(`slot "${a}" needs an order`),i.has(l.order)&&e(`slot "${a}" reuses order ${l.order}`),i.add(l.order),!l.options&&!l.resolve&&!l.default&&e(`slot "${a}" needs options, resolve, or default \u2014 nothing can fill it`),l.fill==="model"&&l.required}s&&!n.undo&&e(`radius max "${t}" is below "external" but no undo() is declared; silence-assent requires a reversal`);for(let[a,r]of(n.effects??[]).entries()){let l=r.name??`effect[${a}]`;typeof r.run!="function"&&e(`${l} needs run()`),r.radius||e(`${l} needs a radius`),typeof r.reversible!="boolean"&&e(`${l} needs reversible`),typeof r.deferrable!="boolean"&&e(`${l} needs deferrable`),!r.deferrable&&s&&e(`${l} is not deferrable, so it fires before undo is possible; declare radius max "external"`),!r.reversible&&s&&e(`${l} is irreversible; declare radius max "external"`),b(r.radius)>b(t)&&e(`${l} declares radius "${r.radius}" above the act's max "${t}"`)}return n}function de(n){return Object.values(n.slots).some(e=>e.required===!0&&e.fill==="model")}function R(n){return Object.entries(n.slots).sort(([,e],[,t])=>e.order-t.order).map(([e])=>e)}var Ze={foreground:!1,unlocked:!1,proximityClear:!1,listening:!1};function T(n,e){let t=n??Ze,s=[];return t.foreground||s.push("app not in foreground"),t.unlocked||s.push("device locked"),t.proximityClear||s.push("proximity sensor covered"),t.listening||s.push("not listening, so a veto could not be heard"),e||s.push("user has not touched or spoken during this act"),{pass:s.length===0,failures:s}}var N=class{constructor(e,t,s={}){d(this,"clock",e);d(this,"ctx",t);d(this,"events",s);d(this,"entries",new Map);d(this,"seq",1)}get size(){return this.entries.size}has(e){return this.entries.has(e)}add(e,t,s,o){let i=`ob_${this.seq++}`,a=this.clock.now()+o,r=s.map((c,u)=>c.name??`effect[${u}]`),l={id:i,act:e,result:t,deadlineAt:a,effectNames:r,effects:s,timer:null};return l.timer=this.clock.setTimeout(()=>{this.fire(i)},o),this.entries.set(i,l),i}cancel(e){let t=this.entries.get(e);return t?(t.timer!==null&&this.clock.clearTimeout(t.timer),this.entries.delete(e),!0):!1}async fire(e){let t=this.entries.get(e);if(!t)return;this.entries.delete(e);let s=this.ctx();for(let o of t.effects)try{await o.run(t.result,s)}catch(i){this.events.onEffectError?.(t,o,i)}this.events.onFire?.(t)}serialize(){return[...this.entries.values()].map(({id:e,act:t,result:s,deadlineAt:o,effectNames:i})=>({id:e,act:t,result:s,deadlineAt:o,effectNames:i}))}restore(e,t){for(let s of e){let o=Math.max(0,s.deadlineAt-this.clock.now()),i={...s,effects:t(s.act,s.effectNames),timer:null};i.timer=this.clock.setTimeout(()=>{this.fire(s.id)},o),this.entries.set(s.id,i)}}};var et=.85,tt=.15;function st(n){let e={};for(let[t,s]of Object.entries(n))e[t]=s.candidates?{...s,candidates:s.candidates.map(o=>({...o}))}:{...s};return e}function nt(n,e=et,t=tt){let s=[...n].sort((l,c)=>c.score-l.score),o=s[0];if(!o)return{outcome:"empty",provisional:!1,ranked:s};let i=s[1],a=o.score-(i?.score??0),r=o.calibrated!==!1;return o.score>=e&&a>=t?{outcome:"filled",value:o.value,provisional:!r,ranked:s}:i&&a<t?{outcome:"narrowed",provisional:!0,ranked:s}:{outcome:"filled",value:o.value,provisional:!0,ranked:s}}var F=class{constructor(e,t,s,o,i){d(this,"clock",t);d(this,"ctxOf",s);d(this,"outbox",o);d(this,"emit",i);d(this,"def");d(this,"status","resolving");d(this,"phase","show");d(this,"slots",{});d(this,"result",null);d(this,"undoId",null);d(this,"speculative",!1);d(this,"holdTimer",null);d(this,"holdEndsAt",0);d(this,"holdMs",0);d(this,"engaged",!1);this.def=e;for(let a of Object.keys(e.slots))this.slots[a]={status:"empty",provisional:!1};this.applyDefaults()}get filled(){let e={};for(let[t,s]of Object.entries(this.slots))s.status==="filled"&&(e[t]=s.value);return e}get radius(){return ue(this.def,this.filled,this.ctxOf())}get requiredNames(){return R(this.def).filter(e=>this.def.slots[e]?.required===!0)}get missingRequired(){return this.requiredNames.filter(e=>this.slots[e]?.status!=="filled")}state(){let e=this.status!=="settled"&&this.status!=="discarded",t=T(this.ctxOf().attention,this.engaged),s=e?this.radius:null,o=this.missingRequired[0],i={act:this.def.name,status:this.status,phase:this.phase,slots:st(this.slots),radius:s,assent:this.status==="hold"?"silence":this.status==="explicit"?"explicit":null,visible:this.status==="resolving"&&o?[o]:R(this.def),outbox:this.outbox.size};return this.status==="hold"&&(i.holdRemainingMs=Math.max(0,this.holdEndsAt-this.clock.now())),o&&(i.focus=o),t.pass||(i.gateFailures=t.failures),i}applyDefaults(){let e=this.ctxOf();for(let[t,s]of Object.entries(this.def.slots)){if(!s.default)continue;let o=this.slots[t];if(!o||o.status!=="empty")continue;let i=s.default(e,this.filled);i!==void 0&&(this.slots[t]={status:"filled",value:i,source:"default",provisional:!1})}}markEngaged(){this.engaged=!0}setValue(e,t,s){if(!this.def.slots[e])throw new Error(`[${this.def.name}] unknown slot "${e}"`);(s==="spoken"||s==="touched")&&this.markEngaged();let o=this.status==="hold",i=this.slots[e],a=i?.status!=="filled"||i.value!==t;this.slots[e]={status:"filled",value:t,source:s,provisional:!1,...s==="model"&&o&&a?{corrected:!0}:{}},this.status==="frozen"&&(s==="touched"||s==="spoken")&&(this.status="resolving"),o&&a&&this.cancelHold("slot changed under a running HOLD"),this.evaluate()}offer(e,t,s){if(!this.def.slots[e])throw new Error(`[${this.def.name}] unknown slot "${e}"`);(s==="spoken"||s==="touched")&&this.markEngaged();let o=this.status==="hold",i=nt(t);i.outcome==="empty"?this.slots[e]={status:"empty",provisional:!1}:i.outcome==="narrowed"?this.slots[e]={status:"narrowed",candidates:i.ranked,provisional:!0,source:s}:this.slots[e]={status:"filled",value:i.value,source:s,provisional:i.provisional,candidates:i.ranked.length>1?i.ranked:void 0},this.status==="frozen"&&(s==="touched"||s==="spoken")&&(this.status="resolving"),o&&this.cancelHold("slot changed under a running HOLD"),this.evaluate()}markStale(e){let t=this.slots[e];t&&(this.slots[e]={...t,stale:!0},this.status==="hold"&&this.cancelHold("a filled value went stale"),this.evaluate())}freeze(e="bare negation"){this.status==="settled"||this.status==="discarded"||(this.markEngaged(),this.cancelHold(e),this.status="frozen",this.phase="frozen",this.emit({type:"frozen",act:this.def.name,reason:e}),this.emit({type:"stage",state:this.state()}))}discard(){this.cancelHold("vetoed"),this.status="discarded",this.emit({type:"discarded",act:this.def.name})}pause(){this.status==="hold"&&this.cancelHold("paused"),this.status!=="settled"&&this.status!=="discarded"&&(this.status="frozen")}resume(){this.status==="frozen"&&(this.status="resolving",this.evaluate())}evaluate(){if(["committing","settled","discarded","failed"].includes(this.status))return;if(this.status==="frozen"){this.emit({type:"stage",state:this.state()});return}let e=this.ctxOf(),t=this.missingRequired;if(t.length>0){this.status="resolving";let r=t[0],l=this.slots[r];this.phase=l.status==="narrowed"?"narrow":"unfold",this.emit({type:"stage",state:this.state()});return}let s=Object.entries(this.slots).find(([,r])=>r.stale);if(s){this.status="resolving",this.phase="show",this.emit({type:"blocked",act:this.def.name,reason:`slot "${s[0]}" is stale`}),this.emit({type:"stage",state:this.state()});return}let o=this.radius,i=this.requiredNames.filter(r=>this.slots[r]?.provisional);if(i.length>0&&b(o)>=b("other-person")){this.status="resolving",this.phase="show",this.emit({type:"blocked",act:this.def.name,reason:`provisional ${i.join(", ")} at radius "${o}"`}),this.emit({type:"stage",state:this.state()});return}if(this.speculative){this.status="speculating",this.phase="show",this.emit({type:"stage",state:this.state()});return}let a=T(e.attention,this.engaged);if(o==="external"||!a.pass){this.status="explicit",this.phase="explicit",this.emit({type:"blocked",act:this.def.name,reason:o==="external"?"radius is external":"attention gate failed",...a.pass?{}:{failures:a.failures}}),this.emit({type:"stage",state:this.state()});return}this.startHold(o)}startHold(e){let t=z(e,this.ctxOf());this.cancelHold("restart",!0),this.status="hold",this.phase="hold",this.holdMs=t,this.holdEndsAt=this.clock.now()+t,this.holdTimer=this.clock.setTimeout(()=>{this.holdTimer=null,this.commit("silence")},t),this.emit({type:"hold-start",act:this.def.name,ms:t,radius:e}),this.emit({type:"stage",state:this.state()})}cancelHold(e,t=!1){this.holdTimer!==null&&(this.clock.clearTimeout(this.holdTimer),this.holdTimer=null,t||this.emit({type:"hold-cancel",act:this.def.name,reason:e})),this.holdEndsAt=0}get holdDurationMsValue(){return this.holdMs}settleSpeculation(){this.speculative&&(this.speculative=!1,this.evaluate())}async assent(){if(this.markEngaged(),this.speculative)throw new Error(`[${this.def.name}] cannot assent to a speculative act; settle it first`);if(this.status!=="explicit"&&this.status!=="hold"&&this.status!=="frozen")throw new Error(`[${this.def.name}] nothing to assent to (status "${this.status}")`);if(this.missingRequired.length>0)throw new Error(`[${this.def.name}] required slots unfilled: ${this.missingRequired.join(", ")}`);this.cancelHold("explicit assent",!0),await this.commit("explicit")}async commit(e){if(this.status==="committing"||this.status==="settled")return;this.status="committing";let t=this.ctxOf(),s=this.filled;try{let o=await this.def.commit(s,t);this.result=o,this.status="settled",this.phase="settle";let i=(this.def.effects??[]).filter(l=>!l.when||l.when(s,t)),a=i.filter(l=>l.deferrable),r=i.filter(l=>!l.deferrable);if(a.length>0){let l=t.undoWindowMs??5e3;this.undoId=this.outbox.add(this.def.name,o,a,l)}else this.def.undo&&(this.undoId=this.outbox.add(this.def.name,o,[],t.undoWindowMs??5e3));for(let l of r)e==="explicit"&&await l.run(o,t);this.emit({type:"commit",act:this.def.name,result:o,undoId:this.undoId}),this.emit({type:"stage",state:this.state()})}catch(o){this.status="failed",this.emit({type:"failed",act:this.def.name,error:o}),this.emit({type:"stage",state:this.state()})}}async undo(){return this.status!=="settled"||!this.result||!this.undoId||!this.outbox.has(this.undoId)?!1:(this.outbox.cancel(this.undoId),this.undoId=null,await this.def.undo?.(this.result,this.ctxOf()),this.emit({type:"undo",act:this.def.name,result:this.result}),!0)}get undoAvailable(){return this.status==="settled"&&!!this.undoId&&this.outbox.has(this.undoId)}};var it={act:null,status:"resolving",phase:"idle",slots:{},radius:null,assent:null,visible:[],outbox:0},V=class{constructor(e){d(this,"config",e);d(this,"acts",new Map);d(this,"listeners",new Set);d(this,"current",null);d(this,"clock");d(this,"outbox");d(this,"emit",e=>{for(let t of this.listeners)t(e)});this.clock=e.clock??ae,this.outbox=new N(this.clock,()=>this.ctx())}ctx(){return{...this.config.ctx(),now:new Date(this.clock.now())}}on(e){return this.listeners.add(e),()=>this.listeners.delete(e)}defineAct(e){let t=O(e);return this.acts.set(t.name,t),t}get definitions(){return[...this.acts.values()]}needsModel(e){let t=this.acts.get(e);if(!t)throw new Error(`unknown act "${e}"`);return de(t)}start(e,t={}){let s=this.acts.get(e);if(!s)throw new Error(`unknown act "${e}"`);this.current&&["resolving","hold","explicit","frozen"].includes(this.current.status)&&this.current.discard();let o=new F(s,this.clock,()=>this.ctx(),this.outbox,this.emit);return t.speculative&&(o.speculative=!0),this.current=o,o.evaluate(),o}get act(){return this.current}state(){return this.current?this.current.state():{...it,outbox:this.outbox.size}}serializeOutbox(){return this.outbox.serialize()}restoreOutbox(e){this.outbox.restore(e,(t,s)=>(this.acts.get(t)?.effects??[]).filter((i,a)=>s.includes(i.name??`effect[${a}]`)))}};function he(n){return new V(n)}var ot=/[.,!?;:'"`()[\]{}<>/\\|@#$%^&*_+=~]/g;function $(n){return n.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(ot," ").replace(/\s+/g," ").trim()}function H(n){let e=[],t=/[^\s.,!?;:'"`()[\]{}<>/\\|@#$%^&*_+=~]+/g,s;for(;(s=t.exec(n))!==null;){let o=s[0],i=$(o);i&&e.push({raw:o,norm:i,start:s.index,end:s.index+o.length})}return e}function rt(n,e){if(n===e)return 0;if(n.length===0)return e.length;if(e.length===0)return n.length;let t=Array.from({length:e.length+1},(o,i)=>i),s=new Array(e.length+1);for(let o=1;o<=n.length;o++){s[0]=o;for(let i=1;i<=e.length;i++){let a=n[o-1]===e[i-1]?0:1;s[i]=Math.min(s[i-1]+1,t[i]+1,t[i-1]+a)}[t,s]=[s,t]}return t[e.length]}function at(n,e){return!n||!e?0:n===e?1:1-rt(n,e)/Math.max(n.length,e.length)}var lt=.72;function W(n,e){let t=$(e).split(" ").filter(Boolean);if(t.length===0||n.length<t.length)return null;let s=null;for(let o=0;o+t.length<=n.length;o++){let i=0;for(let r=0;r<t.length;r++){let l=at(n[o+r].norm,t[r]);i+=l>=lt?l:0}let a=i/t.length;a>0&&(!s||a>s.score)&&(s={score:a,span:[n[o].start,n[o+t.length-1].end]})}return s}var v={tauAct:.5,deltaAct:.15,tauFill:.85,phraseWeight:.4,coverageWeight:.6,phraseFloor:.9,uncheckableCoverage:.25};function G(n,e){let t=[];for(let s of e){let o=[s.label,...s.aliases??[]],i=null;for(let a of o){let r=W(n,a);r&&(!i||r.score>i.score)&&(i=r)}i&&i.score>0&&t.push({value:s.value,label:s.label,...i})}return t.sort((s,o)=>o.score-s.score)}function ct(n){let e=[];for(let[o,i]of Object.entries(n))i.forEach((a,r)=>{a.span&&e.push({slot:o,index:r,span:a.span,score:a.score})});let t=new Set;for(let o=0;o<e.length;o++)for(let i=o+1;i<e.length;i++){let a=e[o],r=e[i];if(a.slot===r.slot||!(a.span[0]<r.span[1]&&r.span[0]<a.span[1]))continue;let c=a.span[1]-a.span[0],u=r.span[1]-r.span[0],p=c!==u?c<u?a:r:a.score<r.score?a:r;t.add(`${p.slot}:${p.index}`)}let s={};for(let[o,i]of Object.entries(n)){let a=i.filter((r,l)=>!t.has(`${o}:${l}`));a.length>0&&(s[o]=a)}return s}var M=class{constructor(e=v){d(this,"routing",e);d(this,"name","local");d(this,"local",!0);d(this,"calibrated",!0)}async score(e,t,s,o){return this.scoreSync(e,t,s,o)}async fill(e,t,s,o,i){return this.fillSync(e,t,s,o,i)}scoreSync(e,t,s,o){let i=H(e),a=[];for(let r of t){let l=0;for(let m of r.phrases??[]){let f=W(i,m);f&&f.score>l&&(l=f.score)}let c=Object.entries(r.slots).filter(([m,f])=>f.required&&f.primitive!=="ghostField"&&(f.resolve||o(r,m).length>0)),u=0;for(let[m,f]of c)((f.resolve?f.resolve(e,s,{}):G(i,o(r,m)))[0]?.score??0)<this.routing.tauFill||(u+=this.discrimination(r,m,e,t,s,o,i));let p=c.length?u/c.length:0,h=0,g=0;l>=this.routing.phraseFloor&&(h+=this.routing.phraseWeight,g+=this.routing.phraseWeight*l),h+=this.routing.coverageWeight,g+=this.routing.coverageWeight*(c.length>0?p:this.routing.uncheckableCoverage),a.push({act:r.name,phraseMatch:l,requiredCoverage:p,score:h>0?g/h:0})}return a.sort((r,l)=>l.score-r.score)}discrimination(e,t,s,o,i,a,r){let l=0;for(let c of o)if(c.name!==e.name)for(let[u,p]of Object.entries(c.slots)){if(!p.required||p.primitive==="ghostField")continue;if(((p.resolve?p.resolve(s,i,{}):G(r,a(c,u)))[0]?.score??0)>=this.routing.tauFill){l++;break}}return 1/(1+l)}fillSync(e,t,s,o,i){let a=H(e),r={};for(let[l,c]of Object.entries(t.slots)){if(l in s||c.fill==="model")continue;if(c.resolve){let p=c.resolve(e,o,s);p.length>0&&(r[l]=[...p].sort((h,g)=>g.score-h.score));continue}let u=G(a,i(t,l));u.length>0&&(r[l]=u)}return ct(r)}};function J(n,e=v){let t=[...n].sort((i,a)=>a.score-i.score),s=t[0];if(!s||s.score<e.tauAct)return{kind:"none",scores:t};let o=t.filter(i=>i.score>=e.tauAct&&s.score-i.score<e.deltaAct);return o.length>1?{kind:"narrow",acts:o.map(i=>i.act),scores:t}:{kind:"start",act:s.act,scores:t}}var D={zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19},X={twenty:20,thirty:30,forty:40,fourty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90},Q=["sunday","monday","tuesday","wednesday","thursday","friday","saturday"],I=["january","february","march","april","may","june","july","august","september","october","november","december"],fe={dollar:"USD",dollars:"USD",buck:"USD",bucks:"USD",usd:"USD",euro:"EUR",euros:"EUR",eur:"EUR",pound:"GBP",pounds:"GBP",quid:"GBP",gbp:"GBP"};function K(n){let e=null;for(let t=0;t<n.length;t++){let s=n[t];if(X[s]!==void 0){let o=X[s],i=n[t+1];i&&D[i]!==void 0&&D[i]<10&&(o+=D[i],t++),e=(e??0)+o}else if(D[s]!==void 0)e=(e??0)+D[s];else if(s==="hundred"&&e!==null)e*=100;else if(s==="a"||s==="an")n[t+1]==="hundred"&&(e=100,t++);else if(e!==null)break}return e}function S(n,e){let t=e==="EUR"?"\u20AC":e==="GBP"?"\xA3":"$",s=Number.isInteger(n)?String(n):n.toFixed(2);return e?t+s:s}function ge(n,e){let t=$(n),s=t.split(" "),o=/(?:^|\s)([$€£])\s?(\d+(?:[.,]\d{1,2})?)/.exec(n);if(o){let a=parseFloat(o[2].replace(",",".")),r=o[1]==="\u20AC"?"EUR":o[1]==="\xA3"?"GBP":"USD";return[{value:{n:a,label:S(a,r),unit:r},label:S(a,r),score:1,calibrated:!0}]}let i=/(?:^|\s)(\d+(?:[.,]\d{1,2})?)(?:\s|$)/.exec(" "+t+" ");if(i){let a=parseFloat(i[1].replace(",",".")),r=s[s.indexOf(i[1].replace(".","."))+1],l=r?fe[r]:void 0;return[{value:{n:a,label:S(a,l),...l?{unit:l}:{}},label:S(a,l),score:1,calibrated:!0}]}for(let a=0;a<s.length;a++)if(D[s[a]]!==void 0||X[s[a]]!==void 0){let r=K(s.slice(a));if(r===null)continue;let l;for(let c=a;c<Math.min(s.length,a+4);c++){let u=fe[s[c]];if(u){l=u;break}}return[{value:{n:r,label:S(r,l),...l?{unit:l}:{}},label:S(r,l),score:1,calibrated:!0}]}return[]}var P=864e5;function A(n,e,t){let s=new Date(n.getTime());return s.setHours(9,0,0,0),s.setDate(s.getDate()+e),{at:s.getTime(),label:t,granularity:"day"}}function ut(n,e,t){let s=n.getDay(),o=(e-s+7)%7;return o===0&&(o=7),t&&o<7&&(o+=0),o}var me=n=>n.charAt(0).toUpperCase()+n.slice(1);function Y(n,e,t){let s=(e%24+24)%24,o=new Date(n.getTime());o.setHours(s,t,0,0),o.getTime()<=n.getTime()&&o.setDate(o.getDate()+1);let i=(s%12===0?12:s%12)+(t?":"+String(t).padStart(2,"0"):"")+(s>=12?"pm":"am");return{at:o.getTime(),label:i,granularity:"minute"}}function ye(n,e){let t=e?.now??new Date,s=$(n),o=[],i=(u,p=1)=>o.push({value:u,label:u.label,score:p,calibrated:!0});if(/\btoday\b/.test(s)&&i(A(t,0,"today")),/\btomorrow\b/.test(s)&&i(A(t,1,"tomorrow")),/\bday after tomorrow\b/.test(s)&&i(A(t,2,"the day after tomorrow")),/\byesterday\b/.test(s)&&i(A(t,-1,"yesterday")),/\btonight\b/.test(s)){let u=new Date(t.getTime());u.setHours(20,0,0,0),i({at:u.getTime(),label:"tonight",granularity:"minute"})}/\bnow\b/.test(s)&&i({at:t.getTime()+6e4,label:"right now",granularity:"minute"});for(let u=0;u<Q.length;u++){let h=new RegExp("\\b(next\\s+)?"+Q[u]+"\\b").exec(s);if(h){let g=ut(t,u,!!h[1]);i(A(t,g,(h[1]?"next ":"")+me(Q[u])))}}let a=/\bin (\d+|[a-z]+) (day|days|week|weeks)\b/.exec(s);if(a){let u=/^\d+$/.test(a[1])?Number(a[1]):K([a[1]]);if(u!==null){let p=a[2].startsWith("week")?7:1;i(A(t,u*p,"in "+u+" "+a[2]))}}for(let u=0;u<I.length;u++){let p=new RegExp("\\b"+I[u]+"\\s+(\\d{1,2})\\b").exec(s)||new RegExp("\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+of\\s+"+I[u]+"\\b").exec(s);if(p){let h=Number(p[1]),g=new Date(t.getTime());g.setMonth(u,h),g.setHours(9,0,0,0),g.getTime()<t.getTime()&&g.setFullYear(g.getFullYear()+1),i({at:g.getTime(),label:me(I[u])+" "+h,granularity:"day"})}}let r=/\b(\d{4})-(\d{2})-(\d{2})\b/.exec(s);if(r){let u=new Date(Number(r[1]),Number(r[2])-1,Number(r[3]),9,0,0,0);i({at:u.getTime(),label:r[0],granularity:"day"})}let l=n.toLowerCase(),c=/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/.exec(l);if(c){let u=Number(c[1]),p=c[2]?Number(c[2]):0;c[3]==="pm"&&u<12&&(u+=12),c[3]==="am"&&u===12&&(u=0),i(Y(t,u,p))}else{let u=/\b(?:at|to|around)\s+(\d{1,2})(?::(\d{2}))?\b/.exec(l),p=/\b(?:at|to|around)\s+([a-z]+)\b/.exec(l),h=null,g=0;if(u)h=Number(u[1]),g=u[2]?Number(u[2]):0;else if(p){let m=K([p[1]]);m!==null&&m>=1&&m<=12&&(h=m)}h!==null&&h>=1&&h<=12&&(i(Y(t,h,g),.5),i(Y(t,h+12,g),.5))}return o.sort((u,p)=>p.score-u.score)}var Ds={second:1e3,seconds:1e3,minute:6e4,minutes:6e4,min:6e4,mins:6e4,hour:36e5,hours:36e5,day:P,days:P,week:P*7,weeks:P*7};var be=new Set(["a","an","the","to","my","please","can","you","could","for","me","on","in","into","list","and","i","want","need","would","like"]),ve=new Set(["to","on","in","into","for","at","under","onto","by","before","after"]),dt=new Set(["the","my","a","an","our"]),pt=new Set(["today","tonight","tomorrow","yesterday","morning","afternoon","evening","night","noon","midnight","weekend","week","month","monday","tuesday","wednesday","thursday","friday","saturday","sunday","am","pm","next","this","o'clock","demain","aujourd'hui","ce","soir","matin"]),ht=new Set(["dollars","dollar","bucks","euros","euro","pounds","cents","$","\u20AC","\xA3"]),ft=/^[$€£]?\d/;function xe(n,e=()=>new Set){let t=new Set(n.flatMap(s=>s.toLowerCase().split(/\s+/)));return s=>{let o=s.trim().split(/\s+/),i=o.map(p=>p.toLowerCase().replace(/[,.!?]+$/,"")),a=e(),r=0;for(;r<o.length&&(t.has(i[r])||be.has(i[r]));)r++;let l=o.length,c=!1;for(;!(l<=r);){let p=i[l-1];if(be.has(p)||t.has(p)){l--;continue}if(pt.has(p)||ht.has(p)||ft.test(p)){l--,c=!0;continue}if(c&&ve.has(p)){l--;continue}if(a.has(p)){let h=l-2;for(;h>=r&&dt.has(i[h]);)h--;if(h>=r&&ve.has(i[h])){l=h;continue}}break}let u=o.slice(r,l).join(" ").replace(/[,.;]+$/,"");return u?[{value:u,label:u,score:.6,calibrated:!1}]:[]}}var mt=7,gt=.2,yt=.25,L=class{constructor(e,t,s,o={}){d(this,"ui",e);d(this,"local",t);d(this,"optionsFor",s);d(this,"tongues");d(this,"switchMargin");d(this,"floor");d(this,"routing");d(this,"run",null);d(this,"leader",null);d(this,"alive",[]);this.tongues=o.tongues??mt,this.switchMargin=o.switchMargin??gt,this.floor=o.floor??yt,this.routing=o.routing??v}get currentRun(){return this.run}get leaderName(){return this.leader}reset(){this.run&&this.run.status!=="settled"&&this.run.discard(),this.run=null,this.leader=null,this.alive=[]}feed(e,t){let s=e.text.trim(),o=this.ui.definitions;if(!s){let f=this.alive;return this.alive=[],{text:s,final:e.final,tracks:[],leader:null,switched:!1,pruned:f,run:null}}let r=this.local.scoreSync(s,o,t,this.optionsFor).filter(f=>f.score>=this.floor).slice(0,this.tongues).map(f=>({act:f.act,score:f.score,coverage:f.requiredCoverage,phraseMatch:f.phraseMatch,slots:this.local.fillSync(s,o.find(C=>C.name===f.act),{},t,this.optionsFor),leading:!1})),l=this.alive.filter(f=>!r.some(C=>C.act===f));this.alive=r.map(f=>f.act);let c=r[0],u=!1;if(!c)return this.stopLeading(),{text:s,final:e.final,tracks:r,leader:null,switched:!1,pruned:l,run:null};let p=r.find(f=>f.act===this.leader),h=e.final?0:this.switchMargin;(!p||c.score-p.score>=h)&&c.act!==this.leader?(u=!0,this.leadWith(c,o,t)):this.run&&p&&this.paint(p,t);let m=r.find(f=>f.act===this.leader);return m&&(m.leading=!0),e.final&&this.run&&this.run.settleSpeculation(),{text:s,final:e.final,tracks:r,leader:this.leader,switched:u,pruned:l,run:e.final?this.run:null}}stopLeading(){this.run&&this.run.status==="speculating"&&this.run.discard(),this.run=null,this.leader=null}leadWith(e,t,s){this.stopLeading(),this.leader=e.act,this.run=this.ui.start(e.act,{speculative:!0}),this.paint(e,s)}paint(e,t){let s=this.run;if(!(!s||s.status==="settled"||s.status==="discarded"))for(let o of Object.keys(e.slots)){let i=e.slots[o];i&&i.length>0&&s.offer(o,i,"spoken")}}};var Z=n=>n.replace(/[_-]+/g," ").replace(/([a-z])([A-Z])/g,"$1 $2").toLowerCase();function ee(n){if(n==null)return"";if(typeof n=="object"){let e=n;return typeof e.label=="string"?e.label:typeof e.name=="string"?e.name:JSON.stringify(n)}return String(n)}function bt(n,e){if(n!==null&&typeof n!="object"){let t=e.find(s=>s.value===n);if(t)return t.label}return ee(n)}var vt={act:null,domain:null,status:"idle",phase:"idle",radius:null,assent:null,holdRemainingMs:null,holdTotalMs:null,slots:[],preview:"",gateFailures:[],canAssent:!1,canUndo:!1,canResume:!1};function te(n,e,t){if(!n)return{...vt};let s=n.state(),o=n.def,i=R(o).map(a=>{let r=o.slots[a],l=s.slots[a];return{name:a,primitive:r.primitive,label:Z(a),status:l.status,...l.value!==void 0?{value:l.value}:{},display:l.status==="filled"?bt(l.value,e(n,a)):"",source:l.source??null,provisional:l.provisional,stale:l.stale===!0,required:r.required===!0,focused:s.focus===a,options:e(n,a),candidates:(l.candidates??[]).map(c=>({value:c.value,display:c.label??ee(c.value),score:c.score}))}});return{act:o.name,domain:o.domain??null,status:s.status,phase:s.phase,radius:s.radius,assent:s.assent,holdRemainingMs:s.status==="hold"?Math.round(s.holdRemainingMs??0):null,holdTotalMs:s.status==="hold"?n.holdDurationMsValue:null,slots:i,preview:xt(n,i),gateFailures:s.gateFailures??[],canAssent:s.status==="explicit"||s.status==="frozen",canUndo:n.undoAvailable,canResume:s.status==="frozen"}}function xt(n,e){let t=n.def;if(t.preview)try{let i=t.preview(n.filled,{}).map(a=>typeof a=="string"?a:ee(a)).filter(Boolean).join(" \xB7 ");if(i)return i}catch{}let s=e.filter(o=>o.status==="filled"&&o.display);return s.length===0?Z(t.name):Z(t.name)+": "+s.map(o=>o.display).join(" \xB7 ")}function we(n,e,t){let s=()=>{let i=te(n,t);for(let a of e)a.render(i)},o={touch:(i,a)=>{n.setValue(i,a,"touched"),s()},assent:()=>{n.assent().then(s)},discard:()=>{n.discard(),s()},undo:()=>{n.undo().then(s)},freeze:()=>{n.freeze("presenter"),s()},resume:()=>{n.resume(),s()}};for(let i of e)i.mount?.(o);return s(),{update:s,handlers:o}}function ke(n){let e=[],t=new Map;for(let s of n){let o=Object.entries(s.slots),i=o.filter(([,l])=>l.required),a=typeof s.radius=="string"?s.radius:s.radius.max;i.length===0&&e.push({act:s.name,level:"warn",message:"no required slots \u2014 this act reaches HOLD the instant it starts"}),s.phrases?.length||e.push({act:s.name,level:"note",message:"no trigger phrases \u2014 routing has only slot coverage to go on"});for(let l of s.phrases??[]){let c=t.get(l.toLowerCase());c&&c!==s.name&&e.push({act:s.name,level:"note",message:`shares the phrase "${l}" with "${c}" \u2014 expect a NARROW between them`}),t.set(l.toLowerCase(),s.name)}i.some(([,l])=>l.fill==="model")&&e.push({act:s.name,level:"warn",message:"a required slot is model-filled, so this act has no offline path"}),a!=="external"&&!s.undo&&e.push({act:s.name,level:"warn",message:"below external with no undo"}),s.effects?.length&&!s.effects.some(l=>l.when)&&a==="other-person"&&e.push({act:s.name,level:"note",message:"an unconditional effect at other-person \u2014 if it can ever be a no-op, give it when() so it stops costing radius"});let r=o.map(([,l])=>l.order);new Set(r).size!==r.length&&e.push({act:s.name,level:"warn",message:"duplicate slot order"}),s.preview||e.push({act:s.name,level:"note",message:"no preview \u2014 the user agrees to a row of slots rather than a sentence"})}return e}var x={mint:"#76C4AE",planPurple:"#A78BFA",rewardsGold:"#FAC775",cyan:"#378ADD",poppinsCyan:"#06B6D4",neutral:"#94A3B8"},w={success:"#34D399",warning:"#FB923C",danger:"#F87171"},Ce={recessed:"#0B1220",base:"#111827",elevated:"#1B2434"},Re={card:.05,cardStrong:.07,row:.03},Se={sm:12,md:20,stage:28,pill:999},Ae={headline:{size:30,line:34,tracking:-.4,weight:600},row:{size:19,line:24,tracking:0,weight:500},detail:{size:13,line:18,tracking:0,weight:400},kicker:{size:11,line:14,tracking:1.3,weight:600,caps:!0}},De="'Bricolage Grotesque', 'Inter var', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif",se={snappy:{damping:20,stiffness:300,mass:.8,approxMs:150},smooth:{damping:18,stiffness:180,mass:1,approxMs:300},settle:{damping:22,stiffness:90,mass:1.2,approxMs:600}};var Oe=44,q={idle:196,cardUp:72,header:34},wt={idle:x.poppinsCyan,listening:w.success,thinking:x.planPurple,speaking:x.poppinsCyan,done:w.success};var ne={chores:{name:"chores",colour:"mint",kicker:"CHORES",does:"Assign, finish, ask for proof",shape:"what \u2192 who \u2192 when \xB7 a photo request rides along"},homework:{name:"homework",colour:"mint",kicker:"HOMEWORK",does:"Set work, review it",shape:"subject \u2192 child \u2192 due \xB7 review lands in the adult's inbox"},groceries:{name:"groceries",colour:"mint",kicker:"GROCERIES",does:"Add, clear, shop",shape:"items only \u2014 never a person \xB7 clothing is its own lane",forbids:{face:'a grocery has no assignee \u2014 "items only, never a person"'}},calendar:{name:"calendar",colour:"planPurple",kicker:"CALENDAR",does:"Events, with the clash check",shape:"what \u2192 when \u2192 who \xB7 leave-by time from the address"},trips:{name:"trips",colour:"planPurple",kicker:"TRIPS",does:"A run of stops, in order",shape:"saved places first, then geocoded \xB7 the list joins a shop stop"},places:{name:"places",colour:"planPurple",kicker:"PLACES",does:"Remember where things are",shape:'"work is on Ren\xE9-L\xE9vesque" becomes a saved place'},rewards:{name:"rewards",colour:"rewardsGold",kicker:"REWARDS",does:"Mint one, claim one, approve",shape:"a child's claim waits for an adult, never auto-settles",floor:"other-person"},allowance:{name:"allowance",colour:"rewardsGold",kicker:"ALLOWANCE",does:"Grant, hold, pay out",shape:"money always confirms \u2014 no silent hold on a payment",floor:"external"},ranks:{name:"ranks",colour:"rewardsGold",kicker:"RANKS",does:"Who's ahead, and why",shape:"read-only on the stage; fairness notes stay in-app",ceiling:"self"},household:{name:"household",colour:"cyan",kicker:"HOUSEHOLD",does:"People, iPad, house rules",shape:"the stage explains and walks you there \u2014 it never edits people",coachOnly:!0},teaching:{name:"teaching",colour:"cyan",kicker:"TEACHING",does:'"How do I\u2026" and walk-throughs',shape:"free, spotlighted on the real screen, stoppable at any step",coachOnly:!0,ceiling:"self"},memory:{name:"memory",colour:"neutral",kicker:"MEMORY",does:"What the house likes",shape:'"Noah hates mushrooms" \xB7 shown as a small note, never a card',noStage:!0}},kt=["self","shared","other-person","external"],_=n=>kt.indexOf(n);function ie(n,e){if(!n)return null;let t=ne[n];if(t)return t;let s=e?.[n];return s?{name:n,colour:"neutral",hex:s.colour,kicker:s.kicker.toUpperCase().slice(0,24),does:"",shape:""}:null}function $e(n,e){return ie(n.domain,e)}function Ee(n,e){let t=typeof n=="string"?ne[n]:n,s=t?t.hex??x[t.colour]:x.neutral;return{domain:s,kicker:s,accent:e??null}}function Te(n,e){let t=[];for(let s of n){let o=s.domain,i=$e(s,e);if(!o){t.push({act:s.name,domain:null,level:"note",message:"no domain \u2014 the card has no kicker and falls back to neutral"});continue}if(!i){t.push({act:s.name,domain:null,level:"error",message:`unknown domain "${o}" \u2014 a colour it does not own cannot be earned by meaning`});continue}let a=typeof s.radius=="string"?s.radius:s.radius.max;for(let[r,l]of Object.entries(s.slots)){let c=i.forbids?.[l.primitive];c&&t.push({act:s.name,domain:i.name,level:"error",message:`slot "${r}" uses \`${l.primitive}\`, which ${i.name} forbids: ${c}`})}i.floor&&_(a)<_(i.floor)&&t.push({act:s.name,domain:i.name,level:"error",message:`declared ${a}, but ${i.name} floors at ${i.floor} \u2014 ${i.shape}`}),i.ceiling&&_(a)>_(i.ceiling)&&t.push({act:s.name,domain:i.name,level:"error",message:`declared ${a}, but ${i.name} is capped at ${i.ceiling} \u2014 ${i.shape}`}),i.coachOnly&&s.effects?.some(r=>!r.reversible)&&t.push({act:s.name,domain:i.name,level:"error",message:`${i.name} points at the real control; it does not make irreversible writes`}),i.noStage&&t.push({act:s.name,domain:i.name,level:"warn",message:`${i.name} is shown as a note, never a card \u2014 an act here will take the stage`})}return t}function Ne(n,e={}){if(!n.act)return null;if(e.domain?.coachOnly)return"coach";switch(n.status){case"committing":case"settled":return"settle";case"hold":case"explicit":case"frozen":return"hold";default:break}return n.slots.some(o=>o.status==="narrowed")?"narrow":n.slots.some(o=>o.status==="filled")?"unfold":(e.queued??0)>0?"chain":"show"}function Fe(n){return n.slots.find(t=>t.status==="filled")?.source==="touched"}var k=n=>`${n}px`;function Ct(){let n=[];for(let[e,t]of Object.entries(x))n.push(`  --eui-${e}: ${t};`);for(let[e,t]of Object.entries(w))n.push(`  --eui-${e}: ${t};`);for(let[e,t]of Object.entries(Ce))n.push(`  --eui-ground-${e}: ${t};`);for(let[e,t]of Object.entries(Re))n.push(`  --eui-surface-${e}: ${t};`);for(let[e,t]of Object.entries(Se))n.push(`  --eui-radius-${e}: ${k(t)};`);for(let[e,t]of Object.entries(Ae))n.push(`  --eui-type-${e}-size: ${k(t.size)};`),n.push(`  --eui-type-${e}-line: ${k(t.line)};`),n.push(`  --eui-type-${e}-tracking: ${t.tracking}px;`),n.push(`  --eui-type-${e}-weight: ${t.weight};`);for(let[e,t]of Object.entries(se))n.push(`  --eui-motion-${e}: ${t.approxMs}ms;`);return n.push(`  --eui-target-min: ${k(Oe)};`),n.push(`  --eui-orb-idle: ${k(q.idle)};`),n.push(`  --eui-orb-card: ${k(q.cardUp)};`),n.push(`  --eui-orb-header: ${k(q.header)};`),n.push(`  --eui-font: ${De};`),n.push("  --eui-domain: var(--eui-neutral);"),`:root {
+${n.join(`
+`)}
+}`}function Me(){return`${Ct()}
+
+.eui-stage {
+  font-family: var(--eui-font);
+  color: #E9EEF7;
+  display: flex; flex-direction: column; gap: 12px;
+  align-items: stretch;
+}
+
+/* "Their words above it." Not inside the card: the card is the reading, the
+   line above is what was said, and merging them hides which is which. */
+.eui-said {
+  font-size: var(--eui-type-detail-size); line-height: var(--eui-type-detail-line);
+  opacity: .62; font-style: italic; padding: 0 4px;
+}
+
+.eui-card {
+  position: relative;
+  border-radius: var(--eui-radius-stage);
+  background: rgba(255,255,255, var(--eui-surface-card));
+  border: 1px solid rgba(255,255,255,.06);
+  padding: 18px;
+  display: flex; flex-direction: column; gap: 10px;
+  transition: opacity var(--eui-motion-smooth) ease, background var(--eui-motion-smooth) ease;
+}
+.eui-card[data-strong="true"] { background: rgba(255,255,255, var(--eui-surface-cardStrong)); }
+
+/* Board 13, NEVER: "A card inside a card." Made visible rather than documented. */
+.eui-card .eui-card { outline: 2px dashed var(--eui-danger); }
+
+.eui-kicker {
+  font-size: var(--eui-type-kicker-size); line-height: var(--eui-type-kicker-line);
+  letter-spacing: var(--eui-type-kicker-tracking); font-weight: var(--eui-type-kicker-weight);
+  text-transform: uppercase;
+  color: var(--eui-domain);
+}
+
+.eui-headline {
+  font-size: var(--eui-type-headline-size); line-height: var(--eui-type-headline-line);
+  letter-spacing: var(--eui-type-headline-tracking); font-weight: var(--eui-type-headline-weight);
+}
+
+/* A row is a tint, not a surface. No radius of its own beyond sm, no border,
+   no shadow \u2014 three things that would make it read as a card. */
+.eui-row {
+  display: flex; align-items: center; gap: 10px;
+  min-height: var(--eui-target-min);
+  padding: 6px 10px;
+  border-radius: var(--eui-radius-sm);
+  background: rgba(255,255,255, var(--eui-surface-row));
+  font-size: var(--eui-type-row-size); line-height: var(--eui-type-row-line);
+  font-weight: var(--eui-type-row-weight);
+}
+.eui-row[data-state="filled"][data-source="spoken"] { color: var(--eui-domain); }
+.eui-row[data-state="empty"] { opacity: .38; }
+.eui-row[data-focused="true"] {
+  opacity: 1;
+  outline: 1px dashed rgba(255,255,255,.28);
+}
+.eui-row[data-provisional="true"] { opacity: .72; }
+.eui-detail {
+  font-size: var(--eui-type-detail-size); line-height: var(--eui-type-detail-line);
+  opacity: .55; margin-left: auto;
+}
+
+.eui-chip, .eui-drop {
+  min-height: var(--eui-target-min); min-width: var(--eui-target-min);
+  border-radius: var(--eui-radius-pill);
+  border: 1px solid rgba(255,255,255,.14);
+  background: transparent; color: inherit;
+  padding: 0 14px; font: inherit; cursor: pointer;
+  transition: transform var(--eui-motion-snappy) ease, background var(--eui-motion-snappy) ease;
+}
+.eui-chip:active { transform: scale(.96); }
+.eui-drop { margin-left: auto; padding: 0; }
+
+.eui-ring {
+  height: 3px; border-radius: var(--eui-radius-pill);
+  background: var(--eui-domain);
+  transition: width var(--eui-motion-settle) linear;
+}
+.eui-count {
+  font-size: var(--eui-type-detail-size); opacity: .7;
+}
+.eui-mark { color: var(--eui-success); font-size: var(--eui-type-row-size); }
+.eui-explicit { color: var(--eui-warning); font-size: var(--eui-type-detail-size); }
+
+.eui-out {
+  align-self: flex-start;
+  min-height: var(--eui-target-min);
+  background: none; border: 0; color: inherit; opacity: .6;
+  font: inherit; cursor: pointer; padding: 0 4px;
+}
+
+/* The next act, waiting. A row on the stage, never a second card. */
+.eui-chained { opacity: .38; }
+
+/* "Reduce Motion swaps every move for a cross-fade and keeps the timing." The
+   durations are unchanged below \u2014 only what moves changes. */
+@media (prefers-reduced-motion: reduce) {
+  .eui-stage * {
+    transition-property: opacity, background, color !important;
+    animation: none !important;
+  }
+  .eui-chip:active { transform: none; }
+}
+`}var j=class{constructor(e,t,s={}){d(this,"root",e);d(this,"doc",t);d(this,"opts",s);d(this,"handlers",null);d(this,"lastBeat",null)}mount(e){this.handlers=e}render(e){let t=this.doc;if(this.root.replaceChildren(),this.root.className="eui-stage",!e.act){this.lastBeat=null;return}let s=ie(e.domain,this.opts.domains),o=Ee(s,this.opts.accent),i=Ne(e,{queued:this.opts.queued?.()??0,domain:s});this.lastBeat=i;let a=this.opts.said?.();if(a){let c=t.createElement("div");c.className="eui-said",c.textContent=`\u201C${a}\u201D`,this.root.appendChild(c)}let r=t.createElement("div");if(r.className="eui-card",r.setAttribute("data-beat",i??""),r.setAttribute("data-domain",s?.name??"neutral"),r.setAttribute("data-at-rest",String(i==="show"&&Fe(e))),this.setVar(r,"--eui-domain",o.domain),this.root.appendChild(r),s){let c=t.createElement("div");c.className="eui-kicker",c.textContent=s.kicker,r.appendChild(c)}let l=t.createElement("div");if(l.className="eui-headline",l.textContent=e.preview,r.appendChild(l),i==="coach")this.renderCoach(r,s);else for(let c of e.slots)this.renderRow(r,c,e);if(e.status==="hold"){let c=e.slots.filter(m=>m.status==="filled").length,u=t.createElement("div");u.className="eui-count",u.textContent=c>1?`One hold for all ${c} \xB7 tap \xD7 to drop one`:"Quiet adds it \xB7 speak or tap to change",r.appendChild(u);let p=t.createElement("div");p.className="eui-ring";let h=e.holdRemainingMs??0,g=e.holdTotalMs||1;this.setVar(p,"width",`${Math.max(0,Math.min(100,h/g*100))}%`),r.appendChild(p)}if(e.status==="explicit"){let c=t.createElement("div");c.className="eui-explicit",c.textContent=e.radius==="external"?"This one needs a yes \u2014 it cannot be taken back":`This one needs a yes \u2014 ${e.gateFailures.join("; ")}`,r.appendChild(c);let u=t.createElement("button");u.className="eui-chip",u.textContent="Do it",u.addEventListener("click",()=>this.handlers?.assent()),r.appendChild(u)}if(e.status==="settled"){let c=t.createElement("div");c.className="eui-mark",c.textContent="Added",r.appendChild(c)}if(e.status==="failed"){let c=t.createElement("div");c.className="eui-explicit",c.textContent="That didn't save. Everything else did.",r.appendChild(c)}if((this.opts.queued?.()??0)>0){let c=t.createElement("div");c.className="eui-row eui-chained",c.textContent=`${this.opts.queued()} more waiting`,this.root.appendChild(c)}this.wayOut(e)}wayOut(e){let t=this.doc.createElement("button");t.className="eui-out";let s=e.canUndo;t.textContent=s?"Undo":e.status==="settled"?"Done":"Not that",t.addEventListener("click",()=>{s?this.handlers?.undo():this.handlers?.discard()}),this.root.appendChild(t)}renderRow(e,t,s){let o=this.doc,i=o.createElement("div");i.className="eui-row",i.setAttribute("data-state",t.status),i.setAttribute("data-source",t.source??""),i.setAttribute("data-focused",String(t.focused)),i.setAttribute("data-provisional",String(t.provisional));let a=o.createElement("span");if(a.className="eui-detail",a.textContent=t.label,t.status==="filled"){let r=o.createElement("span");if(r.textContent=t.display,i.appendChild(r),i.appendChild(a),t.provisional&&(s.status==="resolving"||s.status==="explicit"||s.status==="hold")){let l=o.createElement("button");l.className="eui-chip eui-confirm",l.textContent="\u2713",l.setAttribute("aria-label",`Yes, ${t.label} is ${t.display}`),l.addEventListener("click",()=>this.handlers?.touch(t.name,t.value)),i.appendChild(l)}if(s.status==="hold"||s.status==="resolving"){let l=o.createElement("button");l.className="eui-drop",l.textContent="\xD7",l.addEventListener("click",()=>this.handlers?.touch(t.name,void 0)),i.appendChild(l)}}else if(t.status==="narrowed"){i.appendChild(a);for(let r of t.candidates.slice(0,2)){let l=o.createElement("button");l.className="eui-chip",l.textContent=r.display,l.addEventListener("click",()=>this.handlers?.touch(t.name,r.value)),i.appendChild(l)}}else if(i.appendChild(a),t.focused)for(let r of t.options.slice(0,4)){let l=o.createElement("button");l.className="eui-chip",l.textContent=r.label,l.addEventListener("click",()=>this.handlers?.touch(t.name,r.value)),i.appendChild(l)}e.appendChild(i)}renderCoach(e,t){let s=this.doc,o=s.createElement("div");o.className="eui-detail",o.textContent=t?`${t.does} \u2014 ${t.shape}`:"Walking you there.",e.appendChild(o);for(let i of["Walk me through it","Just do it"]){let a=s.createElement("button");a.className="eui-chip",a.textContent=i,a.addEventListener("click",()=>this.handlers?.assent()),e.appendChild(a)}}setVar(e,t,s){e.style&&(t.startsWith("--")&&e.style.setProperty?e.style.setProperty(t,s):e.style[t]=s)}unmount(){this.root.replaceChildren(),this.handlers=null}};var fn={[w.success.toUpperCase()]:"success",[w.warning.toUpperCase()]:"warning",[w.danger.toUpperCase()]:"danger"};function Ie(n){let e=n.tracks.map(t=>({act:t.act,score:t.score,phraseMatch:t.phraseMatch,requiredCoverage:t.coverage}));return n.leader?{kind:"start",act:n.leader,scores:e}:{kind:"none",scores:e}}function Rt(n,e,t){let s=n.slots[e];if(!s?.options)return[];let o=s.options(t,{});return Array.isArray(o)?o:[]}var oe=class{constructor(e){d(this,"config",e);d(this,"ui");d(this,"resolver");d(this,"speculator");d(this,"presenters",[]);d(this,"wired",null);d(this,"boundRun",null);this.ui=he({...e.clock?{clock:e.clock}:{},ctx:()=>e.ctx()});for(let t of e.acts)this.ui.defineAct(t);this.resolver=new M(e.routing??v),this.speculator=e.speculate===!1?null:new L(this.ui,this.resolver,(t,s)=>this.optionsFor(t,s)),this.presenters=e.presenters??[]}ctx(){let e=this.config.ctx();return{...e,now:e.now??new Date}}optionsFor(e,t){return this.config.optionsFor?this.config.optionsFor(e,t):Rt(e,t,this.ctx())}get act(){return this.speculator?.currentRun??this.ui.act}hear(e,t={}){let s=t.final??!0,o=this.ctx(),i=e.trim();if(!i)return{text:i,final:s,decision:{kind:"none",scores:[]},act:null,run:null,view:null,speculation:null};let a=this.speculator?.currentRun;if(a&&(a.status==="settled"||a.status==="failed"||a.status==="discarded")&&(this.speculator.reset(),this.boundRun=null),this.speculator&&!s){let m=this.speculator.feed({text:i,final:s},o);return this.draw(),{text:i,final:s,decision:Ie(m),act:m.leader,run:null,view:this.view(),speculation:m}}if(this.speculator?.currentRun){let m=this.speculator.feed({text:i,final:!0},o);return this.draw(),{text:i,final:!0,decision:Ie(m),act:m.leader,run:m.run,view:this.view(),speculation:m}}let r=this.ui.definitions,l=this.resolver.scoreSync(i,r,o,(m,f)=>this.optionsFor(m,f)),c=J(l,this.config.routing??v);if(c.kind==="none")return{text:i,final:s,decision:c,act:null,run:null,view:this.view(),speculation:null};let u=c.kind==="start"?c.act:c.acts[0],p=r.find(m=>m.name===u),h=this.ui.start(u),g=this.resolver.fillSync(i,p,{},o,(m,f)=>this.optionsFor(m,f));for(let[m,f]of Object.entries(g))f.length!==0&&h.offer(m,f,"spoken");return h.evaluate(),this.draw(),{text:i,final:s,decision:c,act:u,run:h,view:this.view(),speculation:null}}view(){let e=this.act;return e?te(e,(t,s)=>this.optionsFor(t.def,s)):null}mount(...e){this.presenters.push(...e),this.boundRun=null,this.draw()}draw(){let e=this.act;if(!(!e||this.presenters.length===0)){if(e!==this.boundRun){this.boundRun=e,this.wired=we(e,this.presenters,(t,s)=>this.optionsFor(t.def,s));return}this.wired?.update()}}lint(){let e=this.ui.definitions;return[...Te(e,this.config.domains).map(t=>({act:t.act,level:t.level,message:t.message})),...ke(e)]}reset(){this.speculator?.reset(),this.boundRun=null}};function Pe(n){return new oe(n)}var St=["face","chip","when","quantity","ghostField","objectCard","peek"],Le=8,qe=40,y=class extends Error{constructor(e){super(e),this.name="ComposeError"}},At=["radius","commit","undo","effects","preview","reversible"];function _e(n,e){if(typeof n=="function")throw new y(`${e}: functions are not allowed in a spec`);if(n&&typeof n=="object")for(let[t,s]of Object.entries(n))_e(s,`${e}.${t}`)}var U=class{constructor(){d(this,"caps",new Map)}register(e){if(!e.name)throw new y("a capability needs a name");if(typeof e.run!="function")throw new y(`${e.name}: capability needs run()`);this.caps.set(e.name,e)}get capabilities(){return[...this.caps.values()]}menu(){return this.capabilities.map(e=>({capability:e.name,describe:e.describe,requires:e.requires??{},catalogs:Object.keys(e.catalogs??{})}))}compose(e){if(!e||typeof e!="object")throw new y("spec must be an object");_e(e,"spec");for(let a of At)if(a in e)throw new y(`spec may not set "${a}" \u2014 that belongs to the capability`);if(!e.name||!/^[a-z][a-z0-9_]{1,48}$/.test(e.name))throw new y(`"${String(e.name)}" is not a valid act name`);let t=this.caps.get(e.capability);if(!t)throw new y(`unknown capability "${e.capability}" \u2014 a composed act can only bind to one the host registered`);let s=Object.entries(e.slots??{});if(s.length===0)throw new y(`${e.name}: needs at least one slot`);if(s.length>Le)throw new y(`${e.name}: at most ${Le} slots`);let o={};for(let[a,r]of s){if(!/^[a-zA-Z][a-zA-Z0-9_]{0,32}$/.test(a))throw new y(`${e.name}: "${a}" is not a valid slot name`);if(!St.includes(r.primitive))throw new y(`${e.name}.${a}: "${r.primitive}" is not in the primitive set \u2014 the set is closed`);if(typeof r.order!="number")throw new y(`${e.name}.${a}: needs an order`);if(r.options&&r.catalog)throw new y(`${e.name}.${a}: give options or a catalog, not both`);let l;if(r.catalog){let u=t.catalogs?.[r.catalog];if(!u)throw new y(`${e.name}.${a}: unknown catalog "${r.catalog}" on capability "${t.name}"`);l=()=>u()}else if(r.options){if(r.options.length>qe)throw new y(`${e.name}.${a}: at most ${qe} options`);let u=r.options.map(p=>({...p}));l=()=>u}else l=()=>[];let c={primitive:r.primitive,order:r.order,options:l};if(!r.options&&!r.catalog){if(r.primitive==="when")c.resolve=(u,p)=>ye(u,p);else if(r.primitive==="quantity")c.resolve=u=>ge(u);else if(r.primitive==="ghostField"){let u=()=>{let p=new Set;for(let[h,g]of Object.entries(o)){if(h===a||!g.options)continue;let m=g.options({},{});if(Array.isArray(m))for(let f of m)for(let C of[f.label,...f.aliases??[]])for(let je of String(C).toLowerCase().split(/\s+/))p.add(je)}return p};c.resolve=xe(e.phrases??[],u),c.fill="either"}}r.required&&(c.required=!0),r.params&&(c.params=r.params),o[a]=c}for(let[a,r]of Object.entries(t.requires??{})){let l=o[a];if(!l)throw new y(`${e.name}: capability "${t.name}" requires a "${a}" slot`);if(l.primitive!==r)throw new y(`${e.name}.${a}: capability "${t.name}" requires primitive "${r}", got "${l.primitive}"`);l.required=!0}let i={name:e.name,slots:o,radius:t.radius,commit:(a,r)=>t.run(a,r)};return e.phrases&&(i.phrases=e.phrases.slice(0,12).map(String)),t.undo&&(i.undo=(a,r)=>t.undo(a,r)),t.effects&&(i.effects=t.effects),O(i)}composeJson(e){let t;try{t=JSON.parse(e)}catch{throw new y("spec is not valid JSON")}return this.compose(t)}};return Ge(Dt);})();
+</script>
+<script>
+(function () {
+  var R = window.HeptaRuntime;
+
+  // Copy buttons on every code block. Clipboard can be refused; then the text is selected instead.
+  document.querySelectorAll('.code').forEach(function (box) {
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'copy'; btn.textContent = 'Copy';
+    btn.addEventListener('click', function () {
+      var text = box.querySelector('pre').innerText;
+      var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1400); };
+      var select = function () { var r = document.createRange(); r.selectNodeContents(box.querySelector('pre')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = 'Selected'; };
+      try { navigator.clipboard.writeText(text).then(done, select); } catch (e) { select(); }
+    });
+    box.appendChild(btn);
+  });
+
+  // The section list follows the reader.
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var byId = {}; links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        links.forEach(function (a) { a.removeAttribute('aria-current'); });
+        var a = byId[e.target.id]; if (a) a.setAttribute('aria-current', 'true');
+      });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+    document.querySelectorAll('main section[id]').forEach(function (s) { io.observe(s); });
+  }
+
+  // ------------------------------------------------------------- the live stage
+  if (!R) return;
+  var st = document.createElement('style'); st.textContent = R.stylesheet(); document.head.appendChild(st);
+
+  var list = [], sent = [];
+  var said = document.getElementById('said');
+  var c = new R.Composer();
+  c.register({ name: 'list_add', describe: 'add to the shopping list', radius: 'self',
+    run: function (f) { list.push(f.what); show(); return { id: 'g' + list.length }; },
+    undo: function () { list.pop(); show(); } });
+  c.register({ name: 'send_money', describe: 'send money', radius: 'external',
+    catalogs: { people: function () { return [{ value: 'maya', label: 'Maya' }, { value: 'sam', label: 'Sam' }]; } },
+    run: function (f) { sent.push(f); show(); return { id: 'x' + sent.length }; } });
+
+  var add = c.compose({ name: 'add_items', capability: 'list_add', phrases: ['add', 'we need', 'put'],
+    slots: { what: { primitive: 'ghostField', order: 1, required: true } } });
+  add.domain = 'groceries';
+  add.preview = function (f) { return [(f.what ? f.what : 'Something') + ' on the list']; };
+  var pay = c.compose({ name: 'send_money', capability: 'send_money', phrases: ['send', 'pay'],
+    slots: { who: { primitive: 'face', order: 1, required: true, catalog: 'people' },
+             amount: { primitive: 'quantity', order: 2, required: true } } });
+  pay.domain = 'allowance';
+  pay.preview = function (f) { return ['Send ' + (f.amount ? f.amount.label : '…') + ' to ' + (f.who === 'sam' ? 'Sam' : f.who === 'maya' ? 'Maya' : '…')]; };
+
+  var words = '';
+  var app = R.createApp({ acts: [add, pay], speculate: false,
+    ctx: function () { return { now: new Date(), actor: { id: 'you', basePauseMs: 850 }, reachLimit: 1, undoWindowMs: 5000,
+      attention: { foreground: true, unlocked: true, proximityClear: true, listening: true } }; } });
+  app.mount(new R.StagePresenter(document.getElementById('stage'), document, { said: function () { return words; } }));
+
+  function show() {
+    var parts = [];
+    parts.push(list.length ? 'On the list: ' + list.join(', ') : 'The list is empty.');
+    parts.push(sent.length ? 'Money sent: ' + sent.length : 'No money sent.');
+    said.textContent = parts.join(' · ');
+  }
+  function hear(t) {
+    words = t;
+    var r = app.hear(t);
+    if (!r.act) { document.getElementById('stage').innerHTML = '<p style="color:#9AA6BB;margin:0">Try adding something to the list, or sending money.</p>'; }
+  }
+  app.ui.on(function () { setTimeout(function () { app.draw(); show(); }, 0); });
+  (function loop() { if (app.act && app.act.status === 'hold') app.draw(); requestAnimationFrame(loop); })();
+
+  document.getElementById('demo').addEventListener('submit', function (e) {
+    e.preventDefault(); var v = document.getElementById('demoSay').value.trim(); if (v) hear(v);
+  });
+  var tries = document.getElementById('tries');
+  ['add milk and eggs', 'send 20 dollars to Maya'].forEach(function (t) {
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'try'; b.textContent = t;
+    b.onclick = function () { document.getElementById('demoSay').value = t; hear(t); };
+    tries.appendChild(b);
+  });
+  show();
+  document.getElementById('demoSay').value = 'add milk and eggs';
+  hear('add milk and eggs');
+})();
+</script>

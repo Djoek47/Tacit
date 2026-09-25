@@ -24,7 +24,8 @@ async function appFor(opts: Parameters<typeof tasksServer>[0] = {}) {
 describe('connecting', () => {
   it('turns write tools into acts and read tools into sources', async () => {
     const h = await appFor();
-    expect(h.conn.acts.map((a) => a.name).sort()).toEqual(['add_task', 'archive_all', 'delete_task', 'send_invoice']);
+    // delete_task is add_task's undo: machinery, not an act a person asks for
+    expect(h.conn.acts.map((a) => a.name).sort()).toEqual(['add_task', 'archive_all', 'send_invoice']);
     expect(h.conn.sources.map((s) => s.name).sort()).toEqual(['tasks/list_lists', 'tasks/list_tasks']);
   });
 
@@ -32,8 +33,8 @@ describe('connecting', () => {
     const h = await appFor();
     const p = h.conn.preview();
     expect(p).toContain('Connect Tasks.');
-    expect(p).toContain('do 4 things and look up 2');
-    expect(p).toContain('All 4 ask you first');
+    expect(p).toContain('do 3 things and look up 2');
+    expect(p).toContain('All 3 ask you first');
     expect(p).toContain('1 can be undone');
   });
 

@@ -120,7 +120,12 @@ function probePage(vw: number): Probe {
   const tiny = vw < 600 ? all.filter((el) => {
     if (!visible(el)) return false;
     const own = Array.from(el.childNodes).some((n) => n.nodeType === 3 && (n.textContent ?? '').trim().length > 2);
-    return own && parseFloat(getComputedStyle(el).fontSize) < 12;
+    const cs = getComputedStyle(el);
+    // Spaced capitals — a kicker, a label — are a deliberate small size, and
+    // the EUI language sets its kicker at 11 px caps +1.3. Flagging them would
+    // make the tester argue with the design system on every run.
+    const kicker = cs.textTransform === 'uppercase' && parseFloat(cs.letterSpacing) >= 0.5;
+    return own && !kicker && parseFloat(cs.fontSize) < 12;
   }).slice(0, 5).map(describe) : [];
 
   const noAlt = Array.from(document.images).filter((i) => visible(i) && !i.hasAttribute('alt')).slice(0, 5)

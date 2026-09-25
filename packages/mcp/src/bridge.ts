@@ -191,13 +191,17 @@ export async function connect(client: Client, opts: ConnectOptions = {}): Promis
   await refreshCatalogs();
 
   // -------------------------------------------------------------------- acts
+  // A tool named as another tool's undo is machinery, not something a person
+  // asks for: offered as an act, it would mean saying "undo add task t7" with
+  // an id nobody has seen. Undo is reached from the card that made the change.
+  const undoTools = new Set(Object.values(shape.tools ?? {}).map((ts) => ts.undo?.tool).filter((x): x is string => !!x));
   const acts: ActDef[] = [];
   const skipped: string[] = [];
   for (const t of tools) {
     const c = classes.get(t.name)!;
     if (c.kind === 'read') continue;
     const ts = shape.tools?.[t.name] ?? {};
-    if (ts.hidden) continue;
+    if (ts.hidden || undoTools.has(t.name)) continue;
 
     const phrases = ts.phrases ?? [words(t.name)];
     const cats: Record<string, () => Option[]> = {};
@@ -304,13 +308,13 @@ export async function connect(client: Client, opts: ConnectOptions = {}): Promis
     tools: status,
     preview() {
       const st = status();
-      const writes = st.filter((s) => s.kind === 'write');
+      const writes = st.filter((s) => s.kind === 'write' && !undoTools.has(s.tool));
       const reads = st.filter((s) => s.kind === 'read');
       const quietable = writes.filter((s) => s.lowerable).length;
       const parts = [
         `Connect ${shape.app.name}.`,
         `It can do ${writes.length} thing${writes.length === 1 ? '' : 's'} and look up ${reads.length}.`,
-        writes.length === 1 ? 'It asks you first.' : `All ${writes.length} ask you first.`,
+        writes.length === 1 ? 'It asks you first.' : writes.length === 2 ? 'Both ask you first.' : `All ${writes.length} ask you first.`,
         quietable
           ? `${quietable} can be undone, so you may later let ${quietable === 1 ? 'it' : 'them'} go ahead on silence.`
           : writes.length === 1 ? 'It cannot be undone, so it will always ask.' : 'None can be undone, so they will always ask.',

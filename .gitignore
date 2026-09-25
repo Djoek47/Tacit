@@ -4,3 +4,7 @@ dist/
 .DS_Store
 .eval.mjs
 .hepta.mjs
+apps/*/node_modules/
+packages/devkit/.build/
+packages/devkit/test/.proto/
+packages/devkit/.scaffold-test/

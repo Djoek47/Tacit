@@ -25156,7 +25156,8 @@ var DEFAULT_ROUTING = {
   tauFill: 0.85,
   phraseWeight: 0.4,
   coverageWeight: 0.6,
-  phraseFloor: 0.9
+  phraseFloor: 0.9,
+  uncheckableCoverage: 0.25
 };
 
 // ../../packages/resolve/src/local.ts
@@ -25226,7 +25227,7 @@ var LocalResolver = class {
         if (m && m.score > phraseMatch) phraseMatch = m.score;
       }
       const evaluable = Object.entries(act.slots).filter(
-        ([name2, s]) => s.required && (s.resolve || optionsFor(act, name2).length > 0)
+        ([name2, s]) => s.required && s.primitive !== "ghostField" && (s.resolve || optionsFor(act, name2).length > 0)
       );
       let covered = 0;
       for (const [name2, s] of evaluable) {
@@ -25241,10 +25242,8 @@ var LocalResolver = class {
         weight += this.routing.phraseWeight;
         total += this.routing.phraseWeight * phraseMatch;
       }
-      if (evaluable.length > 0) {
-        weight += this.routing.coverageWeight;
-        total += this.routing.coverageWeight * requiredCoverage;
-      }
+      weight += this.routing.coverageWeight;
+      total += this.routing.coverageWeight * (evaluable.length > 0 ? requiredCoverage : this.routing.uncheckableCoverage);
       scores.push({
         act: act.name,
         phraseMatch,
@@ -25263,7 +25262,7 @@ var LocalResolver = class {
     for (const other of acts) {
       if (other.name === act.name) continue;
       for (const [name2, sd] of Object.entries(other.slots)) {
-        if (!sd.required) continue;
+        if (!sd.required || sd.primitive === "ghostField") continue;
         const cands = sd.resolve ? sd.resolve(text2, ctx, {}) : candidatesForOptions(tokens2, optionsFor(other, name2));
         if ((cands[0]?.score ?? 0) >= this.routing.tauFill) {
           rivals++;
@@ -25544,6 +25543,86 @@ var DUR = {
   week: DAY_MS * 7,
   weeks: DAY_MS * 7
 };
+
+// ../../packages/resolve/src/free.ts
+var FILLER = /* @__PURE__ */ new Set(["a", "an", "the", "to", "my", "please", "can", "you", "could", "for", "me", "on", "in", "into", "list", "and", "i", "want", "need", "would", "like"]);
+var PREP = /* @__PURE__ */ new Set(["to", "on", "in", "into", "for", "at", "under", "onto", "by", "before", "after"]);
+var ARTICLE = /* @__PURE__ */ new Set(["the", "my", "a", "an", "our"]);
+var TEMPORAL = /* @__PURE__ */ new Set([
+  "today",
+  "tonight",
+  "tomorrow",
+  "yesterday",
+  "morning",
+  "afternoon",
+  "evening",
+  "night",
+  "noon",
+  "midnight",
+  "weekend",
+  "week",
+  "month",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+  "am",
+  "pm",
+  "next",
+  "this",
+  "o'clock",
+  "demain",
+  "aujourd'hui",
+  "ce",
+  "soir",
+  "matin"
+]);
+var CURRENCY2 = /* @__PURE__ */ new Set(["dollars", "dollar", "bucks", "euros", "euro", "pounds", "cents", "$", "\u20AC", "\xA3"]);
+var NUMBERISH = /^[$€£]?\d/;
+function remainder(phrases, siblingWords = () => /* @__PURE__ */ new Set()) {
+  const drop = new Set(phrases.flatMap((p) => p.toLowerCase().split(/\s+/)));
+  return (text2) => {
+    const words2 = text2.trim().split(/\s+/);
+    const lower = words2.map((w) => w.toLowerCase().replace(/[,.!?]+$/, ""));
+    const sib = siblingWords();
+    let i = 0;
+    while (i < words2.length && (drop.has(lower[i]) || FILLER.has(lower[i]))) i++;
+    let j = words2.length;
+    let tookTail = false;
+    for (; ; ) {
+      if (j <= i) break;
+      const w = lower[j - 1];
+      if (FILLER.has(w) || drop.has(w)) {
+        j--;
+        continue;
+      }
+      if (TEMPORAL.has(w) || CURRENCY2.has(w) || NUMBERISH.test(w)) {
+        j--;
+        tookTail = true;
+        continue;
+      }
+      if (tookTail && PREP.has(w)) {
+        j--;
+        continue;
+      }
+      if (sib.has(w)) {
+        let k = j - 2;
+        while (k >= i && ARTICLE.has(lower[k])) k--;
+        if (k >= i && PREP.has(lower[k])) {
+          j = k;
+          continue;
+        }
+      }
+      break;
+    }
+    const value = words2.slice(i, j).join(" ").replace(/[,.;]+$/, "");
+    if (!value) return [];
+    return [{ value, label: value, score: 0.6, calibrated: false }];
+  };
+}
 
 // ../../packages/hepta/src/index.ts
 var DEFAULT_TONGUES = 7;
@@ -27005,40 +27084,6 @@ function checkDelegation(tool, c, to) {
 var MAX_SLOTS = 8;
 var humanise2 = (v) => String(v).replace(/[_-]+/g, " ");
 var isType = (p, t) => p.type === t || Array.isArray(p.type) && p.type.includes(t);
-var FILLER = /* @__PURE__ */ new Set(["a", "an", "the", "to", "my", "please", "can", "you", "could", "for", "me", "on", "in", "into", "list", "and", "i", "want", "need", "would", "like"]);
-var PREP = /* @__PURE__ */ new Set(["to", "on", "in", "into", "for", "at", "under", "onto"]);
-var ARTICLE = /* @__PURE__ */ new Set(["the", "my", "a", "an", "our"]);
-function remainder(phrases, siblingWords = () => /* @__PURE__ */ new Set()) {
-  const drop = new Set(phrases.flatMap((p) => p.toLowerCase().split(/\s+/)));
-  return (text2) => {
-    const words2 = text2.trim().split(/\s+/);
-    const lower = words2.map((w) => w.toLowerCase());
-    const sib = siblingWords();
-    let i = 0;
-    while (i < words2.length && (drop.has(lower[i]) || FILLER.has(lower[i]))) i++;
-    let j = words2.length;
-    for (; ; ) {
-      if (j <= i) break;
-      const w = lower[j - 1];
-      if (FILLER.has(w) || drop.has(w)) {
-        j--;
-        continue;
-      }
-      if (sib.has(w)) {
-        let k = j - 2;
-        while (k >= i && ARTICLE.has(lower[k])) k--;
-        if (k >= i && PREP.has(lower[k])) {
-          j = k;
-          continue;
-        }
-      }
-      break;
-    }
-    const value = words2.slice(i, j).join(" ");
-    if (!value) return [];
-    return [{ value, label: value, score: 0.6, calibrated: false }];
-  };
-}
 function slotsFromSchema(schema, opts) {
   const props = Object.entries(schema?.properties ?? {});
   const required3 = new Set(schema?.required ?? []);
@@ -31421,13 +31466,14 @@ async function connect(client, opts = {}) {
     }
   }
   await refreshCatalogs();
+  const undoTools = new Set(Object.values(shape.tools ?? {}).map((ts) => ts.undo?.tool).filter((x) => !!x));
   const acts = [];
   const skipped = [];
   for (const t of tools) {
     const c = classes.get(t.name);
     if (c.kind === "read") continue;
     const ts = shape.tools?.[t.name] ?? {};
-    if (ts.hidden) continue;
+    if (ts.hidden || undoTools.has(t.name)) continue;
     const phrases = ts.phrases ?? [words(t.name)];
     const cats = {};
     for (const slot of Object.keys(ts.options ?? {})) cats[slot] = () => catalogs.get(`${t.name}.${slot}`) ?? [];
@@ -31532,13 +31578,13 @@ async function connect(client, opts = {}) {
     tools: status,
     preview() {
       const st = status();
-      const writes = st.filter((s) => s.kind === "write");
+      const writes = st.filter((s) => s.kind === "write" && !undoTools.has(s.tool));
       const reads = st.filter((s) => s.kind === "read");
       const quietable = writes.filter((s) => s.lowerable).length;
       const parts = [
         `Connect ${shape.app.name}.`,
         `It can do ${writes.length} thing${writes.length === 1 ? "" : "s"} and look up ${reads.length}.`,
-        writes.length === 1 ? "It asks you first." : `All ${writes.length} ask you first.`,
+        writes.length === 1 ? "It asks you first." : writes.length === 2 ? "Both ask you first." : `All ${writes.length} ask you first.`,
         quietable ? `${quietable} can be undone, so you may later let ${quietable === 1 ? "it" : "them"} go ahead on silence.` : writes.length === 1 ? "It cannot be undone, so it will always ask." : "None can be undone, so they will always ask.",
         reads.length === 1 ? "The look-up is trusted to only read, because the server says so." : `The ${reads.length} look-ups are trusted to only read, because the server says so.`
       ];
