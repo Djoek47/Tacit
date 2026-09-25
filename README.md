@@ -10,7 +10,7 @@ None of them answers the one after it: **how does the human accept, reject, or c
 proposed?** No commit model, no repair grammar, no notion of what a mutation costs if it is wrong.
 That is this layer.
 
-Spec **v0.3**. Eleven packages, **220 tests**, five apps. `aiuic-core` has no dependencies.
+Spec **v0.3**. Twelve packages, **236 tests**, five apps. `aiuic-core` has no dependencies.
 
 ---
 
@@ -28,9 +28,60 @@ Spec **v0.3**. Eleven packages, **220 tests**, five apps. `aiuic-core` has no de
 | `aiuic-devtools` | why an act is not committing; recorder, timeline, linter | 14 |
 | `aiuic-present` | the renderer boundary: one view, a text presenter and a DOM one | 15 |
 | `aiuic-eui` | the visual language: tokens, domain rules as lint, the seven beats, one card | 34 |
+| `aiuic-kit` | the front door: `hear(text)` — routing, filling, speculating, drawing | 16 |
 | `aiuic-eval` | labelled suites, the false-confirm rate, reliability curves, threshold sweeps | 12 |
 
 `aiuic-core` imports nothing from the others. That is how the boundary gets tested.
+
+## Bring your own idea
+
+Declare what the app can do and hand it text. That is the whole surface.
+
+```ts
+import { createApp, defineAct } from '@intermenu/aiuic-kit';
+import { StagePresenter, stylesheet } from '@intermenu/aiuic-eui';
+
+const app = createApp({
+  ctx: () => ({ actor: { id: 'me' }, attention, reachLimit: 1 }),
+  presenters: [new StagePresenter(document.getElementById('stage'), document)],
+  acts: [
+    defineAct({
+      name: 'assign_chore',
+      domain: 'chores',                       // picks the colour, and the rules
+      phrases: ['for', 'assign', 'needs to do'],
+      slots: {
+        chore:    { primitive: 'chip', options: () => CHORES, required: true, order: 1 },
+        assignee: { primitive: 'face', options: () => PEOPLE, required: true, order: 2 },
+      },
+      radius: { max: 'other-person', of: () => 'other-person' },   // what it costs to be wrong
+      commit: (f) => db.chores.insert(f),
+      undo:   (r) => db.chores.remove(r.id),
+    }),
+  ],
+});
+
+app.hear('the dishes for Maya');              // card up, filled, holding
+app.hear('the dishes for', { final: false }); // still talking — speculates, cannot commit
+```
+
+`hear()` routes, starts the act, fills its slots from the same text, speculates while
+`final` is false, and draws. `app.lint()` reports the contract and the design language in one
+list. Nothing above decides when to commit — that is the contract's, and a host cannot reach it.
+
+There is one thing a caller has to get right, and it is not a detail: **`final: false` means the
+speaker has not stopped**, and nothing may commit on a sentence nobody has finished. A host with no
+notion of partial text leaves it alone and every call is final.
+
+This is locked decision 5 of the spec — *"the SDK takes text, not audio"* — which had been quoted in
+every document about the project and did not exist in the code. What existed were the assembly
+instructions, followed separately by four apps, and by an eval runner whose fifth copy routed
+differently from the one the apps shipped. That is how the harness came to measure a router nobody
+used. A front door is not sugar here: it is what makes *"the app routes the way the harness says it
+does"* true by construction.
+
+`hear()` lives in the kit rather than on `AIUIC` because the core imports nothing from the other
+packages and routing belongs to the resolve layer. That boundary is worth more than matching the
+spec's spelling, so the spec should read `app.hear(string)`.
 
 **Renderer-agnostic, concretely.** `toView()` turns a live act into everything a renderer needs and
 nothing it has to work out — options resolved, values formatted, the preview sentence, which

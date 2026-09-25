@@ -105,6 +105,15 @@ export function display(v: unknown): string {
   return String(v);
 }
 
+/** The option label for a value when there is one; otherwise how the value reads. */
+export function labelFor(v: unknown, options: Option[]): string {
+  if (v !== null && typeof v !== 'object') {
+    const hit = options.find((o) => o.value === v);
+    if (hit) return hit.label;
+  }
+  return display(v);
+}
+
 export const IDLE_VIEW: StageView = {
   act: null, domain: null, status: 'idle', phase: 'idle', radius: null, assent: null,
   holdRemainingMs: null, holdTotalMs: null, slots: [], preview: '',
@@ -125,7 +134,10 @@ export function toView(run: ActRun | null, optionsFor: OptionsFor, _ctx?: Ctx): 
       label: humanise(name),
       status: st.status,
       ...(st.value !== undefined ? { value: st.value } : {}),
-      display: st.status === 'filled' ? display(st.value) : '',
+      // A plain value reads as its option's label. "dishes" is what the act
+      // stores; "Dishes" is what the person picked from, and the card should
+      // show the thing they recognise rather than the key behind it.
+      display: st.status === 'filled' ? labelFor(st.value, optionsFor(run, name)) : '',
       source: st.source ?? null,
       provisional: st.provisional,
       stale: st.stale === true,

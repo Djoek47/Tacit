@@ -43,6 +43,9 @@ export type Track = {
   score: number;
   /** Required slots with a candidate clearing tau_fill, over required slots. */
   coverage: number;
+  /** How well a trigger phrase matched. Carried so a track can be reported as
+   *  the `ActScore` it was built from, rather than one fabricated downstream. */
+  phraseMatch: number;
   slots: SlotCandidates;
   /** True for the one track currently painted on the stage. */
   leading: boolean;
@@ -133,6 +136,7 @@ export class Speculator {
       act: s.act,
       score: s.score,
       coverage: s.requiredCoverage,
+      phraseMatch: s.phraseMatch,
       slots: this.local.fillSync(
         text,
         defs.find((d) => d.name === s.act)!,
