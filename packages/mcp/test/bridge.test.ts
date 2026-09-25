@@ -33,7 +33,7 @@ describe('connecting', () => {
     const p = h.conn.preview();
     expect(p).toContain('Connect Tasks.');
     expect(p).toContain('do 4 things and look up 2');
-    expect(p).toContain('Every one of those 4 asks you first');
+    expect(p).toContain('All 4 ask you first');
     expect(p).toContain('1 can be undone');
   });
 
@@ -197,5 +197,14 @@ describe('delegating is the person\'s act', () => {
     const skipped = applyDelegations([h.conn], { 'tasks/add_task': 'self', 'tasks/send_invoice': 'self', 'gone/x': 'self' });
     expect(h.conn.tools().find((t) => t.tool === 'add_task')!.radius).toBe('self');
     expect(skipped).toHaveLength(2);
+  });
+});
+
+describe('data a person reads', () => {
+  it('describes a tool result in words, not JSON', async () => {
+    const { describeData } = await import('../src/index.js');
+    expect(describeData({ items: [{ id: 't1', title: 'buy milk' }, { id: 't2', title: 'call the bank' }] })).toBe('2 items: buy milk, call the bank');
+    expect(describeData({ chequing: 2140.55, savings_total: 8800 })).toBe('chequing 2140.55 · savings total 8800');
+    expect(describeData({ items: [] })).toBe('nothing');
   });
 });

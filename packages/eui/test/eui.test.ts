@@ -525,3 +525,20 @@ describe('a personal Hepta', () => {
     expect(orbTints({ assistant: '#34D399' }).idle).toBe(DOMAIN_COLOUR.poppinsCyan);
   });
 });
+
+describe('a guess on the card', () => {
+  it('shows a ✓ that makes the guess the person\'s own', () => {
+    const h = build();
+    const { root, doc } = fakeDom();
+    const run = h.ui.start('assign_chore');
+    const p = new StagePresenter(root, doc);
+    const { update } = attachPresenters(run, [p], optionsFor);
+    run.offer('chore', [{ value: 'dishes', label: 'Dishes', score: 0.6, calibrated: false }], 'model');
+    run.evaluate(); update();
+    const ok = root.find('eui-confirm');
+    expect(ok).toHaveLength(1);
+    ok[0]!.click(); update();
+    expect(toView(run, optionsFor).slots.find((s) => s.name === 'chore')!.provisional).toBe(false);
+    expect(root.find('eui-confirm')).toHaveLength(0);
+  });
+});

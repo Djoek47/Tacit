@@ -86,6 +86,38 @@ function structured(r: CallResult): Record<string, unknown> | undefined {
   }
 }
 
+
+/**
+ * Data as a sentence a person reads: "3 items: renew passport, call the bank,
+ * buy milk" rather than the JSON behind it. Used wherever a tool's result
+ * becomes words someone will see.
+ */
+export function describeData(v: unknown, depth = 0): string {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  const nameOf = (x: unknown): string => {
+    if (x && typeof x === 'object') {
+      const o = x as Record<string, unknown>;
+      for (const k of ['title', 'name', 'label', 'text', 'summary', 'id']) if (typeof o[k] === 'string' || typeof o[k] === 'number') return String(o[k]);
+    }
+    return describeData(x, depth + 1);
+  };
+  if (Array.isArray(v)) {
+    if (v.length === 0) return 'nothing';
+    const shown = v.slice(0, 6).map(nameOf).join(', ');
+    return `${v.length} item${v.length === 1 ? '' : 's'}: ${shown}${v.length > 6 ? ', …' : ''}`;
+  }
+  const o = v as Record<string, unknown>;
+  if (Array.isArray(o.items)) return describeData(o.items, depth);
+  if (depth > 1) return nameOf(o);
+  const parts = Object.entries(o)
+    .filter(([k, x]) => k !== 'memory' && x !== undefined && (typeof x !== 'object' || Array.isArray(x)))
+    .slice(0, 6)
+    .map(([k, x]) => `${k.replace(/_/g, ' ')} ${describeData(x, depth + 1)}`);
+  return parts.join(' · ');
+}
+
 const words = (s: string) => s.replace(/[_-]+/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
 const STOP = new Set(['the', 'a', 'an', 'of', 'to', 'for', 'and', 'or', 'my', 'all', 'get', 'list', 'show', 'what', 'is', 'are', 'on', 'in']);
 const meaningful = (s: string) => new Set(words(s).split(/\W+/).filter((w) => w.length > 2 && !STOP.has(w)));
@@ -248,7 +280,7 @@ export async function connect(client: Client, opts: ConnectOptions = {}): Promis
         const s = structured(r);
         return [{
           source: `${server.name}/${t.name}`,
-          claim: (textOf(r) || JSON.stringify(s)).slice(0, 600),
+          claim: (s !== undefined ? describeData(s) : textOf(r)).slice(0, 600),
           ...(s !== undefined ? { value: s } : {}),
           // The server's own data about itself. Calibrated in the sense that it
           // is not a model's guess — not in the sense that it is true.
@@ -278,11 +310,13 @@ export async function connect(client: Client, opts: ConnectOptions = {}): Promis
       const parts = [
         `Connect ${shape.app.name}.`,
         `It can do ${writes.length} thing${writes.length === 1 ? '' : 's'} and look up ${reads.length}.`,
-        `Every one of those ${writes.length} asks you first.`,
+        writes.length === 1 ? 'It asks you first.' : `All ${writes.length} ask you first.`,
         quietable
           ? `${quietable} can be undone, so you may later let ${quietable === 1 ? 'it' : 'them'} go ahead on silence.`
-          : 'None can be undone, so they will always ask.',
-        `The ${reads.length} look-ups are trusted to only read, because the server says so.`,
+          : writes.length === 1 ? 'It cannot be undone, so it will always ask.' : 'None can be undone, so they will always ask.',
+        reads.length === 1
+          ? 'The look-up is trusted to only read, because the server says so.'
+          : `The ${reads.length} look-ups are trusted to only read, because the server says so.`,
       ];
       if (problems.length) parts.push(`Its layout was refused (${problems.length} problem${problems.length === 1 ? '' : 's'}), so it will look plain.`);
       return parts.join(' ');

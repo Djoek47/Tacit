@@ -182,11 +182,43 @@ export class Congregator {
   }
 }
 
+
+/**
+ * Data as a sentence a person reads: "3 items: renew passport, call the bank,
+ * buy milk" rather than the JSON behind it. Used wherever a tool's result
+ * becomes words someone will see.
+ */
+function describeData(v: unknown, depth = 0): string {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  const nameOf = (x: unknown): string => {
+    if (x && typeof x === 'object') {
+      const o = x as Record<string, unknown>;
+      for (const k of ['title', 'name', 'label', 'text', 'summary', 'id']) if (typeof o[k] === 'string' || typeof o[k] === 'number') return String(o[k]);
+    }
+    return describeData(x, depth + 1);
+  };
+  if (Array.isArray(v)) {
+    if (v.length === 0) return 'nothing';
+    const shown = v.slice(0, 6).map(nameOf).join(', ');
+    return `${v.length} item${v.length === 1 ? '' : 's'}: ${shown}${v.length > 6 ? ', …' : ''}`;
+  }
+  const o = v as Record<string, unknown>;
+  if (Array.isArray(o.items)) return describeData(o.items, depth);
+  if (depth > 1) return nameOf(o);
+  const parts = Object.entries(o)
+    .filter(([k, x]) => k !== 'memory' && x !== undefined && (typeof x !== 'object' || Array.isArray(x)))
+    .slice(0, 6)
+    .map(([k, x]) => `${k.replace(/_/g, ' ')} ${describeData(x, depth + 1)}`);
+  return parts.join(' · ');
+}
+
 function summarise(r: unknown): string {
   const o = r as Record<string, unknown>;
-  const v = o.result ?? o;
-  const s = typeof v === 'string' ? v : JSON.stringify(v);
-  return (s ?? '').slice(0, 200);
+  // What the act returned, in words — never its bookkeeping (ids, memory records).
+  const v = o.result ?? Object.fromEntries(Object.entries(o).filter(([k]) => k !== 'memory' && k !== 'id' && k !== 'previous'));
+  return describeData(v).slice(0, 200);
 }
 
 // --------------------------------------------------------------- orchestrator

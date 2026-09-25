@@ -202,6 +202,16 @@ export class StagePresenter implements Presenter {
       val.textContent = s.display;
       row.appendChild(val);
       row.appendChild(label);
+      // A guess is shown as a guess, and one tap makes it the person's. At
+      // external the contract will not even ask for a yes until it is.
+      if (s.provisional && (v.status === 'resolving' || v.status === 'explicit' || v.status === 'hold')) {
+        const ok = d.createElement('button');
+        ok.className = 'eui-chip eui-confirm';
+        ok.textContent = '✓';
+        ok.setAttribute('aria-label', `Yes, ${s.label} is ${s.display}`);
+        ok.addEventListener('click', () => this.handlers?.touch(s.name, s.value));
+        row.appendChild(ok);
+      }
       // A row's × is a 44px target like everything else. Board 09: "tap × to
       // drop one" — one row, not the whole card.
       if (v.status === 'hold' || v.status === 'resolving') {

@@ -26569,11 +26569,32 @@ var Congregator = class {
     return this.view().filter((e) => e.kind === "committed" || e.kind === "undone");
   }
 };
+function describeData(v, depth = 0) {
+  if (v === null || v === void 0) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  const nameOf = (x) => {
+    if (x && typeof x === "object") {
+      const o2 = x;
+      for (const k of ["title", "name", "label", "text", "summary", "id"]) if (typeof o2[k] === "string" || typeof o2[k] === "number") return String(o2[k]);
+    }
+    return describeData(x, depth + 1);
+  };
+  if (Array.isArray(v)) {
+    if (v.length === 0) return "nothing";
+    const shown = v.slice(0, 6).map(nameOf).join(", ");
+    return `${v.length} item${v.length === 1 ? "" : "s"}: ${shown}${v.length > 6 ? ", \u2026" : ""}`;
+  }
+  const o = v;
+  if (Array.isArray(o.items)) return describeData(o.items, depth);
+  if (depth > 1) return nameOf(o);
+  const parts = Object.entries(o).filter(([k, x]) => k !== "memory" && x !== void 0 && (typeof x !== "object" || Array.isArray(x))).slice(0, 6).map(([k, x]) => `${k.replace(/_/g, " ")} ${describeData(x, depth + 1)}`);
+  return parts.join(" \xB7 ");
+}
 function summarise(r) {
   const o = r;
-  const v = o.result ?? o;
-  const s = typeof v === "string" ? v : JSON.stringify(v);
-  return (s ?? "").slice(0, 200);
+  const v = o.result ?? Object.fromEntries(Object.entries(o).filter(([k]) => k !== "memory" && k !== "id" && k !== "previous"));
+  return describeData(v).slice(0, 200);
 }
 var DEFAULT_MAX_DEPTH = 3;
 var DEFAULT_MAX_LOOKS = 2;
@@ -31318,6 +31339,28 @@ function structured(r) {
     return void 0;
   }
 }
+function describeData2(v, depth = 0) {
+  if (v === null || v === void 0) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  const nameOf = (x) => {
+    if (x && typeof x === "object") {
+      const o2 = x;
+      for (const k of ["title", "name", "label", "text", "summary", "id"]) if (typeof o2[k] === "string" || typeof o2[k] === "number") return String(o2[k]);
+    }
+    return describeData2(x, depth + 1);
+  };
+  if (Array.isArray(v)) {
+    if (v.length === 0) return "nothing";
+    const shown = v.slice(0, 6).map(nameOf).join(", ");
+    return `${v.length} item${v.length === 1 ? "" : "s"}: ${shown}${v.length > 6 ? ", \u2026" : ""}`;
+  }
+  const o = v;
+  if (Array.isArray(o.items)) return describeData2(o.items, depth);
+  if (depth > 1) return nameOf(o);
+  const parts = Object.entries(o).filter(([k, x]) => k !== "memory" && x !== void 0 && (typeof x !== "object" || Array.isArray(x))).slice(0, 6).map(([k, x]) => `${k.replace(/_/g, " ")} ${describeData2(x, depth + 1)}`);
+  return parts.join(" \xB7 ");
+}
 var words = (s) => s.replace(/[_-]+/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
 var STOP = /* @__PURE__ */ new Set(["the", "a", "an", "of", "to", "for", "and", "or", "my", "all", "get", "list", "show", "what", "is", "are", "on", "in"]);
 var meaningful = (s) => new Set(words(s).split(/\W+/).filter((w) => w.length > 2 && !STOP.has(w)));
@@ -31458,7 +31501,7 @@ async function connect(client, opts = {}) {
         const s = structured(r);
         return [{
           source: `${server.name}/${t.name}`,
-          claim: (textOf(r) || JSON.stringify(s)).slice(0, 600),
+          claim: (s !== void 0 ? describeData2(s) : textOf(r)).slice(0, 600),
           ...s !== void 0 ? { value: s } : {},
           // The server's own data about itself. Calibrated in the sense that it
           // is not a model's guess — not in the sense that it is true.
@@ -31495,9 +31538,9 @@ async function connect(client, opts = {}) {
       const parts = [
         `Connect ${shape.app.name}.`,
         `It can do ${writes.length} thing${writes.length === 1 ? "" : "s"} and look up ${reads.length}.`,
-        `Every one of those ${writes.length} asks you first.`,
-        quietable ? `${quietable} can be undone, so you may later let ${quietable === 1 ? "it" : "them"} go ahead on silence.` : "None can be undone, so they will always ask.",
-        `The ${reads.length} look-ups are trusted to only read, because the server says so.`
+        writes.length === 1 ? "It asks you first." : `All ${writes.length} ask you first.`,
+        quietable ? `${quietable} can be undone, so you may later let ${quietable === 1 ? "it" : "them"} go ahead on silence.` : writes.length === 1 ? "It cannot be undone, so it will always ask." : "None can be undone, so they will always ask.",
+        reads.length === 1 ? "The look-up is trusted to only read, because the server says so." : `The ${reads.length} look-ups are trusted to only read, because the server says so.`
       ];
       if (problems.length) parts.push(`Its layout was refused (${problems.length} problem${problems.length === 1 ? "" : "s"}), so it will look plain.`);
       return parts.join(" ");

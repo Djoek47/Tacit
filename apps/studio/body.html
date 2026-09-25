@@ -1,0 +1,60 @@
+<div class="wrap">
+  <header>
+    <div class="orb" id="orb" aria-hidden="true"></div>
+    <div>
+      <h1>Hepta Studio</h1>
+      <p>Connect an app over MCP and it becomes something you talk to. Every write asks first until you say otherwise, and the conductor keeps working while you're away.</p>
+    </div>
+    <div class="theme" role="group" aria-label="Your assistant's colour">
+      <span class="lbl">Your Hepta</span>
+      <span id="swatches" class="row-btns"></span>
+      <span class="theme-msg" id="themeMsg" aria-live="polite"></span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <section class="pane" aria-label="Connected apps">
+      <div class="panel">
+        <div class="head"><h2>Apps</h2><span class="lbl">MCP servers</span></div>
+        <p class="note">Each one is a real MCP server running in this page. Connecting shows you exactly what you are approving.</p>
+        <div id="apps" class="pane"></div>
+      </div>
+    </section>
+
+    <section class="pane centre" aria-label="The stage">
+      <div class="stage-wrap"><div id="stage"></div></div>
+      <p class="why" id="why" aria-live="polite"></p>
+      <form class="say" id="sayForm" autocomplete="off">
+        <input id="say" aria-label="Say something" placeholder="Type as if you were speaking">
+        <button class="btn primary" type="submit">Say</button>
+      </form>
+      <div class="scenes" id="scenes"></div>
+    </section>
+
+    <section class="pane" aria-label="Conductor and memory">
+      <div class="panel">
+        <div class="head"><h2>Conductor</h2><span class="lbl">always on</span></div>
+        <div class="clock"><span class="t" id="clock">--:--</span><span class="note" id="clockDay"></span></div>
+        <div class="row-btns">
+          <button class="btn" id="skipHour" type="button">Skip 1 hour</button>
+          <button class="btn" id="skipMorning" type="button">Skip to 8:00</button>
+        </div>
+        <div><span class="lbl">The score</span></div>
+        <ul class="score" id="score"></ul>
+        <div><span class="lbl">Inbox</span></div>
+        <ul class="inbox" id="inbox"></ul>
+      </div>
+      <div class="panel">
+        <div class="head"><h2>Memory</h2><span class="lbl">one pen</span></div>
+        <div class="mem">
+          <div class="stat"><div class="v" id="mDecisions">0</div><div class="k">decisions</div></div>
+          <div class="stat"><div class="v" id="mThoughts">0</div><div class="k">thoughts</div></div>
+          <div class="stat"><div class="v" id="mBranches">1</div><div class="k">branches</div></div>
+        </div>
+        <ul class="log" id="memLog"></ul>
+      </div>
+    </section>
+  </div>
+
+  <footer>Examples only: the Tasks and Bank servers, their data and the people in them are made up for this demo, and nothing here leaves the page. The same packages run as a daemon on your machine with your own servers.</footer>
+</div>

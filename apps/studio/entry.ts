@@ -1,0 +1,13 @@
+export * from '../../packages/core/src/index.js';
+export { createApp } from '../../packages/kit/src/index.js';
+export { toView, attachPresenters, display } from '../../packages/present/src/index.js';
+export { StagePresenter, stylesheet, DOMAINS, lookupDomain, domainColour, orbTints, checkTheme, beatOf } from '../../packages/eui/src/index.js';
+export { openMemory, EphemeralStore } from '../../packages/memory/src/index.js';
+export { Aggregator, Pyramid } from '../../packages/pyramid/src/index.js';
+export { Conductor, scoreActs, authorise } from '../../packages/conductor/src/index.js';
+export { connect, delegationAct, applyDelegations } from '../../packages/mcp/src/index.js';
+export { explain } from '../../packages/devtools/src/index.js';
+export { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+export { Client } from '@modelcontextprotocol/sdk/client/index.js';
+export { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+export { z } from 'zod';
