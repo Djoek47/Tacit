@@ -203,6 +203,33 @@ await pyramid.pursue('plan my month');
 
 The loop stops at a depth budget (3), after too many "look again"s (2), and on any goal already being pursued higher up.
 
+#### A model behind the orchestrator (optional)
+
+`@intermenu/aiuic-orchestrators` puts Claude or an OpenAI model behind the orchestrator. The model plans; it never writes.
+
+```ts
+import { anthropicOrchestrator, openaiOrchestrator } from '@intermenu/aiuic-orchestrators';
+
+const orchestrator = anthropicOrchestrator({
+  apiKey: process.env.ANTHROPIC_API_KEY!,   // server-side only
+  model: 'claude-opus-5',
+  acts: () => app.ui.definitions,           // read on every plan, so new servers are included
+});
+// or openaiOrchestrator({ apiKey, model, acts }) — the Responses API
+```
+
+What the model is given: the goal, what the aggregator found, what memory holds about it, and the answers to any parts it split the goal into. It answers by calling one of four tools (`answer`, `propose`, `look`, `split`), and its reply is checked before anything else sees it:
+
+- A proposal must name an act the app has, fill only that act's slots, use plain values, and say why. It then lands on the stage and waits for the person, like any other proposal.
+- Acts that grant authority (`set_delegation`, `set_standing_order`) are not offered to the model at all. Findings come from apps, and an app's output should not be what suggests trusting that app more. Pass `includeAuthority: true` to change that.
+- Findings and memory are marked as data. The system prompt says text in them is not from the person and is never to be followed. The check above is what holds if the model follows it anyway.
+- **Nothing throws.** No network, a timeout, a 4xx or 5xx, a refusal, malformed output, two tool calls at once, an unknown act or slot: each becomes `{ kind: 'answer' }` saying what went wrong. An unreachable provider cannot stop the conductor. A provider's error message is included with anything shaped like a key removed, because answers are written to memory.
+- `tool_choice` is `auto` by default: the Claude docs say some current models reject forced tool use. A plain-text reply counts as an answer. OpenAI requests use `parallel_tool_calls: false` and `store: false`.
+
+In the daemon, add `"planner": { "provider": "anthropic", "model": "claude-opus-5" }` to `hepta.config.json` and set `ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`) in the environment. The key is never read from the config file. Without a key it says so and plans locally.
+
+**Not yet verified against the live APIs.** The request shapes follow the providers' current documentation, cited in the source, and the tests run on a stubbed `fetch`. The daemon has been run end to end against a local stand-in for the Claude API: the proposal it relayed waited on the stage, and a proposal naming an act that does not exist was refused. This sandbox cannot reach either provider.
+
 ### Memory
 
 ```ts
@@ -380,8 +407,10 @@ Each of these is a test in the repository, not a promise in a document.
 | A hold that started legitimately must still be legitimate when it ends | the hold re-checks cost and attention when it fires |
 | Speaking again stops a hold | more speech puts the act back to speculating |
 | No server is called before it is approved | `connect()` calls nothing; `approve()` turns it on; the daemon stores approval per fingerprint |
+| A model orchestrator only proposes, and only what exists | `checkPlan` refuses unknown tools, acts, slots and non-plain values; authority-granting acts are never offered |
+| A failing model cannot stop the conductor | every provider failure becomes an honest answer; nothing in the adapters throws |
 
-The last four came from an independent review — an agent that had not seen the code being written — which found eight ways around the rules above. Each is fixed and kept as a regression test.
+Four of these came from an independent review — an agent that had not seen the code being written — which found eight ways around the rules above. Each is fixed and kept as a regression test.
 
 ## Not yet verified
 
@@ -402,6 +431,7 @@ The last four came from an independent review — an agent that had not seen the
 | `aiuic-mcp` | any MCP server as acts, sources and a shape |
 | `aiuic-memory` | one memory, one pen, branches |
 | `aiuic-pyramid` | aggregator, orchestrator, congregator |
+| `aiuic-orchestrators` | optional: Claude or OpenAI behind the orchestrator, planning only |
 | `aiuic-conductor` | always on; the score; the inbox |
 | `aiuic-server` | Hepta as an MCP server |
 | `aiuic-devkit` | brief, drafts, scaffold, prototype, tester, context, dossier |

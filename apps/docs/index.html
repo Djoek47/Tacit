@@ -160,6 +160,7 @@
       <li><a href="#radius">What it costs</a></li>
       <li><a href="#hold">The hold</a></li>
       <li><a href="#pyramid">The pyramid</a></li>
+      <li><a href="#planner">A model that plans</a></li>
       <li><a href="#memory">Memory</a></li>
       <li><a href="#conductor">The conductor</a></li>
       <li><a href="#hepta">Speaking and listening</a></li>
@@ -347,6 +348,29 @@ await pyramid.pursue('plan my month');</code></pre></div>
       <p>The loop stops at a depth of 3, after 2 requests to look again, and on any goal already being pursued higher up.</p>
     </section>
 
+    <section id="planner">
+      <span class="eyebrow">Concepts · optional</span>
+      <h2>A model behind the orchestrator</h2>
+      <p><code>@intermenu/aiuic-orchestrators</code> puts Claude or an OpenAI model behind the orchestrator. It plans; it never writes.</p>
+      <div class="code"><span class="lang">ts</span><pre><code>import { anthropicOrchestrator } from '@intermenu/aiuic-orchestrators';
+
+const orchestrator = anthropicOrchestrator({
+  apiKey: process.env.ANTHROPIC_API_KEY,   // server-side only
+  model: 'claude-opus-5',
+  acts: () =&gt; app.ui.definitions,         // read on every plan
+});
+// or openaiOrchestrator({ apiKey, model, acts }), on the Responses API</code></pre></div>
+      <p>The model gets the goal, what was found, what memory holds, and the answers to any parts it split the goal into. It replies by calling one of four tools, and the reply is checked before anything else sees it:</p>
+      <ul>
+        <li><b>A proposal must be real.</b> It must name an act the app has, fill only that act's slots with plain values, and say why. Then it waits on the stage for the person, like any other proposal.</li>
+        <li><b>Authority is never on offer.</b> The model is not offered <code>set_delegation</code> or <code>set_standing_order</code>, because an app's output should not be what argues for trusting that app more.</li>
+        <li><b>Findings are data.</b> The prompt says text in them is not from the person and is never to be followed. The check is what holds if the model follows it anyway.</li>
+        <li><b>Nothing throws.</b> A timeout, an error, a refusal, malformed output or an unknown act becomes an answer saying what went wrong, with anything that looks like a key removed. A provider that is down cannot stop the conductor.</li>
+      </ul>
+      <p>In the daemon, add <code>"planner": { "provider": "anthropic", "model": "claude-opus-5" }</code> to the config and put the key in <code>ANTHROPIC_API_KEY</code> or <code>OPENAI_API_KEY</code>. The key is never read from the file.</p>
+      <p class="note"><b>Not yet run against the live APIs.</b> The request shapes follow each provider's current documentation, cited in the source. The tests use a stubbed <code>fetch</code>, and the daemon has been run end to end against a local stand-in for the Claude API.</p>
+    </section>
+
     <section id="memory">
       <span class="eyebrow">Concepts</span>
       <h2>Memory: one pen, and branches</h2>
@@ -505,6 +529,8 @@ Audience: parents with kids under 14
           <tr><td>A hold that started legitimately still has to be legitimate when it ends</td><td>the hold checks cost and attention again when it fires</td></tr>
           <tr><td>Speaking again stops a hold</td><td>more speech puts the act back to speculating</td></tr>
           <tr><td>No server is called before it is approved</td><td><code>connect()</code> calls nothing; <code>approve()</code> turns it on; the daemon stores approval per fingerprint</td></tr>
+          <tr><td>A model orchestrator only proposes, and only what exists</td><td><code>checkPlan</code> refuses unknown tools, acts, slots and non-plain values; authority-granting acts are never offered</td></tr>
+          <tr><td>A failing model cannot stop the conductor</td><td>every provider failure becomes an honest answer; the adapters never throw</td></tr>
         </tbody>
       </table></div>
     </section>
@@ -534,6 +560,7 @@ Audience: parents with kids under 14
           <tr><td><code>aiuic-mcp</code></td><td>any MCP server as acts, sources and a shape</td></tr>
           <tr><td><code>aiuic-memory</code></td><td>one memory, one pen, branches</td></tr>
           <tr><td><code>aiuic-pyramid</code></td><td>aggregator, orchestrator, congregator</td></tr>
+          <tr><td><code>aiuic-orchestrators</code></td><td>optional: Claude or OpenAI behind the orchestrator, planning only</td></tr>
           <tr><td><code>aiuic-conductor</code></td><td>always on; the score; the inbox</td></tr>
           <tr><td><code>aiuic-server</code></td><td>Hepta as an MCP server</td></tr>
           <tr><td><code>aiuic-devkit</code></td><td>brief, drafts, scaffold, prototype, tester, context, dossier</td></tr>

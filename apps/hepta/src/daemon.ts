@@ -31,13 +31,14 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 
-import { realClock, type Ctx } from '../../../packages/core/src/index.js';
+import { realClock, type ActDef, type Ctx } from '../../../packages/core/src/index.js';
 import { createApp } from '../../../packages/kit/src/index.js';
 import { openMemory } from '../../../packages/memory/src/index.js';
 import { Aggregator, Pyramid, type Orchestrator } from '../../../packages/pyramid/src/index.js';
 import { Conductor, ConsoleNotifier, scoreActs, type InboxItem, type Notifier } from '../../../packages/conductor/src/index.js';
 import { connect, delegationAct, applyDelegations, type Connection } from '../../../packages/mcp/src/index.js';
 import { createHeptaServer } from '../../../packages/server/src/index.js';
+import { anthropicOrchestrator, openaiOrchestrator } from '../../../packages/orchestrators/src/index.js';
 
 type ServerEntry = { name?: string; command: string; args?: string[]; env?: Record<string, string>; prefix?: string };
 type Config = {
@@ -45,6 +46,12 @@ type Config = {
   servers?: ServerEntry[];
   http?: { port?: number };
   notify?: { url?: string };
+  /**
+   * Which model plans. Omitted: the local orchestrator, which only reports what
+   * it found. The key is read from the environment, never from this file, so a
+   * config can be shared without leaking it.
+   */
+  planner?: { provider: 'anthropic' | 'openai'; model: string; baseUrl?: string };
 };
 
 // ------------------------------------------------------------------ storage
@@ -78,6 +85,18 @@ const localOrchestrator: Orchestrator = ({ findings }) => {
   if (!useful.length) return { kind: 'answer', answer: 'I found nothing about that.' };
   return { kind: 'answer', answer: useful.map((f) => `${f.source}: ${f.claim}`).join('\n') };
 };
+
+/** The configured planner, or the local one with a note saying why. */
+function plannerFor(p: Config['planner'], acts: () => readonly ActDef[]): Orchestrator {
+  if (!p) return localOrchestrator;
+  const env = p.provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
+  const apiKey = process.env[env];
+  if (!apiKey) { log(`planner: ${p.provider} is configured but ${env} is not set; planning locally`); return localOrchestrator; }
+  log(`planner: ${p.provider} ${p.model} (it proposes; you decide)`);
+  return p.provider === 'anthropic'
+    ? anthropicOrchestrator({ apiKey, model: p.model, acts, ...(p.baseUrl ? { baseUrl: p.baseUrl } : {}) })
+    : openaiOrchestrator({ apiKey, model: p.model, acts, ...(p.baseUrl ? { baseUrl: p.baseUrl } : {}) });
+}
 
 // ----------------------------------------------------------------- notifier
 
@@ -171,7 +190,7 @@ export async function start(argv: string[]) {
   const pyramid = new Pyramid({
     app, memory, ctx,
     aggregator: new Aggregator(connections.flatMap((c) => c.sources)),
-    orchestrator: localOrchestrator,
+    orchestrator: plannerFor(cfg.planner, () => app.ui.definitions),
   });
 
   const notifiers: Notifier[] = [new ConsoleNotifier((s) => log(s))];
