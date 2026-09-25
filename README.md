@@ -10,7 +10,7 @@ None of them answers the one after it: **how does the human accept, reject, or c
 proposed?** No commit model, no repair grammar, no notion of what a mutation costs if it is wrong.
 That is this layer.
 
-Spec **v0.3**. Twelve packages, **236 tests**, five apps. `aiuic-core` has no dependencies.
+Spec **v0.3**. Thirteen packages, **269 tests**, five apps. `aiuic-core` has no dependencies.
 
 ---
 
@@ -20,7 +20,7 @@ Spec **v0.3**. Twelve packages, **236 tests**, five apps. `aiuic-core` has no de
 | --- | --- | --- |
 | `aiuic-core` | acts, slots, beats, blast radius, HOLD, attention gate, outbox, undo, speculation | 41 |
 | `aiuic-resolve` | local matcher, grammar, act routing, span arbitration, tiering | 49 |
-| `hepta` | seven tongues — speculation over partial speech | 10 |
+| `hepta` | seven tongues over partial speech, and lines of thought: cutting in, holding the floor, arguing, wandering | 32 |
 | `aiuic-tools` | tool schemas generated from acts; applying a model's call | 12 |
 | `aiuic-compose` | runtime act composition over a closed capability registry | 13 |
 | `aiuic-memory` | stated facts; remembering and forgetting as acts | 10 |
@@ -29,6 +29,7 @@ Spec **v0.3**. Twelve packages, **236 tests**, five apps. `aiuic-core` has no de
 | `aiuic-present` | the renderer boundary: one view, a text presenter and a DOM one | 15 |
 | `aiuic-eui` | the visual language: tokens, domain rules as lint, the seven beats, one card | 34 |
 | `aiuic-kit` | the front door: `hear(text)` — routing, filling, speculating, drawing | 16 |
+| `aiuic-pyramid` | conductor, congregator, orchestrator, aggregator — authority, not votes | 14 |
 | `aiuic-eval` | labelled suites, the false-confirm rate, reliability curves, threshold sweeps | 12 |
 
 `aiuic-core` imports nothing from the others. That is how the boundary gets tested.
@@ -216,6 +217,23 @@ the last word, because the switch margin held the leader and the early words
 kept feeding its score. That margin exists to stop the stage flickering while
 someone is looking at it — a mid-sentence cost, which stops existing when the
 sentence does. It is dropped on the final transcript now.
+
+## The pyramid, and a Hepta that argues
+
+One conductor (the person) and three roles that hold **different authority** rather than
+three votes: the aggregator reads, the orchestrator proposes, the congregator records, and only
+the conductor makes anything true. Three agents voting is not three checks when they share a model.
+
+Hepta's lines of thought run beside the seven tongues on every partial: claims said earlier,
+views it holds, things left open. It cuts in at clause boundaries, keeps talking through "yeah",
+stops for "wait", argues with evidence, yields to an override, and wanders back to open threads
+when it is quiet.
+
+```
+npm run hepta   ->   cutting in: 7/7   WRONG CUTS 0
+```
+
+Design note: `pyramid-and-lines-of-thought.md` in the project.
 
 ## Resolution tiers
 
