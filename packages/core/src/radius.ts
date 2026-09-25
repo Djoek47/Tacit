@@ -21,6 +21,8 @@ export function commitRadius(def: ActDef, filled: Filled, ctx: Ctx): Radius {
 export type RadiusBreakdown = {
   radius: Radius;
   commit: Radius;
+  /** Set when the act's own radius was raised, and why. */
+  why?: string;
   /** Effect name (or index) → the radius it contributed, after coercion. */
   effects: Array<{ name: string; radius: Radius; why?: string }>;
 };
@@ -30,6 +32,17 @@ export function explainRadius(def: ActDef, filled: Filled, ctx: Ctx): RadiusBrea
   const limit = ctx.reachLimit ?? 1;
   const effects: RadiusBreakdown['effects'] = [];
   let radius = commit;
+  let why: string | undefined;
+
+  // defineAct refuses a static max below external with no undo. That check
+  // reads the MAX, so an act can declare max "external" and have of() return
+  // "self" at runtime — which passed definition and then silence-committed
+  // with nothing to take it back. Every radius passes through here, so the
+  // same rule is held here at runtime: no undo, no silence.
+  if (!def.undo && radiusRank(radius) < radiusRank('external')) {
+    radius = 'external';
+    why = 'no undo() — nothing could take it back, so it cannot commit on silence';
+  }
 
   (def.effects ?? []).forEach((e, i) => {
     const name = e.name ?? `effect[${i}]`;
@@ -60,7 +73,7 @@ export function explainRadius(def: ActDef, filled: Filled, ctx: Ctx): RadiusBrea
     radius = maxRadius(radius, r);
   });
 
-  return { radius, commit, effects };
+  return why ? { radius, commit, effects, why } : { radius, commit, effects };
 }
 
 export function effectiveRadius(def: ActDef, filled: Filled, ctx: Ctx): Radius {
