@@ -42,6 +42,16 @@ function wordsOf(v: unknown): string | null {
 }
 
 export function admitValue(slot: SlotDef, value: unknown, ctx: Ctx, filled: Filled = {}): Admitted {
+  // Free text has no closed set to smuggle past: the card shows the very string
+  // that commit() receives, so there is nothing for a label to disagree with.
+  // (Its resolver reads the leftovers of a spoken sentence and cannot confirm a
+  // phrase handed to it on its own — which refused every proposed title until
+  // this case was added.)
+  if (slot.primitive === 'ghostField') {
+    const text = typeof value === 'string' ? value : wordsOf(value);
+    if (text !== null && text.trim() && text.length <= 500) return { ok: true, value: text.trim() };
+    return { ok: false, why: 'it carries no text' };
+  }
   if (slot.options) {
     let options: Option[] | Promise<Option[]>;
     try { options = slot.options(ctx, filled); } catch { return { ok: false, why: 'its options could not be read' }; }

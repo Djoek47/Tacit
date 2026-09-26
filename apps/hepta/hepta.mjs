@@ -25152,6 +25152,11 @@ function wordsOf(v) {
   return null;
 }
 function admitValue(slot, value, ctx, filled = {}) {
+  if (slot.primitive === "ghostField") {
+    const text2 = typeof value === "string" ? value : wordsOf(value);
+    if (text2 !== null && text2.trim() && text2.length <= 500) return { ok: true, value: text2.trim() };
+    return { ok: false, why: "it carries no text" };
+  }
   if (slot.options) {
     let options;
     try {
