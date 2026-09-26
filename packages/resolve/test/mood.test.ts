@@ -18,3 +18,22 @@ describe('is this sentence asking for something', () => {
       expect([s, mood(s)]).toEqual([s, 'statement']);
   });
 });
+
+describe('openers that look like requests (second review)', () => {
+  it('hears a remark after "can you" and "I need to"', () => {
+    expect(mood('can you believe Sam did the dishes')).toBe('statement');
+    expect(mood('I need to tell you Maya did the laundry')).toBe('statement');
+    expect(mood('can you do the dishes')).toBe('request');
+    expect(mood('I need Maya to do the dishes')).toBe('request');
+  });
+});
+
+describe('the copula has to be the sentence\'s own verb', () => {
+  it('does not call a standing order a statement because a clause contains "is"', () => {
+    expect(mood('every morning what is due')).toBe('request');
+    expect(mood('remind me what is left')).toBe('request');
+    // Still statements: the copula is the main verb.
+    expect(mood('twenty dollars is a lot')).toBe('statement');
+    expect(mood('Maya is at school')).toBe('statement');
+  });
+});

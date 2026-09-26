@@ -17992,13 +17992,13 @@ function _array(Class3, element, params) {
   });
 }
 function _custom(Class3, fn, _params) {
-  const norm = normalizeParams(_params);
-  norm.abort ?? (norm.abort = true);
+  const norm2 = normalizeParams(_params);
+  norm2.abort ?? (norm2.abort = true);
   const schema = new Class3({
     type: "custom",
     check: "custom",
     fn,
-    ...norm
+    ...norm2
   });
   return schema;
 }
@@ -25137,6 +25137,50 @@ function createAIUIC(config3) {
   return new AIUIC(config3);
 }
 
+// ../../packages/core/src/admit.ts
+var norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+function same(a, b) {
+  if (a === b) return true;
+  if (typeof a !== "object" || typeof b !== "object" || !a || !b) return false;
+  const ka = Object.keys(a), kb = Object.keys(b);
+  return ka.length === kb.length && ka.every((k) => same(a[k], b[k]));
+}
+function wordsOf(v) {
+  if (typeof v === "string") return v;
+  if (typeof v === "number" && Number.isFinite(v)) return String(v);
+  if (v && typeof v === "object" && typeof v.label === "string") return v.label;
+  return null;
+}
+function admitValue(slot, value, ctx, filled = {}) {
+  if (slot.options) {
+    let options;
+    try {
+      options = slot.options(ctx, filled);
+    } catch {
+      return { ok: false, why: "its options could not be read" };
+    }
+    if (!Array.isArray(options)) return { ok: false, why: "its options are not available yet" };
+    const exact = options.find((o) => same(o.value, value));
+    if (exact) return { ok: true, value: exact.value };
+    if (typeof value === "string") {
+      const w = norm(value);
+      const named = options.filter((o) => norm(o.label) === w || (o.aliases ?? []).some((a) => norm(a) === w));
+      if (named.length === 1) return { ok: true, value: named[0].value };
+      if (named.length > 1) return { ok: false, why: `"${value}" names more than one option` };
+    }
+    return { ok: false, why: "it is not one of the options offered" };
+  }
+  if (slot.resolve) {
+    const words2 = wordsOf(value);
+    if (words2 === null) return { ok: false, why: "it carries no words to check" };
+    const v = classify(slot.resolve(words2, ctx, filled));
+    if (v.outcome === "filled" && !v.provisional) return { ok: true, value: v.value };
+    return { ok: false, why: `"${words2.slice(0, 40)}" does not read as one clear value` };
+  }
+  if (typeof value === "string" && value.length <= 500) return { ok: true, value };
+  return { ok: false, why: "only plain text is accepted here" };
+}
+
 // ../../packages/resolve/src/text.ts
 var PUNCT = /[.,!?;:'"`()[\]{}<>/\\|@#$%^&*_+=~]/g;
 function normalize(s) {
@@ -25148,8 +25192,8 @@ function tokenize(s) {
   let m;
   while ((m = re.exec(s)) !== null) {
     const raw = m[0];
-    const norm = normalize(raw);
-    if (norm) tokens3.push({ raw, norm, start: m.index, end: m.index + raw.length });
+    const norm2 = normalize(raw);
+    if (norm2) tokens3.push({ raw, norm: norm2, start: m.index, end: m.index + raw.length });
   }
   return tokens3;
 }
@@ -25208,16 +25252,24 @@ var DEFAULT_ROUTING = {
 // ../../packages/resolve/src/mood.ts
 var POLITE = /^(please|can you|could you|would you|will you|can we|could we|let s|lets|peux tu|pourrais tu|tu peux|pouvez vous|est ce que tu peux|est ce que vous pouvez)\b/;
 var WANT = /^(i want|i need|i d like|id like|i would like|we need|we want|je veux|je voudrais|j ai besoin|jai besoin|il faut)\b/;
+var REMARK_AFTER_POLITE = /^\s*(believe|imagine|see|tell|guess|remember|understand|feel|think|hear|croire|imaginer|voir|comprendre)\b/;
+var REMARK_AFTER_WANT = /^\s*(to\s+)?(tell|say|know|ask|think|remember|let you know|mention|dire|savoir|demander|penser)\b/;
 var QUESTION = /^(did|does|is|are|was|were|has|have|had|what|when|where|who|whom|whose|why|how|which|do (you|we|they|i)|est ce|qui|quand|ou est|pourquoi|comment|combien|quel|quelle|quels|quelles)\b/;
 var STATEMENT_START = /^(i|we|it|that|this|there|he|she|they|je|j|on|c|ca|il|elle|nous)\b/;
-var COPULA = /\b(is|are|was|were|s|est|sont|etait)\b/;
+var COPULA = /* @__PURE__ */ new Set(["is", "are", "was", "were", "est", "sont", "etait"]);
+var CLAUSE = /* @__PURE__ */ new Set(["what", "who", "which", "that", "whatever", "whoever", "ce", "qui", "que", "quoi"]);
 function mood(text2) {
   const t = normalize(text2.replace(/[\u2019'-]/g, " "));
   if (!t) return "statement";
-  if (POLITE.test(t) || WANT.test(t)) return "request";
+  const polite = POLITE.exec(t), want = WANT.exec(t);
+  if (polite && !REMARK_AFTER_POLITE.test(t.slice(polite[0].length))) return "request";
+  if (want && !REMARK_AFTER_WANT.test(t.slice(want[0].length))) return "request";
+  if (polite || want) return "statement";
   if (text2.trim().endsWith("?") || QUESTION.test(t)) return "question";
   if (STATEMENT_START.test(t)) return "statement";
-  if (COPULA.test(t)) return "statement";
+  const words2 = t.split(" ");
+  const i = words2.findIndex((w) => COPULA.has(w));
+  if (i >= 0 && i <= 3 && !CLAUSE.has(words2[i - 1] ?? "")) return "statement";
   return "request";
 }
 
@@ -25306,13 +25358,12 @@ var LocalResolver = class {
       }
       weight += this.routing.coverageWeight;
       total += this.routing.coverageWeight * (evaluable.length > 0 ? requiredCoverage : this.routing.uncheckableCoverage);
-      const asking = phraseMatch >= this.routing.phraseFloor || sentenceMood === "request";
-      const raw = weight > 0 ? total / weight : 0;
+      const asking = sentenceMood === "request";
       scores.push({
         act: act.name,
         phraseMatch,
         requiredCoverage,
-        score: asking ? raw : raw * this.routing.tauAct * 0.8
+        score: asking && weight > 0 ? total / weight : 0
       });
     }
     return scores.sort((a, b) => b.score - a.score);
@@ -25424,7 +25475,8 @@ var TENS = {
   huitante: 80,
   nonante: 90
 };
-var SCALE = { hundred: 100, cent: 100, cents: 100, thousand: 1e3, mille: 1e3 };
+var SCALE = { hundred: 100, cent: 100, cents: 100, thousand: 1e3, mille: 1e3, million: 1e6, millions: 1e6, billion: 1e9, milliard: 1e9, milliards: 1e9 };
+var ENGLISH = /* @__PURE__ */ new Set(["one", "two", "three", "four", "five", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty", "thirty", "forty", "fourty", "fifty", "sixty", "seventy", "eighty", "ninety", "hundred", "thousand", "a", "an"]);
 var ARTICLE = /* @__PURE__ */ new Set(["a", "an", "un", "une"]);
 var JOIN = /* @__PURE__ */ new Set(["and", "et"]);
 var CURRENCY = {
@@ -25449,25 +25501,42 @@ var REVISION = ["no", "sorry", "i mean", "actually", "rather", "make that", "wai
 function tokens(text2) {
   const t = text2.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const out = [];
-  const re = /(\d+(?:[.,]\d{1,2})?)|([$€£])|([a-z]+)|([,;.!?]+)/g;
+  const re = /(\d{1,3}(?:([.,\u00a0 ])\d{3})(?:\2\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d+)?)|([$\u20ac\u00a3])|([a-z]+)|([,;.!?]+)/g;
   let m;
   while ((m = re.exec(t)) !== null) {
-    if (m[1]) out.push({ kind: "num", n: parseFloat(m[1].replace(",", ".")), raw: m[1] });
-    else if (m[2]) out.push({ kind: "sym", code: CURRENCY[m[2]] });
-    else if (m[3]) out.push({ kind: "word", w: m[3] });
+    if (m[1]) {
+      const raw = m[1];
+      if (m[2]) {
+        const sep = m[2];
+        const body = raw.split(sep).join("");
+        out.push({ kind: "num", n: parseFloat(body.replace(",", ".")), raw });
+        continue;
+      }
+      const d = /^(\d+)[.,](\d+)$/.exec(raw);
+      if (d && d[2].length === 3) {
+        const thousands = Number(d[1] + d[2]), decimal = parseFloat(d[1] + "." + d[2]);
+        out.push({ kind: "num", n: thousands, raw, alts: [thousands, decimal] });
+      } else if (d && d[2].length > 3) {
+        out.push({ kind: "num", n: NaN, raw });
+      } else {
+        out.push({ kind: "num", n: parseFloat(raw.replace(",", ".")), raw });
+      }
+    } else if (m[3]) out.push({ kind: "sym", code: CURRENCY[m[3]] });
+    else if (m[4]) out.push({ kind: "word", w: m[4] });
     else out.push({ kind: "break" });
   }
   return out;
 }
 var isNumberWord = (w) => ONES[w] !== void 0 || TENS[w] !== void 0 || SCALE[w] !== void 0;
 function readWords(toks, i, subunit = false) {
-  let total = 0, current = 0, seen = false, last = null;
+  let total = 0, current = 0, seen = false, last = null, english = false;
   let j = i;
   const word = (k) => toks[k]?.kind === "word" ? toks[k].w : void 0;
   for (; j < toks.length; j++) {
     const w = word(j);
     if (w === void 0) break;
     const nextW = word(j + 1);
+    if (ENGLISH.has(w)) english = true;
     if (ARTICLE.has(w)) {
       if (!seen && nextW && SCALE[nextW] !== void 0) {
         current = 1;
@@ -25494,7 +25563,7 @@ function readWords(toks, i, subunit = false) {
       continue;
     }
     if (SCALE[w] !== void 0) {
-      if (subunit && (w === "cents" || w === "cent")) break;
+      if ((w === "cents" || w === "cent") && (subunit || english)) break;
       if (!seen && (w === "cent" || w === "mille")) {
         current = SCALE[w];
         seen = true;
@@ -25557,12 +25626,31 @@ function amounts(text2) {
     const t = toks[i];
     let a = null;
     if (t.kind === "sym" && toks[i + 1]?.kind === "num") {
-      a = { n: toks[i + 1].n, code: t.code, start: i, end: i + 2 };
+      const num = toks[i + 1];
+      if (Number.isNaN(num.n)) continue;
+      const kilo = toks[i + 2]?.kind === "word" && toks[i + 2].w === "k";
+      const mult = kilo ? 1e3 : 1;
+      a = {
+        n: num.n * mult,
+        code: t.code,
+        start: i,
+        end: i + 2 + (kilo ? 1 : 0),
+        ...num.alts ? { alternatives: num.alts.map((x) => x * mult) } : {}
+      };
     } else if (t.kind === "num") {
+      if (Number.isNaN(t.n)) continue;
       const nx = toks[i + 1];
       if (nx?.kind === "word" && ["am", "pm", "h", "oclock"].includes(nx.w)) continue;
-      const code = currencyAt(i + 1);
-      a = { n: t.n, ...code ? { code } : {}, start: i, end: code ? i + 2 : i + 1 };
+      const kilo = nx?.kind === "word" && nx.w === "k" ? 1 : 0;
+      const code = currencyAt(i + 1 + kilo);
+      const mult = kilo ? 1e3 : 1;
+      a = {
+        n: t.n * mult,
+        ...code ? { code } : {},
+        start: i,
+        end: i + 1 + kilo + (code ? 1 : 0),
+        ...t.alts ? { alternatives: t.alts.map((x) => x * mult) } : {}
+      };
     } else if (t.kind === "word" && (isNumberWord(t.w) || ARTICLE.has(t.w))) {
       const r = readWords(toks, i);
       if (!r || r.end === i) continue;
@@ -25582,6 +25670,13 @@ function amounts(text2) {
         }
       }
       const code = currencyAt(r.end);
+      const unit = toks[r.end]?.kind === "word" ? toks[r.end].w : "";
+      if (!code && SUBUNIT.has(unit)) {
+        const sub = unit === "pence" || unit === "penny" ? "GBP" : unit === "centimes" ? "EUR" : "USD";
+        found.push({ n: r.n / 100, code: sub, start: i, end: r.end + 1 });
+        i = r.end;
+        continue;
+      }
       a = { n: r.n, ...code ? { code } : {}, start: i, end: code ? r.end + 1 : r.end };
     }
     if (!a) continue;
@@ -25593,7 +25688,7 @@ function amounts(text2) {
       const after = toks[sub?.end ?? -1];
       const named = after?.kind === "word" && SUBUNIT.has(after.w);
       const french = !!sub && k === a.end && !named;
-      if (sub && sub.n > 0 && sub.n < 100 && Number.isInteger(a.n) && (named || french)) {
+      if (sub && sub.n > 0 && sub.n < 100 && Number.isInteger(a.n) && !a.alternatives && (named || french)) {
         a = { ...a, n: a.n + sub.n / 100, end: sub.end + (named ? 1 : 0) };
       }
     }
@@ -26999,13 +27094,19 @@ var Pyramid = class {
     if (!def) return this.stop(goal, `proposed an act this app does not have: "${plan.act}"`);
     this.config.app.reset();
     const run = this.config.app.ui.start(plan.act);
+    const ctx = this.config.ctx();
+    const admitted = {};
     for (const [slot, value] of Object.entries(plan.fill)) {
-      if (!def.slots[slot]) continue;
-      run.setValue(slot, value, "model");
+      const sd = def.slots[slot];
+      if (!sd) continue;
+      const a = admitValue(sd, value, ctx, admitted);
+      if (!a.ok) continue;
+      admitted[slot] = a.value;
+      run.setValue(slot, a.value, "model");
     }
     run.evaluate();
     this.config.app.draw();
-    this.congregator[WRITE]({ kind: "proposed", goal, act: plan.act, fill: plan.fill, at: this.now() });
+    this.congregator[WRITE]({ kind: "proposed", goal, act: plan.act, fill: admitted, at: this.now() });
     const out = { kind: "proposed", act: plan.act, status: run.status };
     return parts ? { kind: "split", parts, then: out } : out;
   }
@@ -39006,13 +39107,13 @@ function _array2(Class3, element, params) {
   });
 }
 function _custom2(Class3, fn, _params) {
-  const norm = normalizeParams2(_params);
-  norm.abort ?? (norm.abort = true);
+  const norm2 = normalizeParams2(_params);
+  norm2.abort ?? (norm2.abort = true);
   const schema = new Class3({
     type: "custom",
     check: "custom",
     fn,
-    ...norm
+    ...norm2
   });
   return schema;
 }
@@ -46157,16 +46258,25 @@ function createHeptaServer(cfg) {
     app.reset();
     const run = app.ui.start(act);
     const dropped = [];
+    const refused = [];
+    const admitted = {};
     for (const [k, v] of Object.entries(fill)) {
-      if (!def.slots[k]) {
+      const sd = def.slots[k];
+      if (!sd) {
         dropped.push(k);
         continue;
       }
-      run.setValue(k, v, "model");
+      const a = admitValue(sd, v, cfg.ctx(), admitted);
+      if (!a.ok) {
+        refused.push({ slot: k, why: a.why });
+        continue;
+      }
+      admitted[k] = a.value;
+      run.setValue(k, a.value, "model");
     }
     run.evaluate();
     app.draw();
-    return json2({ status: run.status, waitingFor: "the person", dropped, stage: toView(run, optionsFor) });
+    return json2({ status: run.status, waitingFor: "the person", dropped, refused, stage: toView(run, optionsFor) });
   });
   if (cfg.pyramid) {
     const p = cfg.pyramid;
@@ -46208,10 +46318,25 @@ function describeAct(act) {
 
 // ../../packages/orchestrators/src/plan.ts
 function actCards(defs, opts = {}) {
+  const ctx = opts.ctx ?? { now: /* @__PURE__ */ new Date(), actor: { id: "planner" } };
   return defs.filter((d) => opts.includeAuthority || !d.grantsAuthority).map((d) => ({
     name: d.name,
     about: describeAct(d),
-    slots: Object.entries(d.slots).map(([name2, s]) => ({ name: name2, primitive: s.primitive, required: !!s.required }))
+    slots: Object.entries(d.slots).map(([name2, s]) => {
+      let options;
+      try {
+        const o = s.options?.(ctx, {});
+        if (Array.isArray(o)) options = o.slice(0, 30).map((x) => x.label);
+      } catch {
+      }
+      return {
+        name: name2,
+        primitive: s.primitive,
+        required: !!s.required,
+        ...options ? { options } : {},
+        admit: (v) => admitValue(s, v, ctx)
+      };
+    })
   }));
 }
 var LIMITS = {
@@ -46240,7 +46365,7 @@ function describeInput(input, acts) {
   lines.push("ACTS (the only things you may propose):");
   if (!acts.length) lines.push("  none. You cannot propose anything; answer, look or split.");
   for (const a of acts) {
-    const slots = a.slots.map((s) => `${s.name}${s.required ? "*" : ""} (${s.primitive})`).join(", ");
+    const slots = a.slots.map((s) => `${s.name}${s.required ? "*" : ""} (${s.primitive}${s.options ? `: one of ${s.options.join(" | ")}` : ""})`).join(", ");
     lines.push(`  ${a.name}: ${a.about}${slots ? ` Slots: ${slots}.` : ""}`);
   }
   lines.push("  (* = required)", "");
@@ -46347,7 +46472,10 @@ function checkPlan(tool, input, acts) {
       for (const [k, v] of Object.entries(fill)) {
         if (v === null || v === void 0) continue;
         if (!plain(v)) return { ok: false, problem: `gave a value for ${k} that is not plain data` };
-        clean[k] = v;
+        const slot = card.slots.find((s) => s.name === k);
+        const a = slot.admit ? slot.admit(v) : { ok: true, value: v };
+        if (!a.ok) return { ok: false, problem: `gave ${k} a value the app does not accept (${a.why})` };
+        clean[k] = a.value;
       }
       return { ok: true, plan: { kind: "propose", act: card.name, fill: clean, why: o.why.trim() } };
     }
@@ -46379,7 +46507,7 @@ async function post(fetch2, url, headers, body, timeoutMs) {
   try {
     const res = await fetch2(url, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body), ...ctl ? { signal: ctl.signal } : {} });
     const text2 = await res.text();
-    if (!res.ok) return { ok: false, problem: `answered ${res.status}${redact(errorMessage(text2), headers)}` };
+    if (!res.ok) return { ok: false, problem: `answered ${res.status}${errorMessage(text2, headers)}` };
     try {
       return { ok: true, json: JSON.parse(text2) };
     } catch {
@@ -46400,11 +46528,11 @@ function redact(text2, headers) {
   }
   return out;
 }
-function errorMessage(text2) {
+function errorMessage(text2, headers) {
   try {
     const j = JSON.parse(text2);
     const m = j.error?.message;
-    return typeof m === "string" && m ? ` (${m.slice(0, 160)})` : "";
+    return typeof m === "string" && m ? ` (${redact(m, headers).slice(0, 160)})` : "";
   } catch {
     return "";
   }
@@ -46416,7 +46544,7 @@ function anthropicOrchestrator(opts) {
   const fetch2 = opts.fetch ?? globalThis.fetch;
   const url = `${(opts.baseUrl ?? "https://api.anthropic.com").replace(/\/$/, "")}/v1/messages`;
   return async (input) => {
-    const acts = actCards(opts.acts(), { includeAuthority: !!opts.includeAuthority });
+    const acts = actCards(opts.acts(), { includeAuthority: !!opts.includeAuthority, ...opts.ctx ? { ctx: opts.ctx() } : {} });
     const tools = planTools(acts).map((t) => ({ name: t.name, description: t.description, input_schema: t.schema }));
     const res = await post(fetch2, url, { "x-api-key": opts.apiKey, "anthropic-version": "2023-06-01" }, {
       model: opts.model,
@@ -46450,7 +46578,7 @@ function openaiOrchestrator(opts) {
   const fetch2 = opts.fetch ?? globalThis.fetch;
   const url = `${(opts.baseUrl ?? "https://api.openai.com").replace(/\/$/, "")}/v1/responses`;
   return async (input) => {
-    const acts = actCards(opts.acts(), { includeAuthority: !!opts.includeAuthority });
+    const acts = actCards(opts.acts(), { includeAuthority: !!opts.includeAuthority, ...opts.ctx ? { ctx: opts.ctx() } : {} });
     const tools = planTools(acts).map((t) => ({ type: "function", name: t.name, description: t.description, parameters: t.schema }));
     const res = await post(fetch2, url, { authorization: `Bearer ${opts.apiKey}` }, {
       model: opts.model,
@@ -46518,7 +46646,7 @@ var localOrchestrator = ({ findings }) => {
   if (!useful.length) return { kind: "answer", answer: "I found nothing about that." };
   return { kind: "answer", answer: useful.map((f) => `${f.source}: ${f.claim}`).join("\n") };
 };
-function plannerFor(p, acts) {
+function plannerFor(p, acts, ctx) {
   if (!p) return localOrchestrator;
   const env = p.provider === "anthropic" ? "ANTHROPIC_API_KEY" : "OPENAI_API_KEY";
   const apiKey = process.env[env];
@@ -46527,7 +46655,7 @@ function plannerFor(p, acts) {
     return localOrchestrator;
   }
   log(`planner: ${p.provider} ${p.model} (it proposes; you decide)`);
-  return p.provider === "anthropic" ? anthropicOrchestrator({ apiKey, model: p.model, acts, ...p.baseUrl ? { baseUrl: p.baseUrl } : {} }) : openaiOrchestrator({ apiKey, model: p.model, acts, ...p.baseUrl ? { baseUrl: p.baseUrl } : {} });
+  return p.provider === "anthropic" ? anthropicOrchestrator({ apiKey, model: p.model, acts, ctx, ...p.baseUrl ? { baseUrl: p.baseUrl } : {} }) : openaiOrchestrator({ apiKey, model: p.model, acts, ctx, ...p.baseUrl ? { baseUrl: p.baseUrl } : {} });
 }
 var WebhookNotifier = class {
   constructor(url) {
@@ -46622,7 +46750,7 @@ async function start(argv) {
     memory,
     ctx,
     aggregator: new Aggregator(connections.flatMap((c) => c.sources)),
-    orchestrator: plannerFor(cfg.planner, () => app.ui.definitions)
+    orchestrator: plannerFor(cfg.planner, () => app.ui.definitions, ctx)
   });
   const notifiers = [new ConsoleNotifier((s) => log(s))];
   if (cfg.notify?.url) notifiers.push(new WebhookNotifier(cfg.notify.url));

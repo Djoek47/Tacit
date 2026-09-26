@@ -60,9 +60,9 @@ describe('a sentence that mentions things without asking for them (found by the 
   it('still hears the same words as a request', () => {
     expect(at('do the laundry')).toBe('start');
     expect(at('can you do the dishes')).toBe('start');
-    // A known limit, pinned so it is a decision and not an accident: a trigger phrase speaks for
-    // itself whatever the sentence shape, so a question that names the act still opens its card.
-    // Paying is external, so the card waits for an explicit yes.
-    expect(at('did you pay Maya 20 dollars')).toBe('start');
+    // This was a pinned "known limit" (a trigger phrase overrode the sentence shape). The second
+    // review showed the same rule let "who did the dishes for Sam?" reach HOLD on an act that
+    // commits on silence, so it is closed: a question opens no card, even one naming the act.
+    expect(at('did you pay Maya 20 dollars')).toBe('none');
   });
 });

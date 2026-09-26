@@ -35,7 +35,7 @@
  * "loops until the bill arrives".
  */
 
-import type { Ctx, Filled } from '@intermenu/aiuic-core';
+import { admitValue, type Ctx, type Filled } from '@intermenu/aiuic-core';
 import type { App } from '@intermenu/aiuic-kit';
 import { MAIN, type MemRecord, type MemoryReader, type MemoryWriter } from '@intermenu/aiuic-memory';
 
@@ -362,13 +362,21 @@ export class Pyramid {
 
     this.config.app.reset();
     const run = this.config.app.ui.start(plan.act);
+    const ctx = this.config.ctx();
+    const admitted: Filled = {};
     for (const [slot, value] of Object.entries(plan.fill)) {
-      if (!def.slots[slot]) continue; // a model inventing slots gets nothing for it
-      run.setValue(slot, value, 'model');
+      const sd = def.slots[slot];
+      if (!sd) continue; // a model inventing slots gets nothing for it
+      // What the card shows must be what commit() receives: a proposed value
+      // is admitted only through the slot's own options or resolver.
+      const a = admitValue(sd, value, ctx, admitted);
+      if (!a.ok) continue; // left empty; the person fills it
+      admitted[slot] = a.value;
+      run.setValue(slot, a.value, 'model');
     }
     run.evaluate();
     this.config.app.draw();
-    this.congregator[WRITE]({ kind: 'proposed', goal, act: plan.act, fill: plan.fill, at: this.now() });
+    this.congregator[WRITE]({ kind: 'proposed', goal, act: plan.act, fill: admitted, at: this.now() });
 
     const out: Outcome = { kind: 'proposed', act: plan.act, status: run.status };
     return parts ? { kind: 'split', parts, then: out } : out;

@@ -28,7 +28,9 @@ const TENS: Record<string, number> = {
   twenty: 20, thirty: 30, forty: 40, fourty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90,
   vingt: 20, vingts: 20, trente: 30, quarante: 40, cinquante: 50, soixante: 60, septante: 70, huitante: 80, nonante: 90,
 };
-const SCALE: Record<string, number> = { hundred: 100, cent: 100, cents: 100, thousand: 1000, mille: 1000 };
+const SCALE: Record<string, number> = { hundred: 100, cent: 100, cents: 100, thousand: 1000, mille: 1000, million: 1e6, millions: 1e6, billion: 1e9, milliard: 1e9, milliards: 1e9 };
+/** English number words: after these, "cents" is money, not French hundreds. */
+const ENGLISH = new Set(['one','two','three','four','five','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen','twenty','thirty','forty','fourty','fifty','sixty','seventy','eighty','ninety','hundred','thousand','a','an']);
 const ARTICLE = new Set(['a', 'an', 'un', 'une']);
 const JOIN = new Set(['and', 'et']);
 
@@ -42,17 +44,38 @@ const SUBUNIT = new Set(['cents', 'cent', 'penny', 'pence', 'centimes', 'sous'])
 /** Words that take back what was just said. */
 const REVISION = ['no', 'sorry', 'i mean', 'actually', 'rather', 'make that', 'wait', 'non', 'pardon', 'plutot', 'je veux dire', 'enfin'];
 
-export type Tok = { kind: 'num'; n: number; raw: string } | { kind: 'word'; w: string } | { kind: 'sym'; code: string } | { kind: 'break' };
+export type Tok = { kind: 'num'; n: number; raw: string; alts?: number[] } | { kind: 'word'; w: string } | { kind: 'sym'; code: string } | { kind: 'break' };
 
 function tokens(text: string): Tok[] {
   const t = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const out: Tok[] = [];
-  const re = /(\d+(?:[.,]\d{1,2})?)|([$€£])|([a-z]+)|([,;.!?]+)/g;
+  // Digits with separators, read the way the review showed they must be: "1,500,000" is
+  // grouped; "12.50" and "12,50" are decimals; "1,500" and "1.500" are a thousand and a half
+  // in one language and one and a half in another, so both readings are kept.
+  const re = /(\d{1,3}(?:([.,\u00a0 ])\d{3})(?:\2\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d+)?)|([$\u20ac\u00a3])|([a-z]+)|([,;.!?]+)/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(t)) !== null) {
-    if (m[1]) out.push({ kind: 'num', n: parseFloat(m[1].replace(',', '.')), raw: m[1] });
-    else if (m[2]) out.push({ kind: 'sym', code: CURRENCY[m[2]]! });
-    else if (m[3]) out.push({ kind: 'word', w: m[3] });
+    if (m[1]) {
+      const raw = m[1];
+      if (m[2]) {
+        // Several groups: the repeated separator is the thousands one; anything after the other is a decimal.
+        const sep = m[2];
+        const body = raw.split(sep).join('');
+        out.push({ kind: 'num', n: parseFloat(body.replace(',', '.')), raw });
+        continue;
+      }
+      const d = /^(\d+)[.,](\d+)$/.exec(raw);
+      if (d && d[2]!.length === 3) {
+        const thousands = Number(d[1]! + d[2]!), decimal = parseFloat(d[1]! + '.' + d[2]!);
+        out.push({ kind: 'num', n: thousands, raw, alts: [thousands, decimal] });
+      } else if (d && d[2]!.length > 3) {
+        out.push({ kind: 'num', n: NaN, raw }); // not an amount anyone says
+      } else {
+        out.push({ kind: 'num', n: parseFloat(raw.replace(',', '.')), raw });
+      }
+    }
+    else if (m[3]) out.push({ kind: 'sym', code: CURRENCY[m[3]]! });
+    else if (m[4]) out.push({ kind: 'word', w: m[4] });
     else out.push({ kind: 'break' });
   }
   return out;
@@ -65,7 +88,7 @@ const isNumberWord = (w: string) => ONES[w] !== undefined || TENS[w] !== undefin
  * number, and at a juxtaposition ("fifteen fifty"), which it reports.
  */
 function readWords(toks: Tok[], i: number, subunit = false): { n: number; end: number; juxtaposed: boolean } | null {
-  let total = 0, current = 0, seen = false, last: 'ones' | 'tens' | 'scale' | null = null;
+  let total = 0, current = 0, seen = false, last: 'ones' | 'tens' | 'scale' | null = null, english = false;
   let j = i;
   const word = (k: number) => (toks[k]?.kind === 'word' ? (toks[k] as { w: string }).w : undefined);
 
@@ -73,6 +96,7 @@ function readWords(toks: Tok[], i: number, subunit = false): { n: number; end: n
     const w = word(j);
     if (w === undefined) break;
     const nextW = word(j + 1);
+    if (ENGLISH.has(w)) english = true;
     if (ARTICLE.has(w)) {
       // "a hundred", "un million"… and "vingt et un".
       if (!seen && nextW && SCALE[nextW] !== undefined) { current = 1; seen = true; last = 'ones'; continue; }
@@ -86,8 +110,9 @@ function readWords(toks: Tok[], i: number, subunit = false): { n: number; end: n
     }
     if (w === 'quatre' && (nextW === 'vingt' || nextW === 'vingts')) { current += 80; j++; seen = true; last = 'tens'; continue; }
     if (SCALE[w] !== undefined) {
-      // After a currency, "cents" names the subunit ("fifty cents"); the caller reads it.
-      if (subunit && (w === 'cents' || w === 'cent')) break;
+      // After a currency, or after English number words, "cents" names the subunit
+      // ("fifty cents"); the caller reads it. In French, "deux cents" is 200.
+      if ((w === 'cents' || w === 'cent') && (subunit || english)) break;
       // French "cent" and "mille" need no article: "cent vingt" is 120.
       if (!seen && (w === 'cent' || w === 'mille')) { current = SCALE[w]!; seen = true; last = 'scale'; if (w === 'mille') { total = 1000; current = 0; } continue; }
       if (!seen) break;
@@ -140,13 +165,23 @@ export function amounts(text: string): { found: Amount[]; toks: Tok[] } {
     let a: Amount | null = null;
 
     if (t.kind === 'sym' && toks[i + 1]?.kind === 'num') {
-      a = { n: (toks[i + 1] as { n: number }).n, code: t.code, start: i, end: i + 2 };
+      const num = toks[i + 1] as { n: number; alts?: number[] };
+      if (Number.isNaN(num.n)) continue;
+      const kilo = toks[i + 2]?.kind === 'word' && (toks[i + 2] as { w: string }).w === 'k';
+      const mult = kilo ? 1000 : 1;
+      a = { n: num.n * mult, code: t.code, start: i, end: i + 2 + (kilo ? 1 : 0),
+        ...(num.alts ? { alternatives: num.alts.map((x) => x * mult) } : {}) };
     } else if (t.kind === 'num') {
+      if (Number.isNaN(t.n)) continue;
       // A time of day is not an amount: "5pm", "9 h".
       const nx = toks[i + 1];
       if (nx?.kind === 'word' && ['am', 'pm', 'h', 'oclock'].includes(nx.w)) continue;
-      const code = currencyAt(i + 1);
-      a = { n: t.n, ...(code ? { code } : {}), start: i, end: code ? i + 2 : i + 1 };
+      // "20k": the review found it read as 20.
+      const kilo = nx?.kind === 'word' && nx.w === 'k' ? 1 : 0;
+      const code = currencyAt(i + 1 + kilo);
+      const mult = kilo ? 1000 : 1;
+      a = { n: t.n * mult, ...(code ? { code } : {}), start: i, end: i + 1 + kilo + (code ? 1 : 0),
+        ...(t.alts ? { alternatives: t.alts.map((x) => x * mult) } : {}) };
     } else if (t.kind === 'word' && (isNumberWord(t.w) || ARTICLE.has(t.w))) {
       const r = readWords(toks, i);
       if (!r || r.end === i) continue;
@@ -161,6 +196,14 @@ export function amounts(text: string): { found: Amount[]; toks: Tok[] } {
         }
       }
       const code = currencyAt(r.end);
+      const unit = toks[r.end]?.kind === 'word' ? (toks[r.end] as { w: string }).w : '';
+      if (!code && SUBUNIT.has(unit)) {
+        // "fifty cents" is half a dollar, not 5000.
+        const sub = unit === 'pence' || unit === 'penny' ? 'GBP' : unit === 'centimes' ? 'EUR' : 'USD';
+        found.push({ n: r.n / 100, code: sub, start: i, end: r.end + 1 });
+        i = r.end;
+        continue;
+      }
       a = { n: r.n, ...(code ? { code } : {}), start: i, end: code ? r.end + 1 : r.end };
     }
     if (!a) continue;
@@ -174,7 +217,7 @@ export function amounts(text: string): { found: Amount[]; toks: Tok[] } {
       const after = toks[sub?.end ?? -1];
       const named = after?.kind === 'word' && SUBUNIT.has(after.w);
       const french = !!sub && k === a.end && !named; // "douze dollars cinquante": no "and", no "cents"
-      if (sub && sub.n > 0 && sub.n < 100 && Number.isInteger(a.n) && (named || french)) {
+      if (sub && sub.n > 0 && sub.n < 100 && Number.isInteger(a.n) && !a.alternatives && (named || french)) {
         a = { ...a, n: a.n + sub.n / 100, end: sub.end + (named ? 1 : 0) };
       }
     }

@@ -16,7 +16,7 @@
  * `store: false`: a plan is built from the person's data; it is not kept there.
  */
 
-import type { ActDef } from '@intermenu/aiuic-core';
+import type { ActDef, Ctx } from '@intermenu/aiuic-core';
 import type { Orchestrator } from '@intermenu/aiuic-pyramid';
 import { actCards, checkPlan, couldNot, describeInput, planTools, post, SYSTEM, LIMITS, type Fetch } from './plan.js';
 
@@ -31,6 +31,8 @@ export type OpenAIOptions = {
   /** 'auto' (default) or 'required'. */
   toolChoice?: 'auto' | 'required';
   includeAuthority?: boolean;
+  /** The app's context, for reading slot options and checking proposed values against them. */
+  ctx?: () => Ctx;
 };
 
 const WHO = 'the OpenAI API';
@@ -40,7 +42,7 @@ export function openaiOrchestrator(opts: OpenAIOptions): Orchestrator {
   const url = `${(opts.baseUrl ?? 'https://api.openai.com').replace(/\/$/, '')}/v1/responses`;
 
   return async (input) => {
-    const acts = actCards(opts.acts(), { includeAuthority: !!opts.includeAuthority });
+    const acts = actCards(opts.acts(), { includeAuthority: !!opts.includeAuthority, ...(opts.ctx ? { ctx: opts.ctx() } : {}) });
     const tools = planTools(acts).map((t) => ({ type: 'function', name: t.name, description: t.description, parameters: t.schema }));
     const res = await post(fetch, url, { authorization: `Bearer ${opts.apiKey}` }, {
       model: opts.model,

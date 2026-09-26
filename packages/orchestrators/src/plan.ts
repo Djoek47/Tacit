@@ -17,7 +17,7 @@
  *      becomes an honest answer saying what went wrong. Nothing here throws.
  */
 
-import type { ActDef } from '@intermenu/aiuic-core';
+import { admitValue, type ActDef, type Admitted, type Ctx } from '@intermenu/aiuic-core';
 import type { Plan, PlanInput } from '@intermenu/aiuic-pyramid';
 import { describeAct } from '@intermenu/aiuic-tools';
 
@@ -27,7 +27,13 @@ import { describeAct } from '@intermenu/aiuic-tools';
 export type ActCard = {
   name: string;
   about: string;
-  slots: { name: string; primitive: string; required: boolean }[];
+  slots: {
+    name: string; primitive: string; required: boolean;
+    /** The labels the host offers, when it offers a list. Shown to the model. */
+    options?: string[];
+    /** Admits a proposed value through the slot's own options or resolver (core admitValue). */
+    admit?: (value: unknown) => Admitted;
+  }[];
 };
 
 /**
@@ -36,13 +42,22 @@ export type ActCard = {
  * person can still say it, but a model reading an MCP server's output should
  * not be the one suggesting that the server be trusted more.
  */
-export function actCards(defs: readonly ActDef[], opts: { includeAuthority?: boolean } = {}): ActCard[] {
+export function actCards(defs: readonly ActDef[], opts: { includeAuthority?: boolean; ctx?: Ctx } = {}): ActCard[] {
+  const ctx = opts.ctx ?? ({ now: new Date(), actor: { id: 'planner' } } as Ctx);
   return defs
     .filter((d) => opts.includeAuthority || !d.grantsAuthority)
     .map((d) => ({
       name: d.name,
       about: describeAct(d),
-      slots: Object.entries(d.slots).map(([name, s]) => ({ name, primitive: s.primitive, required: !!s.required })),
+      slots: Object.entries(d.slots).map(([name, s]) => {
+        let options: string[] | undefined;
+        try {
+          const o = s.options?.(ctx, {});
+          if (Array.isArray(o)) options = o.slice(0, 30).map((x) => x.label);
+        } catch { /* options that need more context are checked at proposal time instead */ }
+        return { name, primitive: s.primitive, required: !!s.required, ...(options ? { options } : {}),
+          admit: (v: unknown) => admitValue(s, v, ctx) };
+      }),
     }));
 }
 
@@ -80,7 +95,7 @@ export function describeInput(input: PlanInput, acts: readonly ActCard[]): strin
   lines.push('ACTS (the only things you may propose):');
   if (!acts.length) lines.push('  none. You cannot propose anything; answer, look or split.');
   for (const a of acts) {
-    const slots = a.slots.map((s) => `${s.name}${s.required ? '*' : ''} (${s.primitive})`).join(', ');
+    const slots = a.slots.map((s) => `${s.name}${s.required ? '*' : ''} (${s.primitive}${s.options ? `: one of ${s.options.join(' | ')}` : ''})`).join(', ');
     lines.push(`  ${a.name}: ${a.about}${slots ? ` Slots: ${slots}.` : ''}`);
   }
   lines.push('  (* = required)', '');
@@ -199,7 +214,10 @@ export function checkPlan(tool: unknown, input: unknown, acts: readonly ActCard[
       for (const [k, v] of Object.entries(fill as Record<string, unknown>)) {
         if (v === null || v === undefined) continue;
         if (!plain(v)) return { ok: false, problem: `gave a value for ${k} that is not plain data` };
-        clean[k] = v;
+        const slot = card.slots.find((s) => s.name === k)!;
+        const a = slot.admit ? slot.admit(v) : { ok: true as const, value: v };
+        if (!a.ok) return { ok: false, problem: `gave ${k} a value the app does not accept (${a.why})` };
+        clean[k] = a.value;
       }
       return { ok: true, plan: { kind: 'propose', act: card.name, fill: clean, why: o.why.trim() } };
     }
@@ -248,7 +266,7 @@ export async function post(
   try {
     const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body), ...(ctl ? { signal: ctl.signal } : {}) });
     const text = await res.text();
-    if (!res.ok) return { ok: false, problem: `answered ${res.status}${redact(errorMessage(text), headers)}` };
+    if (!res.ok) return { ok: false, problem: `answered ${res.status}${errorMessage(text, headers)}` };
     try { return { ok: true, json: JSON.parse(text) }; } catch { return { ok: false, problem: 'answered with something that is not JSON' }; }
   } catch (e) {
     const aborted = (e as Error)?.name === 'AbortError';
@@ -273,10 +291,13 @@ export function redact(text: string, headers: Record<string, string>): string {
 }
 
 /** The provider's own error message, if it sent one. Short, and never the request (which held the key). */
-function errorMessage(text: string): string {
+function errorMessage(text: string, headers: Record<string, string>): string {
   try {
     const j = JSON.parse(text) as { error?: { message?: unknown } };
     const m = j.error?.message;
-    return typeof m === 'string' && m ? ` (${m.slice(0, 160)})` : '';
+    // Redact BEFORE cutting: a key echoed across the cut would otherwise leave
+    // half of itself behind, and half no longer matches the header to remove it.
+    // (Found by the second independent review.)
+    return typeof m === 'string' && m ? ` (${redact(m, headers).slice(0, 160)})` : '';
   } catch { return ''; }
 }

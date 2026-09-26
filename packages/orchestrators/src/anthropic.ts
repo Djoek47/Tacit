@@ -15,7 +15,7 @@
  * opt-in, and a reply in plain text is accepted as an answer instead.
  */
 
-import type { ActDef } from '@intermenu/aiuic-core';
+import type { ActDef, Ctx } from '@intermenu/aiuic-core';
 import type { Orchestrator } from '@intermenu/aiuic-pyramid';
 import { actCards, checkPlan, couldNot, describeInput, planTools, post, SYSTEM, LIMITS, type Fetch } from './plan.js';
 
@@ -32,6 +32,8 @@ export type AnthropicOptions = {
   toolChoice?: 'auto' | 'any';
   /** Let the model propose acts that grant authority. Off by default. */
   includeAuthority?: boolean;
+  /** The app's context, for reading slot options and checking proposed values against them. */
+  ctx?: () => Ctx;
 };
 
 const WHO = 'the Claude API';
@@ -41,7 +43,7 @@ export function anthropicOrchestrator(opts: AnthropicOptions): Orchestrator {
   const url = `${(opts.baseUrl ?? 'https://api.anthropic.com').replace(/\/$/, '')}/v1/messages`;
 
   return async (input) => {
-    const acts = actCards(opts.acts(), { includeAuthority: !!opts.includeAuthority });
+    const acts = actCards(opts.acts(), { includeAuthority: !!opts.includeAuthority, ...(opts.ctx ? { ctx: opts.ctx() } : {}) });
     const tools = planTools(acts).map((t) => ({ name: t.name, description: t.description, input_schema: t.schema }));
     const res = await post(fetch, url, { 'x-api-key': opts.apiKey, 'anthropic-version': '2023-06-01' }, {
       model: opts.model,

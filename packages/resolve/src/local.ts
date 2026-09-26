@@ -148,13 +148,21 @@ export class LocalResolver implements Resolver {
       // even full coverage lands under the routing threshold. Halving was the
       // first try, and "did Sam do the laundry" (both slots filled, score 1.0)
       // halved to exactly the threshold, opened a card, and held it to commit.
-      const asking = phraseMatch >= this.routing.phraseFloor || sentenceMood === 'request';
-      const raw = weight > 0 ? total / weight : 0;
+      // A sentence that asks for nothing scores nothing. Not "less": a chore
+      // named in a question or a remark is not a weak request, it is not a
+      // request. Two rounds of review found the softer versions:
+      //   halving   "did Sam do the laundry" landed exactly on the threshold,
+      //             opened a card and held it to commit;
+      //   a floor   the score still cleared Hepta's own lower floor (0.25), so
+      //             the act led the stage and reached HOLD anyway.
+      // A trigger phrase does not override this: "who did the dishes for Sam?"
+      // matched "for". The person can always say the same thing as a request.
+      const asking = sentenceMood === 'request';
       scores.push({
         act: act.name,
         phraseMatch,
         requiredCoverage,
-        score: asking ? raw : raw * this.routing.tauAct * 0.8,
+        score: asking && weight > 0 ? total / weight : 0,
       });
     }
 

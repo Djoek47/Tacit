@@ -87,15 +87,15 @@ const localOrchestrator: Orchestrator = ({ findings }) => {
 };
 
 /** The configured planner, or the local one with a note saying why. */
-function plannerFor(p: Config['planner'], acts: () => readonly ActDef[]): Orchestrator {
+function plannerFor(p: Config['planner'], acts: () => readonly ActDef[], ctx: () => Ctx): Orchestrator {
   if (!p) return localOrchestrator;
   const env = p.provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
   const apiKey = process.env[env];
   if (!apiKey) { log(`planner: ${p.provider} is configured but ${env} is not set; planning locally`); return localOrchestrator; }
   log(`planner: ${p.provider} ${p.model} (it proposes; you decide)`);
   return p.provider === 'anthropic'
-    ? anthropicOrchestrator({ apiKey, model: p.model, acts, ...(p.baseUrl ? { baseUrl: p.baseUrl } : {}) })
-    : openaiOrchestrator({ apiKey, model: p.model, acts, ...(p.baseUrl ? { baseUrl: p.baseUrl } : {}) });
+    ? anthropicOrchestrator({ apiKey, model: p.model, acts, ctx, ...(p.baseUrl ? { baseUrl: p.baseUrl } : {}) })
+    : openaiOrchestrator({ apiKey, model: p.model, acts, ctx, ...(p.baseUrl ? { baseUrl: p.baseUrl } : {}) });
 }
 
 // ----------------------------------------------------------------- notifier
@@ -190,7 +190,7 @@ export async function start(argv: string[]) {
   const pyramid = new Pyramid({
     app, memory, ctx,
     aggregator: new Aggregator(connections.flatMap((c) => c.sources)),
-    orchestrator: plannerFor(cfg.planner, () => app.ui.definitions),
+    orchestrator: plannerFor(cfg.planner, () => app.ui.definitions, ctx),
   });
 
   const notifiers: Notifier[] = [new ConsoleNotifier((s) => log(s))];

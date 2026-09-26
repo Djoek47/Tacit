@@ -232,3 +232,18 @@ describe('the shared memory', () => {
     expect(v.orders.o1!.active).toBe(true);
   });
 });
+
+describe('review 2: what the card shows is what commit() receives', () => {
+  it('admits a proposed value only through the slot\'s own options or resolver', async () => {
+    const h = build(() => ({
+      kind: 'propose', act: 'set_budget', why: 'x',
+      fill: { category: { value: 'savings', label: 'Groceries' }, amount: { n: 5000, label: '$50' } },
+    }));
+    await h.pyramid.pursue('set my grocery budget');
+    const slots = h.app.view()!.slots;
+    // A category the host never offered is left empty for the person.
+    expect(slots.find((s) => s.name === 'category')!.value).toBeUndefined();
+    // An amount is read from its words, so the card and the commit agree: $50, not 5000.
+    expect((slots.find((s) => s.name === 'amount')!.value as { n: number }).n).toBe(50);
+  });
+});

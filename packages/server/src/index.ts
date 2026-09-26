@@ -33,7 +33,7 @@ import type { Pyramid } from '@intermenu/aiuic-pyramid';
 import type { MemoryReader } from '@intermenu/aiuic-memory';
 import { toView } from '@intermenu/aiuic-present';
 import { explain } from '@intermenu/aiuic-devtools';
-import type { Ctx } from '@intermenu/aiuic-core';
+import { admitValue, type Ctx, type Filled } from '@intermenu/aiuic-core';
 
 export type HeptaServerConfig = {
   name?: string;
@@ -136,13 +136,20 @@ export function createHeptaServer(cfg: HeptaServerConfig): McpServer {
     app.reset();
     const run = app.ui.start(act);
     const dropped: string[] = [];
+    const refused: { slot: string; why: string }[] = [];
+    const admitted: Filled = {};
     for (const [k, v] of Object.entries(fill)) {
-      if (!def.slots[k]) { dropped.push(k); continue; }
-      run.setValue(k, v, 'model');
+      const sd = def.slots[k];
+      if (!sd) { dropped.push(k); continue; }
+      // The card must show what commit() would receive: values go through the slot's own options or resolver.
+      const a = admitValue(sd, v, cfg.ctx(), admitted);
+      if (!a.ok) { refused.push({ slot: k, why: a.why }); continue; }
+      admitted[k] = a.value;
+      run.setValue(k, a.value, 'model');
     }
     run.evaluate();
     app.draw();
-    return json({ status: run.status, waitingFor: 'the person', dropped, stage: toView(run, optionsFor as never) });
+    return json({ status: run.status, waitingFor: 'the person', dropped, refused, stage: toView(run, optionsFor as never) });
   });
 
   if (cfg.pyramid) {
