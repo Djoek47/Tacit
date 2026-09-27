@@ -21,6 +21,7 @@
  * should read `app.hear(string)`.
  */
 
+import { Menus, type MenusOptions } from '@intermenu/aiuic-menu';
 import {
   createAIUIC,
   defineAct,
@@ -63,6 +64,12 @@ export type AppConfig = {
   optionsFor?: (act: ActDef, slot: string) => Option[];
   /** Domains the app declares in its shape, so the lint knows them. */
   domains?: CustomDomains;
+  /**
+   * The menus. Left out, they are generated from the acts, grouped by the
+   * `domain` each act already carries — so every app has menus without anyone
+   * writing one, and a menu cannot promise what the app cannot do.
+   */
+  menus?: MenusOptions;
 };
 
 export type HearResult = {
@@ -108,6 +115,8 @@ export class App {
   readonly ui: AIUIC;
   readonly resolver: LocalResolver;
   readonly speculator: Speculator | null;
+  /** The way to an act. Navigation only: nothing here can commit. */
+  readonly menus: Menus;
   private presenters: Presenter[] = [];
   private wired: { update: () => void } | null = null;
   private boundRun: ActRun | null = null;
@@ -124,7 +133,23 @@ export class App {
       ? null
       : new Speculator(this.ui, this.resolver, (act, slot) => this.optionsFor(act, slot));
 
+    this.menus = new Menus(config.acts, config.menus ?? {});
     this.presenters = config.presenters ?? [];
+  }
+
+  /**
+   * Put an act on the stage because the person picked it out of a menu, rather
+   * than said it. It arrives empty and waits: picking a name is not consent to
+   * what the act does, so the run goes through the same gate a spoken one does.
+   */
+  pick(act: string): ActRun | null {
+    const chosen = this.menus.choose(act);
+    if (chosen.kind !== 'act') return null;
+    this.reset();
+    const run = this.ui.start(chosen.act);
+    run.evaluate();
+    this.draw();
+    return run;
   }
 
   private ctx(): Ctx {

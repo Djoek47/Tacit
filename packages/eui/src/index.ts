@@ -8,6 +8,10 @@
  *   domain   what an act in each part of the app is allowed to be — checkable
  *   stage    one card, drawn in the language, over the same view every
  *            presenter gets
+ *   menu     the way to a card, in the same language, with what an act costs
+ *            shown before it is picked
+ *   element  <eui-stage>: one custom element, so the language works in React,
+ *            Vue, Svelte, Angular or a plain HTML file without a binding each
  *
  * Nothing here restates a contract rule. If a card decides when silence
  * commits, the boundary is in the wrong place and the fix is upstream.
@@ -18,4 +22,6 @@ export * from './domain.js';
 export * from './beats.js';
 export * from './css.js';
 export * from './stage.js';
+export * from './menu.js';
+export * from './element.js';
 export * from './theme.js';

@@ -10,6 +10,7 @@ export default defineConfig({
       '@intermenu/aiuic-present': fileURLToPath(new URL('../present/src/index.ts', import.meta.url)),
       '@intermenu/aiuic-devtools': fileURLToPath(new URL('../devtools/src/index.ts', import.meta.url)),
       '@intermenu/aiuic-eui': fileURLToPath(new URL('../eui/src/index.ts', import.meta.url)),
+      '@intermenu/aiuic-menu': fileURLToPath(new URL('../menu/src/index.ts', import.meta.url)),
       '@intermenu/aiuic-kit': fileURLToPath(new URL('../kit/src/index.ts', import.meta.url)),
       '@intermenu/aiuic-memory': fileURLToPath(new URL('../memory/src/index.ts', import.meta.url)),
     },

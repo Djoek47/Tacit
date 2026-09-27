@@ -213,3 +213,40 @@ describe('the routing a host gets is the routing the harness measures', () => {
     expect(h.written).toEqual([]);
   });
 });
+
+describe('menus come with the app', () => {
+  const build = () => createApp({
+    clock: new FakeClock(T0),
+    ctx: () => ({ actor: { id: 'me', basePauseMs: 850 }, attention, reachLimit: 1, undoWindowMs: 5000 }),
+    acts: [
+      defineAct({ name: 'add_item', domain: 'groceries', phrases: ['add'], radius: 'self',
+        slots: { item: { primitive: 'chip', options: () => [{ value: 'milk', label: 'Milk' }], required: true, order: 1 } },
+        commit: () => ({ id: '1' }), undo: () => {} }),
+      defineAct({ name: 'clear_list', domain: 'groceries', phrases: ['clear'], radius: 'self',
+        slots: { sure: { primitive: 'chip', options: () => [{ value: 'yes', label: 'Yes' }], required: true, order: 1 } },
+        commit: () => ({ id: '2' }), undo: () => {} }),
+      defineAct({ name: 'pay_allowance', domain: 'money', phrases: ['pay'], radius: 'external',
+        slots: { amount: { primitive: 'chip', options: () => [{ value: 5, label: '$5' }], required: true, order: 1 } },
+        commit: () => ({ id: '3' }) }),
+    ],
+  });
+
+  it('generates them from the acts, with nobody writing one', () => {
+    const app = build();
+    expect(app.menus.view().items.map((i) => i.id)).toEqual(['groceries', 'pay_allowance']);
+  });
+
+  it('puts a picked act on the stage empty, waiting — picking a name is not consent', () => {
+    const app = build();
+    const run = app.pick('pay_allowance')!;
+    expect(run.def.name).toBe('pay_allowance');
+    expect(app.view()!.slots.every((s) => s.status === 'empty')).toBe(true);
+    expect(app.view()!.canAssent).toBe(false);
+  });
+
+  it('starts nothing when what was picked is a menu, not an act', () => {
+    const app = build();
+    expect(app.pick('groceries')).toBeNull();
+    expect(app.act).toBeNull();
+  });
+});

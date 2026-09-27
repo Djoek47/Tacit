@@ -31,6 +31,9 @@
       ],
       "@intermenu/aiuic-eui": [
         "../eui/src/index.ts"
+      ],
+      "@intermenu/aiuic-menu": [
+        "../menu/src/index.ts"
       ]
     }
   },

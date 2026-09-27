@@ -37,6 +37,9 @@
       ],
       "@intermenu/aiuic-memory": [
         "../memory/src/index.ts"
+      ],
+      "@intermenu/aiuic-menu": [
+        "../menu/src/index.ts"
       ]
     }
   },

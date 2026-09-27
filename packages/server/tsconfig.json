@@ -46,6 +46,9 @@
       ],
       "@intermenu/aiuic-mcp": [
         "../mcp/src/index.ts"
+      ],
+      "@intermenu/aiuic-menu": [
+        "../menu/src/index.ts"
       ]
     }
   },

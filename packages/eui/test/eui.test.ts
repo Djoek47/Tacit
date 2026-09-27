@@ -48,50 +48,7 @@ function build(attention = { foreground: true, unlocked: true, proximityClear: t
 }
 
 /* A DOM stand-in with style support, since the card sets --eui-domain. */
-type FakeEl = {
-  tag: string; textContent: string | null; className: string;
-  attrs: Record<string, string>; vars: Record<string, string>;
-  children: FakeEl[]; listeners: Array<() => void>;
-  appendChild(c: FakeEl): void;
-  addEventListener(t: string, fn: () => void): void;
-  replaceChildren(): void;
-  setAttribute(k: string, v: string): void;
-  style: Record<string, string> & { setProperty(k: string, v: string): void };
-  click(): void;
-  find(cls: string): FakeEl[];
-  depth(cls: string, d?: number): number;
-  text(): string;
-};
 
-function makeEl(tag: string): FakeEl {
-  const vars: Record<string, string> = {};
-  const style = Object.assign({} as Record<string, string>, {
-    setProperty(k: string, v: string) { vars[k] = v; },
-  });
-  const node: FakeEl = {
-    tag, textContent: null, className: '', attrs: {}, vars, style,
-    children: [], listeners: [],
-    appendChild(c) { node.children.push(c); },
-    addEventListener(_t, fn) { node.listeners.push(fn); },
-    replaceChildren() { node.children.length = 0; },
-    setAttribute(k, v) { node.attrs[k] = v; },
-    click() { for (const fn of node.listeners) fn(); },
-    find(cls) {
-      const hit: FakeEl[] = node.className.split(' ').includes(cls) ? [node] : [];
-      for (const c of node.children) hit.push(...c.find(cls));
-      return hit;
-    },
-    /** Deepest nesting of `cls` inside itself, anywhere in the subtree. */
-    depth(cls, d = 0) {
-      const here = node.className.split(' ').includes(cls) ? d + 1 : d;
-      return node.children.reduce((m, c) => Math.max(m, c.depth(cls, here)), here);
-    },
-    text() { return [node.textContent ?? '', ...node.children.map((c) => c.text())].join(' ').trim(); },
-  };
-  return node;
-}
-
-const fakeDom = () => ({ root: makeEl('div'), doc: { createElement: makeEl } });
 
 // ------------------------------------------------------------------ material
 
@@ -484,6 +441,7 @@ describe('domainColour', () => {
 // ------------------------------------------------------- an app's own domains
 
 import { lookupDomain, checkTheme, orbTints, ORB_TINT as TINT } from '../src/index.js';
+import { fakeDom, makeEl, type FakeEl } from './fake-dom.js';
 
 describe("an app's own domains", () => {
   const extra = { tasks: { kicker: 'Tasks', colour: '#5B6CFF' }, groceries: { kicker: 'FOOD', colour: '#FF00FF' } };

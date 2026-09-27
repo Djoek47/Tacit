@@ -40,6 +40,9 @@
       ],
       "@intermenu/aiuic-pyramid": [
         "../pyramid/src/index.ts"
+      ],
+      "@intermenu/aiuic-menu": [
+        "../menu/src/index.ts"
       ]
     }
   },

@@ -50,6 +50,9 @@
       ],
       "@intermenu/aiuic-compose": [
         "../compose/src/index.ts"
+      ],
+      "@intermenu/aiuic-menu": [
+        "../menu/src/index.ts"
       ]
     },
     "types": [

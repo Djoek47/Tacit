@@ -14,7 +14,15 @@ import {
 
 const px = (n: number) => `${n}px`;
 
-/** Every token as a custom property, so a host can read them without importing JS. */
+/**
+ * Every token as a custom property, so a host can read them without importing JS.
+ *
+ * `:root` and `:host` both, because a shadow root is not the document root:
+ * inside `<eui-stage>` only `:host` matches, and with `:root` alone every
+ * `var(--eui-…)` resolved to nothing. A browser caught it — rows came out
+ * 41 px, under the 44 px minimum the language promises — which is exactly the
+ * way a design system ends up looking right only in its own demo.
+ */
 export function cssVariables(): string {
   const lines: string[] = [];
   for (const [k, v] of Object.entries(DOMAIN_COLOUR)) lines.push(`  --eui-${k}: ${v};`);
@@ -37,7 +45,7 @@ export function cssVariables(): string {
   // The domain colour of the card currently on stage. Set per-card, never
   // globally: two domains never share a stage, so this is always unambiguous.
   lines.push(`  --eui-domain: var(--eui-neutral);`);
-  return `:root {\n${lines.join('\n')}\n}`;
+  return `:root, :host {\n${lines.join('\n')}\n}`;
 }
 
 /**
@@ -155,5 +163,49 @@ export function stylesheet(): string {
   }
   .eui-chip:active { transform: none; }
 }
+
+/* ---------------------------------------------------------------- menus ---
+   The way to a card, in the same language as the card. Every target clears
+   the minimum on a touch screen, because the tester fails the build otherwise
+   and because a thumb is wider than a cursor. */
+.eui-menu { font-family: var(--eui-font); display: flex; flex-direction: column; gap: 10px; }
+.eui-menu-title {
+  font-size: var(--eui-type-headline-size); line-height: var(--eui-type-headline-line);
+  font-weight: var(--eui-type-headline-weight);
+}
+.eui-menu-note {
+  font-size: var(--eui-type-detail-size); line-height: var(--eui-type-detail-line);
+  opacity: .72;
+}
+.eui-menu-empty { font-size: var(--eui-type-detail-size); opacity: .6; }
+.eui-back {
+  align-self: flex-start; min-height: var(--eui-target-min); min-width: var(--eui-target-min);
+  display: inline-flex; align-items: center; padding: 0 12px;
+  background: transparent; border: 0; cursor: pointer; color: inherit; font: inherit;
+  font-size: var(--eui-type-detail-size); opacity: .8; border-radius: var(--eui-radius-md);
+}
+.eui-back:hover { opacity: 1; }
+.eui-items { display: flex; flex-direction: column; gap: 8px; }
+.eui-item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  min-height: var(--eui-target-min); padding: 10px 14px; box-sizing: border-box;
+  text-align: left; cursor: pointer; color: inherit; font: inherit;
+  background: rgba(255,255,255, var(--eui-surface-row));
+  border: 1px solid transparent; border-left: 3px solid var(--eui-domain);
+  border-radius: var(--eui-radius-md);
+  transition: background var(--eui-motion-snappy) ease;
+}
+.eui-item:hover { background: rgba(255,255,255, var(--eui-surface-cardStrong)); }
+.eui-item:focus-visible { outline: 2px solid var(--eui-domain); outline-offset: 2px; }
+.eui-item[data-spotlit="true"] { border-color: var(--eui-domain); }
+.eui-item-label { flex: 1; }
+.eui-item-cost {
+  font-size: var(--eui-type-kicker-size); letter-spacing: var(--eui-type-kicker-tracking);
+  text-transform: uppercase; opacity: .85; white-space: nowrap;
+}
+.eui-item-cost[data-radius="external"] { color: var(--eui-danger); opacity: 1; }
+.eui-item-cost[data-radius="other-person"] { color: var(--eui-warning); opacity: 1; }
+.eui-item-count { font-size: var(--eui-type-detail-size); opacity: .55; }
+.eui-item-note { flex-basis: 100%; font-size: var(--eui-type-detail-size); opacity: .7; }
 `;
 }
