@@ -25186,6 +25186,166 @@ function admitValue(slot, value, ctx, filled = {}) {
   return { ok: false, why: "only plain text is accepted here" };
 }
 
+// ../../packages/menu/src/index.ts
+var ROOT = "root";
+var OTHER = "other";
+var humanise = (s) => s.replace(/[_-]+/g, " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase().trim();
+var title = (s) => {
+  const h = humanise(s);
+  return h.charAt(0).toUpperCase() + h.slice(1);
+};
+function declaredRadius(act) {
+  return typeof act.radius === "string" ? act.radius : act.radius.max;
+}
+function menusFromActs(acts, opts = {}) {
+  const byDomain = /* @__PURE__ */ new Map();
+  for (const a of acts) {
+    const key = a.domain ?? OTHER;
+    const list = byDomain.get(key);
+    if (list) list.push(a);
+    else byDomain.set(key, [a]);
+  }
+  const root = { id: ROOT, title: opts.title ?? "Home", acts: [], menus: [] };
+  const out = [root];
+  for (const [domain, group] of byDomain) {
+    const sorted = [...group].sort((a, b) => a.name.localeCompare(b.name));
+    if (sorted.length === 1) {
+      root.acts.push(sorted[0].name);
+      continue;
+    }
+    const id = domain;
+    root.menus.push(id);
+    out.push({ id, title: opts.names?.[domain] ?? title(domain), acts: sorted.map((a) => a.name), menus: [] });
+  }
+  root.acts.sort((a, b) => a.localeCompare(b));
+  root.menus.sort((a, b) => a.localeCompare(b));
+  return [root, ...out.slice(1).sort((a, b) => a.id.localeCompare(b.id))];
+}
+var Menus = class {
+  specs;
+  acts;
+  path = [ROOT];
+  spotlitActs = /* @__PURE__ */ new Set();
+  notes = /* @__PURE__ */ new Map();
+  menuNote = null;
+  constructor(acts, opts = {}) {
+    this.acts = new Map(acts.map((a) => [a.name, a]));
+    const specs = opts.specs ?? menusFromActs(acts, opts);
+    this.specs = new Map(specs.map((s) => [s.id, s]));
+  }
+  /** Every menu, as generated or as given. */
+  get structure() {
+    return [...this.specs.values()];
+  }
+  get here() {
+    return this.path[this.path.length - 1];
+  }
+  view() {
+    const spec = this.specs.get(this.here);
+    const trail = this.path.slice(0, -1).map((id) => ({ id, title: this.specs.get(id)?.title ?? title(id) }));
+    if (!spec) return { id: this.here, title: title(this.here), trail, items: [], note: this.menuNote, atRoot: this.path.length === 1 };
+    const items = [
+      ...spec.menus.map((id) => {
+        const child = this.specs.get(id);
+        return {
+          kind: "menu",
+          id,
+          label: child?.title ?? title(id),
+          domain: id,
+          radius: null,
+          count: child ? child.acts.length : 0,
+          note: this.notes.get(id) ?? null,
+          spotlit: child ? child.acts.some((a) => this.spotlitActs.has(a)) : false
+        };
+      }),
+      ...spec.acts.flatMap((name2) => {
+        const act = this.acts.get(name2);
+        if (!act) return [];
+        return [{
+          kind: "act",
+          id: name2,
+          label: title(name2),
+          domain: act.domain ?? null,
+          radius: declaredRadius(act),
+          count: 0,
+          note: this.notes.get(name2) ?? null,
+          spotlit: this.spotlitActs.has(name2)
+        }];
+      })
+    ];
+    const ordered = [...items.filter((i) => i.spotlit), ...items.filter((i) => !i.spotlit)];
+    return { id: spec.id, title: spec.title, trail, items: ordered, note: this.menuNote, atRoot: this.path.length === 1 };
+  }
+  /** Move into a menu. Writes nothing. */
+  open(id) {
+    if (!this.specs.has(id) || this.path.includes(id)) return false;
+    this.path.push(id);
+    this.menuNote = null;
+    return true;
+  }
+  back() {
+    if (this.path.length === 1) return false;
+    this.path.pop();
+    this.menuNote = null;
+    return true;
+  }
+  home() {
+    this.path = [ROOT];
+    this.menuNote = null;
+  }
+  /** What the person picked. Starting an act is the host's, through the contract. */
+  choose(id) {
+    if (this.specs.has(id)) {
+      this.open(id);
+      return { kind: "menu", menu: id };
+    }
+    if (this.acts.has(id)) return { kind: "act", act: id };
+    return { kind: "unknown", id };
+  }
+  /** Every act, wherever it sits, for a person searching rather than walking. */
+  find(query) {
+    const q = humanise(query);
+    if (!q) return [];
+    const words2 = q.split(/\s+/);
+    return [...this.acts.values()].filter((a) => {
+      const hay = `${humanise(a.name)} ${a.domain ?? ""} ${(a.phrases ?? []).join(" ")}`;
+      return words2.every((w) => hay.includes(w));
+    }).map((a) => ({
+      kind: "act",
+      id: a.name,
+      label: title(a.name),
+      domain: a.domain ?? null,
+      radius: declaredRadius(a),
+      count: 0,
+      note: this.notes.get(a.name) ?? null,
+      spotlit: this.spotlitActs.has(a.name)
+    }));
+  }
+  // --------------------------------------------------------- what the AI may do
+  /**
+   * Raise these, and say why. The only control the AI has over a menu.
+   * There is deliberately no counterpart that lowers or removes anything.
+   */
+  spotlight(acts, why) {
+    this.spotlitActs = new Set(acts.filter((a) => this.acts.has(a)));
+    if (why !== void 0) this.menuNote = why;
+  }
+  /** A line against one item. Replaces any line already there; never hides it. */
+  annotate(id, note) {
+    if (this.acts.has(id) || this.specs.has(id)) this.notes.set(id, note);
+  }
+  /** One line about the menu now open. */
+  say(note) {
+    this.menuNote = note;
+  }
+  /** Drop every annotation and every raised item. */
+  clear() {
+    this.spotlitActs.clear();
+    this.notes.clear();
+    this.menuNote = null;
+  }
+};
+
 // ../../packages/resolve/src/text.ts
 var PUNCT = /[.,!?;:'"`()[\]{}<>/\\|@#$%^&*_+=~]/g;
 function normalize(s) {
@@ -26065,7 +26225,7 @@ var Speculator = class {
 };
 
 // ../../packages/present/src/index.ts
-var humanise = (s) => s.replace(/[_-]+/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+var humanise2 = (s) => s.replace(/[_-]+/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
 function display(v) {
   if (v === null || v === void 0) return "";
   if (typeof v === "object") {
@@ -26109,7 +26269,7 @@ function toView(run, optionsFor, _ctx) {
     return {
       name: name2,
       primitive: sd.primitive,
-      label: humanise(name2),
+      label: humanise2(name2),
       status: st.status,
       ...st.value !== void 0 ? { value: st.value } : {},
       // A plain value reads as its option's label. "dishes" is what the act
@@ -26157,8 +26317,8 @@ function previewLine(run, slots) {
     }
   }
   const filled = slots.filter((s) => s.status === "filled" && s.display);
-  if (filled.length === 0) return humanise(def.name);
-  return humanise(def.name) + ": " + filled.map((s) => s.display).join(" \xB7 ");
+  if (filled.length === 0) return humanise2(def.name);
+  return humanise2(def.name) + ": " + filled.map((s) => s.display).join(" \xB7 ");
 }
 function attachPresenters(run, presenters, optionsFor) {
   const update = () => {
@@ -26567,14 +26727,31 @@ var App = class {
     for (const a of config3.acts) this.ui.defineAct(a);
     this.resolver = new LocalResolver(config3.routing ?? DEFAULT_ROUTING);
     this.speculator = config3.speculate === false ? null : new Speculator(this.ui, this.resolver, (act, slot) => this.optionsFor(act, slot));
+    this.menus = new Menus(config3.acts, config3.menus ?? {});
     this.presenters = config3.presenters ?? [];
   }
   ui;
   resolver;
   speculator;
+  /** The way to an act. Navigation only: nothing here can commit. */
+  menus;
   presenters = [];
   wired = null;
   boundRun = null;
+  /**
+   * Put an act on the stage because the person picked it out of a menu, rather
+   * than said it. It arrives empty and waits: picking a name is not consent to
+   * what the act does, so the run goes through the same gate a spoken one does.
+   */
+  pick(act) {
+    const chosen = this.menus.choose(act);
+    if (chosen.kind !== "act") return null;
+    this.reset();
+    const run = this.ui.start(chosen.act);
+    run.evaluate();
+    this.draw();
+    return run;
+  }
   ctx() {
     const base = this.config.ctx();
     return { ...base, now: base.now ?? /* @__PURE__ */ new Date() };
@@ -27284,18 +27461,18 @@ var Conductor = class {
   }
   async settle(run, o) {
     const v = authorise(run, o);
-    const title = this.titleOf(run);
+    const title2 = this.titleOf(run);
     if (!v.ok) {
       const fill = { ...run.filled };
       run.discard();
-      this.push({ orderId: o.id, kind: "waiting", title, detail: o.text, act: run.def.name, fill, why: v.why });
+      this.push({ orderId: o.id, kind: "waiting", title: title2, detail: o.text, act: run.def.name, fill, why: v.why });
       return;
     }
     await run.assentUnattended();
     if (run.status === "settled" && run.result) {
-      this.push({ orderId: o.id, kind: "done", title, detail: o.text, act: run.def.name, fill: { ...run.filled }, result: run.result });
+      this.push({ orderId: o.id, kind: "done", title: title2, detail: o.text, act: run.def.name, fill: { ...run.filled }, result: run.result });
     } else {
-      this.push({ orderId: o.id, kind: "failed", title, detail: "the app refused it", act: run.def.name });
+      this.push({ orderId: o.id, kind: "failed", title: title2, detail: "the app refused it", act: run.def.name });
     }
   }
   titleOf(run) {
@@ -27443,7 +27620,7 @@ function checkDelegation(tool, c, to) {
 
 // ../../packages/mcp/src/schema.ts
 var MAX_SLOTS = 8;
-var humanise2 = (v) => String(v).replace(/[_-]+/g, " ");
+var humanise3 = (v) => String(v).replace(/[_-]+/g, " ");
 var isType = (p, t) => p.type === t || Array.isArray(p.type) && p.type.includes(t);
 function slotsFromSchema(schema, opts) {
   const props = Object.entries(schema?.properties ?? {});
@@ -27468,7 +27645,7 @@ function slotsFromSchema(schema, opts) {
     const req = required3.has(name2);
     const catalog = opts.catalogs[name2];
     if (catalog || p.enum) {
-      const list = catalog ?? (() => (p.enum ?? []).map((v) => ({ value: v, label: humanise2(v) })));
+      const list = catalog ?? (() => (p.enum ?? []).map((v) => ({ value: v, label: humanise3(v) })));
       slots[name2] = { primitive: "chip", options: () => list(), required: req, order };
       toArg[name2] = (v) => v;
     } else if (isType(p, "number") || isType(p, "integer")) {
@@ -31722,8 +31899,8 @@ function deriveShape(appName, tools) {
   for (const t of tools) {
     if (t.readOnly) continue;
     const phrase2 = words2(t.name);
-    const title = t.title ? words2(t.title) : null;
-    shaped[t.name] = { phrases: [.../* @__PURE__ */ new Set([phrase2, ...title && title !== phrase2 ? [title] : []])] };
+    const title2 = t.title ? words2(t.title) : null;
+    shaped[t.name] = { phrases: [.../* @__PURE__ */ new Set([phrase2, ...title2 && title2 !== phrase2 ? [title2] : []])] };
   }
   return {
     schema: SHAPE_SCHEMA,
@@ -43569,9 +43746,9 @@ var zodToJsonSchema2 = (schema, options) => {
     ...refs,
     currentPath: [...refs.basePath, refs.definitionPath, name2]
   }, false) ?? parseAnyDef2(refs);
-  const title = typeof options === "object" && options.name !== void 0 && options.nameStrategy === "title" ? options.name : void 0;
-  if (title !== void 0) {
-    main.title = title;
+  const title2 = typeof options === "object" && options.name !== void 0 && options.nameStrategy === "title" ? options.name : void 0;
+  if (title2 !== void 0) {
+    main.title = title2;
   }
   if (refs.flags.hasReferencedOpenAiAnyType) {
     if (!definitions) {
@@ -45830,10 +46007,10 @@ var McpServer = class {
       return registeredResourceTemplate;
     }
   }
-  _createRegisteredResource(name2, title, uri, metadata, readCallback) {
+  _createRegisteredResource(name2, title2, uri, metadata, readCallback) {
     const registeredResource = {
       name: name2,
-      title,
+      title: title2,
       metadata,
       readCallback,
       enabled: true,
@@ -45862,10 +46039,10 @@ var McpServer = class {
     this._registeredResources[uri] = registeredResource;
     return registeredResource;
   }
-  _createRegisteredResourceTemplate(name2, title, template, metadata, readCallback) {
+  _createRegisteredResourceTemplate(name2, title2, template, metadata, readCallback) {
     const registeredResourceTemplate = {
       resourceTemplate: template,
-      title,
+      title: title2,
       metadata,
       readCallback,
       enabled: true,
@@ -45899,9 +46076,9 @@ var McpServer = class {
     }
     return registeredResourceTemplate;
   }
-  _createRegisteredPrompt(name2, title, description, argsSchema, callback) {
+  _createRegisteredPrompt(name2, title2, description, argsSchema, callback) {
     const registeredPrompt = {
-      title,
+      title: title2,
       description,
       argsSchema: argsSchema === void 0 ? void 0 : objectFromShape(argsSchema),
       callback,
@@ -45940,10 +46117,10 @@ var McpServer = class {
     }
     return registeredPrompt;
   }
-  _createRegisteredTool(name2, title, description, inputSchema, outputSchema, annotations, execution, _meta, handler) {
+  _createRegisteredTool(name2, title2, description, inputSchema, outputSchema, annotations, execution, _meta, handler) {
     validateAndWarnToolName(name2);
     const registeredTool = {
-      title,
+      title: title2,
       description,
       inputSchema: getZodSchemaObject(inputSchema),
       outputSchema: getZodSchemaObject(outputSchema),
@@ -46026,8 +46203,8 @@ var McpServer = class {
     if (this._registeredTools[name2]) {
       throw new Error(`Tool ${name2} is already registered`);
     }
-    const { title, description, inputSchema, outputSchema, annotations, _meta } = config3;
-    return this._createRegisteredTool(name2, title, description, inputSchema, outputSchema, annotations, { taskSupport: "forbidden" }, _meta, cb);
+    const { title: title2, description, inputSchema, outputSchema, annotations, _meta } = config3;
+    return this._createRegisteredTool(name2, title2, description, inputSchema, outputSchema, annotations, { taskSupport: "forbidden" }, _meta, cb);
   }
   prompt(name2, ...rest) {
     if (this._registeredPrompts[name2]) {
@@ -46054,8 +46231,8 @@ var McpServer = class {
     if (this._registeredPrompts[name2]) {
       throw new Error(`Prompt ${name2} is already registered`);
     }
-    const { title, description, argsSchema } = config3;
-    const registeredPrompt = this._createRegisteredPrompt(name2, title, description, argsSchema, cb);
+    const { title: title2, description, argsSchema } = config3;
+    const registeredPrompt = this._createRegisteredPrompt(name2, title2, description, argsSchema, cb);
     this.setPromptRequestHandlers();
     this.sendPromptListChanged();
     return registeredPrompt;
