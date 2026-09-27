@@ -16,6 +16,9 @@ run('testing an app like a person would', () => {
     const phone = r.views.find((v) => v.viewport.name === 'phone')!;
     const rules = new Set(phone.findings.map((f) => f.rule));
     for (const rule of ['console', 'sideways', 'fingertips', 'cut-off', 'tiny-text', 'alt', 'cards']) expect(rules.has(rule as never)).toBe(true);
+    // The visually-hidden label on that page is clipped on purpose, and saying
+    // so would tell a developer to delete their accessible label.
+    expect(phone.findings.filter((f) => f.rule === 'cut-off').map((f) => f.says).join(' ')).not.toMatch(/screen reader/);
     const sideways = phone.findings.find((f) => f.rule === 'sideways')!;
     expect(sideways.says).toMatch(/scrolls sideways/);
     expect(sideways.says).toMatch(/div\.hero/);

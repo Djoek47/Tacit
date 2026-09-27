@@ -113,4 +113,41 @@
   @media (pointer:coarse){ .top .brand,.top nav a,.note a{display:inline-flex;align-items:center;min-height:44px} .top nav a{padding-inline:4px} .device .try,.code .copy{min-height:44px;min-width:44px} }
   /* On a phone the header is two rows: the name, then the sections as one row that scrolls sideways on its own. */
   @media (max-width:640px){ .top{flex-wrap:wrap;row-gap:4px} .top nav{margin-left:0;width:100%;flex-wrap:nowrap;overflow-x:auto;gap:8px;scrollbar-width:none} .top nav a{white-space:nowrap} }
+
+  /* ------------------------------------------------------------- playground
+     Where a developer pastes what they already have and sees their own menus.
+     Two columns on a desk, one on a phone, and every target a thumb can hit. */
+  .play { max-width:1180px; margin:0 auto; padding:40px 20px 8px; }
+  .play-head { max-width:720px; }
+  .play-head h2 { margin:6px 0 10px; }
+  .play-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:22px; align-items:start; }
+  .play-in, .play-out { border:1px solid var(--line); border-radius:16px; padding:14px; background:var(--surface); }
+  .tabs { display:flex; gap:6px; margin-bottom:10px; }
+  .tab { min-height:44px; padding:0 14px; border-radius:999px; border:1px solid var(--line);
+         background:transparent; color:var(--dim); font:inherit; font-size:14px; cursor:pointer; }
+  .tab[aria-selected="true"] { color:var(--ink); border-color:currentColor; }
+  #playSrc { width:100%; box-sizing:border-box; resize:vertical; min-height:240px;
+             font:13px/1.5 var(--mono); color:var(--ink); background:var(--sunk);
+             border:1px solid var(--line); border-radius:12px; padding:12px; }
+  .play-actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .play-actions .go, .play-actions .ghost { min-height:44px; padding:0 16px; border-radius:999px;
+             font:inherit; font-size:15px; cursor:pointer; border:1px solid var(--line); }
+  /* --bg is not a token on this page; the accent pair is, and it stays legible
+     in both themes. Written as var(--bg), the label was dark on dark. */
+  .play-actions .go { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); font-weight:600; }
+  .play-actions .ghost { background:transparent; color:var(--dim); }
+  .play-note { font-size:13px; color:var(--dim); margin:10px 0 0; min-height:1.2em; }
+  .play-note[data-bad="true"] { color:var(--bad); }
+  .play-out .bar { display:flex; align-items:center; gap:8px; font:11px/1 var(--mono);
+             letter-spacing:.14em; text-transform:uppercase; color:var(--faint); margin-bottom:12px; }
+  #playSayForm { display:flex; gap:8px; margin-top:14px; }
+  #playSay { flex:1; min-height:44px; padding:0 14px; border-radius:999px; font:inherit;
+             color:var(--ink); background:var(--sunk); border:1px solid var(--line); }
+  #playSayForm .go { min-height:44px; padding:0 18px; border-radius:999px; border:1px solid var(--accent);
+             background:var(--accent); color:var(--accent-ink); font:inherit; font-weight:600; cursor:pointer; }
+  .play-costs { margin-top:14px; display:flex; flex-direction:column; gap:6px; }
+  .play-cost { font:12px/1.5 var(--mono); color:var(--dim); }
+  .play-cost b { color:var(--ink); font-weight:500; }
+  .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+  @media (max-width:860px){ .play-grid { grid-template-columns:1fr; } }
 </style>

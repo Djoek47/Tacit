@@ -2,6 +2,7 @@
   <a class="brand" href="#top"><span class="dot" aria-hidden="true"></span>Hepta</a>
   <span class="tag">Developers · V1</span>
   <nav aria-label="Primary">
+    <a href="#bring">Bring yours</a>
     <a href="#inside">Inside</a>
     <a href="#outside">Outside</a>
     <a href="#concepts">Concepts</a>
@@ -32,10 +33,45 @@
   </div>
 </div>
 
+
+<section class="play" id="bring">
+  <div class="play-head">
+    <span class="eyebrow">Bring your own project</span>
+    <h2>Paste what your app already has. Get menus.</h2>
+    <p class="lede">Nobody writes a menu here. Menus are generated from what your app can actually do, grouped by the part of the app each action belongs to — so a menu cannot offer something your code cannot do, and an action you add on Tuesday is in the menu on Tuesday.</p>
+  </div>
+  <div class="play-grid">
+    <div class="play-in">
+      <div class="tabs" role="tablist" aria-label="What to paste">
+        <button class="tab" role="tab" aria-selected="true" data-kind="openapi" type="button">OpenAPI</button>
+        <button class="tab" role="tab" aria-selected="false" data-kind="functions" type="button">Functions</button>
+      </div>
+      <label class="sr-only" for="playSrc">Your OpenAPI document or function list</label>
+      <textarea id="playSrc" spellcheck="false" rows="14"></textarea>
+      <div class="play-actions">
+        <button class="go" id="playBuild" type="button">Build the UI</button>
+        <button class="ghost" id="playReset" type="button">Reset</button>
+      </div>
+      <p class="play-note" id="playNote" aria-live="polite"></p>
+    </div>
+    <div class="play-out">
+      <div class="bar"><span class="live" aria-hidden="true"></span>Your menus · generated in this page</div>
+      <eui-stage id="playUI"></eui-stage>
+      <form id="playSayForm" autocomplete="off">
+        <input id="playSay" aria-label="Say something to your app" placeholder="say something to it">
+        <button class="go" type="submit">Say</button>
+      </form>
+      <div class="play-costs" id="playCosts"></div>
+    </div>
+  </div>
+</section>
+
 <div class="layout">
   <nav class="toc" aria-label="On this page">
     <ol>
       <li class="grp">Start</li>
+      <li><a href="#bring">Bring your own project</a></li>
+      <li><a href="#quickstart">One call</a></li>
       <li><a href="#inside">Inside your app</a></li>
       <li><a href="#connect">Connect MCP servers</a></li>
       <li><a href="#outside">Outside, as a server</a></li>
@@ -43,6 +79,8 @@
       <li><a href="#concepts">Acts and slots</a></li>
       <li><a href="#radius">What it costs</a></li>
       <li><a href="#hold">The hold</a></li>
+      <li><a href="#menus">Menus</a></li>
+      <li><a href="#element">One element</a></li>
       <li><a href="#pyramid">The pyramid</a></li>
       <li><a href="#planner">A model that plans</a></li>
       <li><a href="#memory">Memory</a></li>
@@ -60,6 +98,33 @@
 
   <main>
     <div class="note"><b>Status.</b> V1. The packages are not on npm yet: use them from the repository (<code>packages/*</code>) or the bundled files in <code>apps/</code>. Everything on this page is covered by the test suite, except the section <a href="#unverified">Not yet verified</a>.</div>
+
+    <section id="quickstart">
+      <span class="eyebrow">Start</span>
+      <h2>One call, if you want the whole thing</h2>
+      <p>Everything below this is separable on purpose &mdash; take the core alone, or the language alone. This is the other end of that: for when you want it working before you learn how the pieces fit.</p>
+      <div class="code"><span class="lang">ts</span><pre><code>import { mount } from '@intermenu/sdk';
+
+const ui = mount({
+  el: '#app',              // an &lt;eui-stage&gt; element, or a selector
+  functions: myFunctions,  // or: acts, openapi, connections &mdash; they compose
+});
+
+ui.hear('add milk and eggs');</code></pre></div>
+      <div class="code"><span class="lang">html</span><pre><code>&lt;eui-stage id="app"&gt;&lt;/eui-stage&gt;</code></pre></div>
+      <p>Four doors in, and they compose &mdash; an app with an API document and a few local functions passes both:</p>
+      <div class="tbl"><table>
+        <thead><tr><th>Door</th><th>For</th></tr></thead>
+        <tbody>
+          <tr><td><code>acts</code></td><td>written by hand with <code>defineAct</code>, when you want every detail</td></tr>
+          <tr><td><code>functions</code></td><td>the functions your project already exports</td></tr>
+          <tr><td><code>openapi</code></td><td>your backend's own document</td></tr>
+          <tr><td><code>connections</code></td><td>MCP servers the person has approved</td></tr>
+        </tbody>
+      </table></div>
+      <p>All four end at the same <code>ActDef</code>, so the hold, the blast radius, the menus and the stage are the same code whatever your app was written in. Leave <code>el</code> out and nothing is drawn, which is how a test, a server or a voice-only host uses it.</p>
+      <p class="note"><b>Two acts arriving with one name is said out loud</b>, not resolved by last-wins. The person would otherwise be agreeing to something ambiguous.</p>
+    </section>
 
     <section id="inside">
       <span class="eyebrow">Start · Inside</span>
@@ -255,6 +320,41 @@ const orchestrator = anthropicOrchestrator({
       <p class="note"><b>Not yet run against the live APIs.</b> The request shapes follow each provider's current documentation, cited in the source. The tests use a stubbed <code>fetch</code>, and the daemon has been run end to end against a local stand-in for the Claude API.</p>
     </section>
 
+    <section id="menus">
+      <span class="eyebrow">Concepts</span>
+      <h2>Menus: a projection of what your app can do</h2>
+      <p>Nobody writes a menu. Menus are generated from the acts your app has, grouped by the <code>domain</code> each act already carries. A menu therefore cannot promise something your app cannot do, and an act you add on Tuesday is in the menu on Tuesday.</p>
+      <div class="code"><span class="lang">ts</span><pre><code>ui.menus.view();     // { title, items, trail, atRoot }
+ui.menus.open('groceries');
+ui.menus.back();
+ui.menus.find('milk');      // every act, wherever it sits
+
+ui.pick('pay_allowance');   // onto the stage, EMPTY, waiting</code></pre></div>
+      <p>A domain holding a single act gets no menu of its own; that act sits at the top. A menu whose only job is to reach one thing is a menu the stage can replace &mdash; say the thing, and the card for it appears.</p>
+      <p><b>Picking a name off a list is not consent to what the act does.</b> <code>pick()</code> puts the act up empty and it waits, through the same gate a spoken act goes through.</p>
+      <h3>What the AI may do to a menu, and what it may never do</h3>
+      <div class="code"><span class="lang">ts</span><pre><code>ui.menus.spotlight(['remove_item'], 'you added milk twice');  // raises it
+ui.menus.annotate('pay_allowance', 'due Friday');             // a line beside it
+// there is no hide(), no only(), no filter</code></pre></div>
+      <p>An assistant that can quietly drop "cancel" or "refund" from a menu has taken a decision away from the person without ever writing anything &mdash; the same harm this system exists to prevent, arriving through a door the commit contract does not watch. So raising and annotating are the whole of it, and a test holds that every act stays reachable whatever the AI does.</p>
+    </section>
+
+    <section id="element">
+      <span class="eyebrow">Concepts</span>
+      <h2>One element, whatever you write your app in</h2>
+      <p><code>&lt;eui-stage&gt;</code> is a custom element, which React, Vue, Svelte, Angular, Astro and a plain HTML file all already know how to place. One renderer every framework accepts beats four bindings that each drift.</p>
+      <div class="code"><span class="lang">jsx</span><pre><code>// React
+&lt;eui-stage ref={(el) =&gt; el &amp;&amp; mount({ el, functions })} /&gt;
+
+// Vue
+&lt;eui-stage ref="ui" /&gt;
+
+// Plain HTML &mdash; the same element
+&lt;eui-stage id="app"&gt;&lt;/eui-stage&gt;</code></pre></div>
+      <p>It carries its own stylesheet inside a shadow root, so your CSS cannot reach in and break the language, and the language cannot reach out and restyle your app. It emits what the person did &mdash; <code>eui-choose</code>, <code>eui-back</code>, <code>eui-assent</code>, <code>eui-undo</code> &mdash; and decides nothing itself.</p>
+      <p class="note">On a server there is no browser to register it with, so <code>defineStageElement()</code> answers <code>false</code> instead of throwing. The rest of the language has no DOM dependency at all.</p>
+    </section>
+
     <section id="memory">
       <span class="eyebrow">Concepts</span>
       <h2>Memory: one pen, and branches</h2>
@@ -443,6 +543,9 @@ Audience: parents with kids under 14
           <tr><td><code>aiuic-eui</code></td><td>the visual language: tokens, domains as rules, the stage</td></tr>
           <tr><td><code>aiuic-mcp</code></td><td>any MCP server as acts, sources and a shape</td></tr>
           <tr><td><code>aiuic-memory</code></td><td>one memory, one pen, branches</td></tr>
+          <tr><td><code>sdk</code></td><td>one call: acts, functions, OpenAPI or MCP in, a working UI out</td></tr>
+          <tr><td><code>aiuic-menu</code></td><td>menus generated from acts; the AI may raise, never hide</td></tr>
+          <tr><td><code>aiuic-adapters</code></td><td>an OpenAPI document, or a project's own functions, become acts</td></tr>
           <tr><td><code>aiuic-pyramid</code></td><td>aggregator, orchestrator, congregator</td></tr>
           <tr><td><code>aiuic-orchestrators</code></td><td>optional: Claude or OpenAI behind the orchestrator, planning only</td></tr>
           <tr><td><code>aiuic-conductor</code></td><td>always on; the score; the inbox</td></tr>

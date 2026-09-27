@@ -114,8 +114,20 @@ function probePage(vw: number): Probe {
     .slice(0, 8)
     .map(({ el, r }) => ({ what: describe(el), w: Math.round(r.width), h: Math.round(r.height) }));
 
+  // A label only a screen reader is meant to read is clipped on purpose: the
+  // standard visually-hidden pattern is a 1 px box with its overflow hidden.
+  // Flagging it told developers to "fix" the accessible label by deleting it,
+  // which is the opposite of the point.
+  const screenReaderOnly = (el: Element) => {
+    const r = el.getBoundingClientRect();
+    if (r.width > 2 || r.height > 2) return false;
+    const s = getComputedStyle(el);
+    return s.position === 'absolute' || s.clip !== 'auto' || s.clipPath !== 'none';
+  };
+
   const clippedEls = all.filter((el) => {
     if (!visible(el) || !(el as HTMLElement).innerText?.trim()) return false;
+    if (screenReaderOnly(el)) return false;
     const s = getComputedStyle(el);
     const hides = ['hidden', 'clip'].includes(s.overflowX) || ['hidden', 'clip'].includes(s.overflowY);
     if (!hides) return false;

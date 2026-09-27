@@ -12905,8 +12905,15 @@ function probePage(vw) {
     const l = label.getBoundingClientRect();
     return l.width < 44 || l.height < 44;
   }).slice(0, 8).map(({ el, r }) => ({ what: describe(el), w: Math.round(r.width), h: Math.round(r.height) }));
+  const screenReaderOnly = (el) => {
+    const r = el.getBoundingClientRect();
+    if (r.width > 2 || r.height > 2) return false;
+    const s = getComputedStyle(el);
+    return s.position === "absolute" || s.clip !== "auto" || s.clipPath !== "none";
+  };
   const clippedEls = all.filter((el) => {
     if (!visible(el) || !el.innerText?.trim()) return false;
+    if (screenReaderOnly(el)) return false;
     const s = getComputedStyle(el);
     const hides = ["hidden", "clip"].includes(s.overflowX) || ["hidden", "clip"].includes(s.overflowY);
     if (!hides) return false;
