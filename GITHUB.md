@@ -11,10 +11,10 @@ Suggested name: `kairos/tacit` (an organisation named Kairos), or `Djoek47/tacit
 ## 2. Push the bundle (on your Mac)
 
 ```sh
-git clone tacit.bundle tacit
+git clone -b v1 tacit.bundle tacit
 cd tacit
 git remote set-url origin git@github.com:<you>/tacit.git
-git push -u origin main
+git push -u origin v1:main   # all current work is on v1; it becomes main on GitHub
 ```
 
 ## 3. Check it works
