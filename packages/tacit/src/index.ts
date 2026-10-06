@@ -16,7 +16,8 @@
 import type { ActDef, Clock, Ctx } from '@intermenu/aiuic-core';
 import { mount, type Mounted, type MountOptions } from '@intermenu/sdk';
 import { ContextMemory, DEFAULT_BUDGET, Desk, briefingAct, notifyAct, type Channel, type Notice, type Profile, type WorldSource } from '@intermenu/aiuic-notify';
-import { Interview, personKey, type Learned } from './interview.js';
+import { Conversation, Person, type Line, type Snapshot } from '@intermenu/knowing';
+import { learnFrom, personKey, type Offer } from './learn.js';
 import { CORE_SETTINGS, Settings, settingActs, type SettingDef } from '@intermenu/aiuic-settings';
 
 export type TacitOptions = {
@@ -39,6 +40,10 @@ export type TacitOptions = {
   ctx?: () => Omit<Ctx, 'now'> & { now?: Date };
   now?: () => number;
   hourOf?: (t: number) => number;
+  /** What Tacit already knew, from a previous session. */
+  restore?: Snapshot;
+  /** A fast classifier (Jev-class) for which topic a sentence touches. */
+  classify?: ConstructorParameters<typeof Conversation>[0]['classify'];
 };
 
 export type Tacit = Mounted & {
@@ -49,9 +54,18 @@ export type Tacit = Mounted & {
   receive(n: Notice): ReturnType<Desk['ingest']>;
   /** Who this is for, as the interview and the person last left it. */
   readonly profile: TacitOptions['profile'] & { place?: string; people?: string[] };
-  /** The first conversation. Nothing it hears applies until `learn` is called with a confirmed result. */
-  interview(): Interview;
-  learn(l: Learned): void;
+  /** Everything Tacit knows about the person, in their words. */
+  readonly person: Person;
+  /** The conversation: Tacit speaks first, then listens. */
+  open(c?: { hour?: number }): Line;
+  /**
+   * The person said something. A command goes to the Stage as an act; anything
+   * else is conversation. Offers are settings the conversation suggests; none
+   * of them applies until the person accepts it.
+   */
+  talk(text: string): { line: Line | null; act: string | null; offers: Offer[] };
+  accept(o: Offer): void;
+  snapshot(): Snapshot;
   /** Pull the world in. Run it daily, or when the person asks. */
   refresh(): ReturnType<ContextMemory['refresh']>;
 };
@@ -60,6 +74,10 @@ export function createTacit(o: TacitOptions): Tacit {
   const now = o.now ?? Date.now;
   // The profile is the person's, and the interview can change it; everything reads it fresh.
   let profile: TacitOptions['profile'] & { place?: string; people?: string[] } = { ...o.profile };
+  const person = o.restore ? Person.restore(o.restore, now) : new Person(now);
+  // What was learned before shapes the profile again: the name, the place, what leads the briefing.
+  profile = learnFrom(person.all(), profile, new Settings(CORE_SETTINGS, now)).profile;
+  const conversation = new Conversation({ person, now, ...(o.classify ? { classify: o.classify } : {}) });
   const settings = new Settings([...CORE_SETTINGS, ...(o.settings ?? [])], now);
 
   // The desk reads its budget from the settings on every notice, so a setting
@@ -95,25 +113,31 @@ export function createTacit(o: TacitOptions): Tacit {
   return {
     ...m, desk, context, settings,
     get profile() { return profile; },
-    interview: () => new Interview(),
-    learn(l: Learned) {
-      // Only a confirmed interview reaches here. Settings go through the same
-      // store as the screen and the voice, so the change log shows them.
-      profile = {
-        ...profile,
-        ...(l.name ? { name: l.name } : {}),
-        ...(l.interests?.length ? { interests: l.interests } : {}),
-        ...(l.place ? { place: l.place } : {}),
-        ...(l.people ? { people: l.people } : {}),
-      };
-      if (l.briefing_time) settings.set('briefing_time', l.briefing_time, 'voice');
-      if (l.briefing_length) settings.set('briefing_length', l.briefing_length, 'voice');
-      if (l.quiet_hours !== undefined) settings.set('quiet_hours', l.quiet_hours, 'voice');
+    person,
+    open(c = {}) {
+      const hour = c.hour ?? (o.hourOf ?? ((x: number) => new Date(x).getHours()))(now());
+      const briefingReady = settings.get('briefing_time') !== 'off';
+      return conversation.open({ hour, ...(profile.name ? { name: profile.name } : {}), briefingReady });
+    },
+    talk(text) {
+      // A command is an act; the Stage takes it, and the conversation waits.
+      const r = m.hear(text, { final: true });
+      if (r.decision.kind === 'start') return { line: null, act: m.app.act?.def.name ?? null, offers: [] };
+      const line = conversation.hear(text);
+      const learned = learnFrom(line.recorded ?? [], profile, settings);
+      profile = learned.profile;
+      return { line, act: null, offers: learned.offers };
+    },
+    accept(offer) {
+      if (offer.kind === 'setting') settings.set(offer.key, offer.value, 'voice');
+      else profile = { ...profile, people: offer.value };
       m.draw();
     },
+    snapshot: () => person.snapshot(),
     receive: (n) => desk.ingest(n),
     refresh: () => context.refresh(now()),
   };
 }
 export { worldRoute, type WorldReply } from './world.js';
-export { Interview, QUESTIONS, summarize, personKey, type Learned, type Step } from './interview.js';
+export { learnFrom, personKey, type Offer } from './learn.js';
+export { Conversation, Person, THREADS, DOMAINS, type Line, type Snapshot, type Fact } from '@intermenu/knowing';

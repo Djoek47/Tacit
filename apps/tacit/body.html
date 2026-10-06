@@ -8,19 +8,13 @@
   <section class="view" id="v-talk">
     <div class="talk">
       <div class="view">
-        <div class="iv" id="iv" hidden>
-          <span class="eyebrow" id="iv-n"></span>
-          <h1 id="iv-q"></h1>
-          <p class="lede" id="iv-h"></p>
-          <ul class="iv-sum" id="iv-sum" hidden></ul>
-          <div class="tries" id="iv-ctl"></div>
-        </div>
         <h1 id="hello">Say it once.</h1>
-        <p class="lede" id="intro">Type what you would say. Cheap things that only touch you happen when you stay quiet; anything else waits for your yes.</p>
+        <p class="lede" id="intro">Tacit talks with you. Answer however you like, go off on tangents, say “skip” or “stop”. Commands like “turn off quiet hours” go straight to the card.</p>
         <div class="said" id="said" aria-live="polite"></div>
+        <div class="tries" id="offers"></div>
         <form class="ask" id="ask">
           <label for="q" class="eyebrow" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Say something</label>
-          <input id="q" autocomplete="off" placeholder="brief me">
+          <input id="q" autocomplete="off" placeholder="Say something">
           <button class="go" type="submit">Say</button>
         </form>
         <div class="tries" id="tries"></div>
@@ -50,11 +44,19 @@
     <div class="morning" id="m-body"></div>
   </section>
 
+  <section class="view" id="v-you" hidden>
+    <h1>What Tacit knows</h1>
+    <p class="lede">Everything here came from you, in your words. Change it or forget it at any time. The number is how much of the map Tacit has covered, not how well it knows you.</p>
+    <div class="cover"><span class="big" id="y-pct"></span><span class="meter" id="y-min"></span></div>
+    <div class="bars" id="y-bars"></div>
+    <div id="y-pending"></div>
+    <div class="view" id="y-facts"></div>
+  </section>
+
   <section class="view" id="v-settings" hidden>
     <h1>Settings</h1>
     <p class="lede">The one fixed screen. Everything on it can also be said: “turn off quiet hours”, “make the briefing short”.</p>
     <div id="s-body" class="view"></div>
-    <button class="play" id="redo" type="button">Redo the first conversation</button>
     <h2>What changed</h2>
     <div class="log" id="s-log">Nothing yet.</div>
   </section>
@@ -64,5 +66,6 @@
   <button role="tab" data-v="talk" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h6"/></svg>Talk<span class="badge"></span></button>
   <button role="tab" data-v="desk" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="5" width="16" height="14" rx="3"/><path d="M4 13h5l1 2h4l1-2h5"/></svg>Desk<span class="badge" id="b-desk"></span></button>
   <button role="tab" data-v="morning" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 18h18M7 18a5 5 0 0 1 10 0M12 6v3M5 10l2 2M19 10l-2 2"/></svg>Morning<span class="badge"></span></button>
+  <button role="tab" data-v="you" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>You<span class="badge" id="b-you"></span></button>
   <button role="tab" data-v="settings" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Settings<span class="badge"></span></button>
 </nav>

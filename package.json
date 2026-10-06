@@ -4,8 +4,8 @@
   "version": "0.2.0",
   "description": "AIUIC + Hepta: the layer between knowing what the user wants and the write happening.",
   "scripts": {
-    "test": "for p in core resolve hepta tools compose memory brand devtools present eui kit pyramid mcp conductor orchestrators menu adapters sdk notify settings tacit server devkit eval; do (cd packages/$p && npx vitest run) || exit 1; done",
-    "typecheck": "for p in core resolve hepta tools compose memory brand devtools present eui kit pyramid mcp conductor orchestrators menu adapters sdk notify settings tacit server devkit eval; do (cd packages/$p && npx tsc --noEmit -p tsconfig.json) || exit 1; done",
+    "test": "for p in core resolve hepta tools compose memory brand devtools present eui kit pyramid mcp conductor orchestrators menu adapters sdk notify settings knowing tacit server devkit eval; do (cd packages/$p && npx vitest run) || exit 1; done",
+    "typecheck": "for p in core resolve hepta tools compose memory brand devtools present eui kit pyramid mcp conductor orchestrators menu adapters sdk notify settings knowing tacit server devkit eval; do (cd packages/$p && npx tsc --noEmit -p tsconfig.json) || exit 1; done",
     "build:demo": "npx esbuild demo/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=demo/aiuic.bundle.js --log-level=warning && scripts/page.sh demo page-head.html page-body.html",
     "build:heckit": "npx esbuild apps/heckit/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=apps/heckit/aiuic.bundle.js --log-level=warning && scripts/page.sh apps/heckit",
     "build:console": "npx esbuild apps/console/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=apps/console/aiuic.bundle.js --log-level=warning && scripts/page.sh apps/console",

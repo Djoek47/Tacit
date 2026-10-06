@@ -26,7 +26,7 @@
   var said = $('said');
   function line(cls, text) {
     var p = document.createElement('div'); p.className = cls; p.textContent = text; said.appendChild(p);
-    while (said.children.length > 6) said.removeChild(said.firstChild);
+    while (said.children.length > 10) said.removeChild(said.firstChild);
   }
   function speak(text) {
     line('reply', text);
@@ -43,64 +43,45 @@
       .catch(function () { return world.pull(); });
   } } : world;
 
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+  var saved = null; try { saved = JSON.parse(store('tacit.person') || 'null'); } catch (e) {}
+
   var t = T.createTacit({
+    restore: saved || undefined,
     profile: { interests: ['trading', 'ai', 'cyber'] },
     world: [served], speak: speak, el: $('stage'),
   });
 
-  // ---- Talk
-  var TRIES = ['brief me', 'what did I miss', 'turn off quiet hours', 'make the briefing short', 'interruptions per hour one', "don't brief me"];
-  TRIES.forEach(function (s) {
-    var b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = s;
-    b.onclick = function () { say(s); }; $('tries').appendChild(b);
+  // ---- Talk: a conversation, with commands going to the card
+  var TRIES = ['skip', 'why do you ask?', 'stop', 'brief me', 'turn off quiet hours'];
+  TRIES.forEach(function (x) {
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = x;
+    b.onclick = function () { say(x); }; $('tries').appendChild(b);
   });
+  function offers(list) {
+    var box = $('offers'); box.replaceChildren();
+    list.forEach(function (o) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'chip primary'; b.textContent = o.say;
+      b.onclick = function () { t.accept(o); box.replaceChildren(); line('reply', 'Done.'); renderAll(); };
+      var n = document.createElement('button'); n.type = 'button'; n.className = 'chip'; n.textContent = 'No thanks';
+      n.onclick = function () { box.replaceChildren(); };
+      box.append(b, n);
+    });
+  }
+  function save() { store('tacit.person', JSON.stringify(t.snapshot())); }
   function say(text) {
     if (!text.trim()) return;
     line('bubble', text);
-    if (iv) { ivShow(iv.answer(text)); return; }
-    var r = t.hear(text, { final: true });
-    if (!r || !r.decision || r.decision.kind === 'none') line('reply', 'Nothing I can do matches that yet. Try one of these.');
+    var r = t.talk(text);
+    if (r.line) {
+      if (r.line.move === 'briefing') { t.talk('brief me'); }
+      else if (r.line.say) speak(r.line.say);
+      offers(r.offers || []);
+    }
+    save();
     setTimeout(renderAll, 50);
   }
   $('ask').addEventListener('submit', function (e) { e.preventDefault(); var q = $('q'); say(q.value); q.value = ''; });
-
-  // ---- The first conversation
-  var iv = null;
-  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
-  function ivStart() { iv = t.interview(); show('talk'); ivShow(iv.step()); }
-  function ivEnd() { iv = null; $('iv').hidden = true; $('hello').hidden = false; $('intro').hidden = false; $('tries').hidden = false; $('q').placeholder = 'brief me'; store('tacit.met', '1'); }
-  function ctl(label, words, primary) {
-    var b = document.createElement('button'); b.type = 'button'; b.className = 'chip' + (primary ? ' primary' : '');
-    b.textContent = label; b.onclick = function () { say(words); }; $('iv-ctl').appendChild(b);
-  }
-  function ivShow(s) {
-    $('iv').hidden = false; $('hello').hidden = true; $('intro').hidden = true; $('tries').hidden = true; $('q').placeholder = 'Your answer'; $('iv-ctl').replaceChildren(); $('iv-sum').hidden = true;
-    if (s.kind === 'ask') {
-      $('iv-n').textContent = (s.index + 1) + ' of ' + s.of + ' · first conversation';
-      $('iv-q').textContent = s.ask; $('iv-h').textContent = s.hint;
-      speakQuiet(s.ask);
-      ctl('Skip', 'skip'); if (s.index > 0) ctl('Back', 'go back'); ctl('Stop', 'stop');
-      $('q').focus();
-    } else if (s.kind === 'confirm') {
-      $('iv-n').textContent = 'Did I hear you right?';
-      $('iv-q').textContent = 'Here is what I will remember.';
-      $('iv-h').textContent = 'Nothing changes until you say yes.';
-      var ul = $('iv-sum'); ul.replaceChildren(); ul.hidden = false;
-      s.summary.forEach(function (x) { var li = document.createElement('li'); li.textContent = x; ul.appendChild(li); });
-      speakQuiet(s.summary.join(' ') + ' Is that right?');
-      ctl('Yes, that is right', 'yes', true); ctl('No, go back', 'no');
-    } else if (s.kind === 'done') {
-      t.learn(s.learned); ivEnd();
-      line('reply', (t.profile.name ? 'Thank you, ' + t.profile.name + '. ' : 'Thank you. ') + 'Say “brief me” whenever you want your briefing.');
-      renderAll();
-    } else { ivEnd(); line('reply', 'Stopped. Nothing was changed. You can do it again from Settings.'); }
-  }
-  // Questions are spoken through the same voice setting as every reply, without filling the transcript.
-  function speakQuiet(text) {
-    if (!t.settings.get('voice')) return;
-    try { if (window.speechSynthesis) { speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text)); } } catch (e) {}
-  }
-  $('redo').onclick = ivStart;
 
   // ---- Desk
   var decided = [];
@@ -164,6 +145,44 @@
     $('m-play').onclick = function () { say('brief me'); show('talk'); };
   }
 
+  // ---- You
+  function renderYou() {
+    var c = t.person.coverage();
+    $('y-pct').textContent = (c.overall * 100).toFixed(1) + '%';
+    $('y-min').textContent = 'of the map · ' + Math.round(t.person.minutes) + ' min of conversation';
+    $('b-you').textContent = c.overall ? Math.round(c.overall * 100) + '%' : '';
+    var bars = $('y-bars'); bars.replaceChildren();
+    c.domains.forEach(function (d) {
+      var r = document.createElement('div'); r.className = 'bar';
+      var a = document.createElement('span'); a.textContent = d.name;
+      var tr = document.createElement('div'); tr.className = 'track';
+      var f = document.createElement('div'); f.className = 'fill'; f.style.width = (d.covered * 100).toFixed(1) + '%'; tr.appendChild(f);
+      var n = document.createElement('span'); n.className = 'n'; n.textContent = Math.round(d.covered * 100) + '%';
+      r.append(a, tr, n); bars.appendChild(r);
+    });
+    var box = $('y-facts'); box.replaceChildren();
+    var by = {};
+    t.person.all().forEach(function (f) { (by[f.domain] = by[f.domain] || []).push(f); });
+    T.DOMAINS.forEach(function (d) {
+      var fs = by[d.id]; if (!fs) return;
+      var g = document.createElement('div'); g.className = 'group';
+      var h = document.createElement('span'); h.className = 'eyebrow'; h.textContent = d.name; g.appendChild(h);
+      var list = document.createElement('div'); list.className = 'list';
+      fs.forEach(function (f) {
+        var row = document.createElement('div'); row.className = 'fact';
+        var left = document.createElement('div');
+        var a = document.createElement('div'); a.textContent = f.text;
+        var q = document.createElement('q'); q.textContent = f.quote;
+        if (f.text.toLowerCase().replace(/[^a-z0-9]/g, '') === f.quote.toLowerCase().replace(/[^a-z0-9]/g, '')) left.append(a); else left.append(a, q);
+        var x = document.createElement('button'); x.type = 'button'; x.className = 'forget'; x.textContent = 'Forget';
+        x.onclick = function () { t.person.forget(f.id); save(); renderAll(); };
+        row.append(left, x); list.appendChild(row);
+      });
+      g.appendChild(list); box.appendChild(g);
+    });
+    if (!t.person.all().length) { var p = document.createElement('p'); p.className = 'lede'; p.textContent = 'Nothing yet. Talk to Tacit and this fills in.'; box.appendChild(p); }
+  }
+
   // ---- Settings
   function renderSettings() {
     var body = $('s-body'); body.replaceChildren();
@@ -215,7 +234,7 @@
   // ---- Tabs
   function show(v) {
     document.querySelectorAll('nav.tabs button').forEach(function (b) { b.setAttribute('aria-selected', String(b.dataset.v === v)); });
-    ['talk', 'desk', 'morning', 'settings'].forEach(function (k) { $('v-' + k).hidden = k !== v; });
+    ['talk', 'desk', 'morning', 'you', 'settings'].forEach(function (k) { $('v-' + k).hidden = k !== v; });
     renderAll();
   }
   document.querySelectorAll('nav.tabs button').forEach(function (b) { b.onclick = function () { show(b.dataset.v); }; });
@@ -223,18 +242,20 @@
   function renderAll() {
     $('clock').textContent = new Date().toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' }) +
       (t.settings.get('quiet_hours') ? ' · quiet hours on' : '');
-    renderDesk(); renderMorning(); renderSettings();
+    renderDesk(); renderMorning(); renderYou(); renderSettings();
   }
   // The stage commits on silence with a real clock; redraw the other views when it does.
   var sig = '';
   setInterval(function () {
-    var s = t.settings.changes().length + ':' + decided.length + ':' + (t.app.act ? t.app.act.status : '-');
+    var s = t.settings.changes().length + ':' + t.person.all().length + ':' + decided.length + ':' + (t.app.act ? t.app.act.status : '-');
     if (s !== sig) { sig = s; renderAll(); }
   }, 1000);
   var tok = (location.hash || '').slice(1);
   t.refresh().then(function () {
-    show(['desk', 'morning', 'settings'].indexOf(tok) >= 0 ? tok : 'talk');
-    if (!store('tacit.met') || tok === 'hello') ivStart();
+    show(['desk', 'morning', 'you', 'settings'].indexOf(tok) >= 0 ? tok : 'talk');
+    // Tacit speaks first.
+    var first = t.open();
+    speak(first.say);
   });
 })();
 </script>

@@ -59,6 +59,9 @@
       ],
       "@intermenu/aiuic-settings": [
         "../settings/src/index.ts"
+      ],
+      "@intermenu/knowing": [
+        "../knowing/src/index.ts"
       ]
     }
   },

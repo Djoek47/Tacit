@@ -9,6 +9,7 @@ export default defineConfig({
       '@intermenu/sdk': fileURLToPath(new URL('../sdk/src/index.ts', import.meta.url)),
       '@intermenu/aiuic-notify': fileURLToPath(new URL('../notify/src/index.ts', import.meta.url)),
       '@intermenu/aiuic-settings': fileURLToPath(new URL('../settings/src/index.ts', import.meta.url)),
+      '@intermenu/knowing': fileURLToPath(new URL('../knowing/src/index.ts', import.meta.url)),
       '@intermenu/aiuic-core': fileURLToPath(new URL('../core/src/index.ts', import.meta.url)),
       '@intermenu/aiuic-resolve': fileURLToPath(new URL('../resolve/src/index.ts', import.meta.url)),
       '@intermenu/hepta': fileURLToPath(new URL('../hepta/src/index.ts', import.meta.url)),
