@@ -1,18 +1,18 @@
-# Building with Hepta
+# Building with Tacit
 
-Hepta turns an app into something people talk to. They say what they want; one card appears with what was heard; it holds for a moment, and silence lets it happen. A word or a tap corrects it. Undo is always one tap away.
+Tacit turns an app into something people talk to. They say what they want; one card appears with what was heard; it holds for a moment, and silence lets it happen. A word or a tap corrects it. Undo is always one tap away.
 
-It is built on AIUIC, the commit contract underneath: every action declares **what it costs to be wrong**, and that, not a list of exceptions, decides whether it may happen on silence, needs a yes, or may never happen unattended.
+It is built on Stage, the commit contract underneath: every action declares **what it costs to be wrong**, and that, not a list of exceptions, decides whether it may happen on silence, needs a yes, or may never happen unattended.
 
 There are two ways to use it.
 
 | | Inside your app | Outside, next to your tools |
 |---|---|---|
 | You have | an app, or MCP servers for your services | an assistant: Claude, Cursor, any MCP client |
-| You add | `createApp()` and your acts, or `connect()` to your MCP servers | the Hepta server (`hepta.mjs`) |
+| You add | `createApp()` and your acts, or `connect()` to your MCP servers | the Tacit server (`hepta.mjs`) |
 | People get | a stage in your app they can talk to | an always-on conductor, a shared memory, and a stage their assistant can propose to |
 
-The two compose: Hepta can be bridged into another Hepta, and every write stays behind the same rules.
+The two compose: one Tacit can be bridged into another, and every write stays behind the same rules.
 
 > **Status.** V1. The packages are not published to npm yet; use them from this repository (`packages/*`) or the bundled files in `apps/`. Everything described here is tested (see `npm test`), except where a section says otherwise.
 
@@ -258,7 +258,7 @@ The person writes the **score**: standing orders like "every morning, tell me wh
 
 Everything else goes to the **inbox**, waiting for a yes. Every unattended commit is in the inbox too, with its result so it can be undone later. With no orders, the conductor does nothing.
 
-### Hepta: speaking and listening at once
+### Tacit: speaking and listening at once
 
 **The seven tongues** (`Speculator`) keep up to seven candidate acts alive while someone is still talking, and paint the leader early. None may commit until the sentence ends.
 
@@ -325,7 +325,7 @@ Letting a tool go ahead is the person's own act (`delegationAct`): previewed, he
 
 ## Developer tools: `hepta-dev`
 
-For building with Hepta, not inside it. Shaped on the same pyramid: context, evolution, proposal, reconstruction, testing.
+For building with Tacit, not inside it. Shaped on the same pyramid: context, evolution, proposal, reconstruction, testing.
 
 ```bash
 node apps/hepta-dev/hepta-dev.mjs init            # write BRIEF.md to start from
@@ -399,7 +399,7 @@ Each of these is a test in the repository, not a promise in a document.
 | Nothing commits on silence the person did not engage with | the attention gate's engagement clause |
 | A model cannot lower what an act costs | the composer takes cost from the capability, never the spec |
 | An MCP server cannot lower what its tools cost | annotations only raise; the shape may not set a radius |
-| An outside caller cannot say yes | the Hepta server has no assent tool and no way to speak as the person |
+| An outside caller cannot say yes | the Tacit server has no assent tool and no way to speak as the person |
 | Money and the irreversible are never done unattended | `authorise()` in the conductor; order ceilings capped below `external` |
 | Nothing real is hypothetical | memory refuses facts, decisions, delegations and orders on branches |
 | Only the person's words become facts | memory refuses facts without their words, or from any role but the congregator |
@@ -414,9 +414,9 @@ Four of these came from an independent review — an agent that had not seen the
 
 ## Not yet verified
 
-- **Voice, live.** The OpenAI Realtime wiring follows the current GA documentation, but it has not connected to a live session yet. Two details could not be confirmed from the docs: whether input transcription must be enabled explicitly in a speech-to-speech session, and whether the model will start speaking while input audio is still arriving (Hepta cutting in depends on it).
+- **Voice, live.** The OpenAI Realtime wiring follows the current GA documentation, but it has not connected to a live session yet. Two details could not be confirmed from the docs: whether input transcription must be enabled explicitly in a speech-to-speech session, and whether the model will start speaking while input audio is still arriving (Tacit cutting in depends on it).
 - **Thresholds.** Routing and hold thresholds are tuned on 28 written sentences and 15 replayed conversations. They need a few hundred real ones.
-- **Detectors.** Every detector in Hepta's lines of thought is tier 0: word overlap and numbers. The `Detector` interface is where a fast classifier replaces them.
+- **Detectors.** Every detector in Tacit's lines of thought is tier 0: word overlap and numbers. The `Detector` interface is where a fast classifier replaces them.
 
 ## Packages
 
@@ -433,7 +433,7 @@ Four of these came from an independent review — an agent that had not seen the
 | `aiuic-pyramid` | aggregator, orchestrator, congregator |
 | `aiuic-orchestrators` | optional: Claude or OpenAI behind the orchestrator, planning only |
 | `aiuic-conductor` | always on; the score; the inbox |
-| `aiuic-server` | Hepta as an MCP server |
+| `aiuic-server` | Tacit as an MCP server |
 | `aiuic-devkit` | brief, drafts, scaffold, prototype, tester, context, dossier |
 | `aiuic-compose`, `aiuic-tools` | acts composed by a model; tool schemas from acts |
 | `aiuic-devtools`, `aiuic-eval` | why an act is waiting; the false-confirm rate |

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Kairos">
+  <!-- The dial: every hour. The opening: the one moment. The point: now. -->
+  <path d="M60 14 A46 46 0 1 1 27.5 27.5" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="44" cy="17" r="8" fill="#C8792B"/>
+</svg>

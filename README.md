@@ -1,4 +1,6 @@
-# AIUIC + Hepta
+# Tacit, by Kairos
+
+*Say it once.* Tacit is the product; Stage (formerly AIUIC) is the commit contract under it; the speech layer was called Hepta and keeps that name in the code until the packages are renamed.
 
 **The AI proposes. Your silence approves. One word corrects it.**
 
@@ -119,7 +121,7 @@ is real.
 | --- | --- |
 | `apps/console/` | the concept page: compose an act from JSON, use it, then try six ways to break it |
 | `apps/heckit/` | the product: speak once, it interviews, remembers, plans, composes |
-| `apps/orb/` | voice: WebRTC to a realtime model, transcripts into Hepta, tools into the contract |
+| `apps/orb/` | voice: WebRTC to a realtime model, transcripts into Tacit, tools into the contract |
 | `apps/stage/` | the visual language: say something, break a design rule, read the material |
 | `demo/` | the commit contract with its workings exposed — four acts, four radii |
 
@@ -218,13 +220,13 @@ kept feeding its score. That margin exists to stop the stage flickering while
 someone is looking at it — a mid-sentence cost, which stops existing when the
 sentence does. It is dropped on the final transcript now.
 
-## The pyramid, and a Hepta that argues
+## The pyramid, and a Tacit that argues
 
 One conductor (the person) and three roles that hold **different authority** rather than
 three votes: the aggregator reads, the orchestrator proposes, the congregator records, and only
 the conductor makes anything true. Three agents voting is not three checks when they share a model.
 
-Hepta's lines of thought run beside the seven tongues on every partial: claims said earlier,
+Tacit's lines of thought run beside the seven tongues on every partial: claims said earlier,
 views it holds, things left open. It cuts in at clause boundaries, keeps talking through "yeah",
 stops for "wait", argues with evidence, yields to an override, and wanders back to open threads
 when it is quiet.

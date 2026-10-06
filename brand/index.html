@@ -1,0 +1,126 @@
+<title>Kairos and Tacit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: a narrow brand sheet. Two marks side by side, then the names, the motto, the services, the numbers. */
+  :root {
+    --paper: #EEF0EA; --surface: #F7F8F4; --ink: #14182B; --dim: #565C6E; --line: rgba(20,24,43,.12);
+    --moment: #C8792B; --tile: #14182B; --tile-ink: #EEF0EA;
+    --display: "Familjen Grotesk", "Segoe UI", system-ui, sans-serif;
+    --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --paper: #0F1222; --surface: #161A2E; --ink: #E7E9E2; --dim: #9AA0B2; --line: rgba(231,233,226,.12);
+    --moment: #E0924A; --tile: #E7E9E2; --tile-ink: #14182B; color-scheme: dark; } }
+  :root[data-theme="dark"] {
+    --paper: #0F1222; --surface: #161A2E; --ink: #E7E9E2; --dim: #9AA0B2; --line: rgba(231,233,226,.12);
+    --moment: #E0924A; --tile: #E7E9E2; --tile-ink: #14182B; color-scheme: dark; }
+
+  body { background: var(--paper); color: var(--ink); font: 16px/1.6 var(--body); }
+  .page { max-width: 880px; margin: 0 auto; padding-inline: 20px; padding-block: 48px 72px; display: flex; flex-direction: column; gap: 56px; }
+  h1, h2 { font-family: var(--display); text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(34px, 6vw, 56px); line-height: 1.05; letter-spacing: -.02em; font-weight: 700; }
+  h2 { font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+  p { margin: 0; max-width: 62ch; }
+  .eyebrow { font: 500 12px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+  .head { display: flex; flex-direction: column; gap: 14px; }
+  .motto { font-family: var(--display); font-size: clamp(22px, 3.4vw, 30px); font-weight: 500; }
+  .motto b { color: var(--moment); font-weight: 600; }
+
+  .marks { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .mark { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 28px; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .mark svg { width: 112px; height: 112px; }
+  .lockup { display: flex; align-items: center; gap: 14px; font: 700 30px/1 var(--display); letter-spacing: -.02em; }
+  .lockup svg { width: 40px; height: 40px; }
+  .mark p { color: var(--dim); font-size: 15px; }
+  .role { font: 500 12px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--moment); }
+
+  section { display: flex; flex-direction: column; gap: 16px; }
+  .table { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  th { font: 500 12px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+  td:first-child { font-weight: 700; white-space: nowrap; }
+  td.was { color: var(--dim); font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+  .num td, .num th { font-variant-numeric: tabular-nums; }
+  .hit { color: var(--moment); font-weight: 700; }
+  .small { font-size: 14px; color: var(--dim); }
+
+  @media (max-width: 640px) { .marks { grid-template-columns: 1fr; } }
+</style>
+
+<div class="page">
+  <header class="head">
+    <span class="eyebrow">Brand sheet · October 2026</span>
+    <h1>Kairos makes Tacit.</h1>
+    <p class="motto">Say it <b>once</b>.</p>
+    <p>Kairos is the company. Tacit is the product people talk to. One answers <i>when</i> to speak, the other carries <i>what goes unsaid</i>.</p>
+  </header>
+
+  <div class="marks">
+    <div class="mark">
+      <span class="role">The company</span>
+      <svg viewBox="0 0 120 120" role="img" aria-label="Kairos mark">
+        <path d="M60 14 A46 46 0 1 1 27.5 27.5" fill="none" stroke="var(--ink)" stroke-width="10" stroke-linecap="round"/>
+        <circle cx="44" cy="17" r="8" fill="var(--moment)"/>
+      </svg>
+      <div class="lockup">
+        <svg viewBox="0 0 120 120" aria-hidden="true"><path d="M60 14 A46 46 0 1 1 27.5 27.5" fill="none" stroke="var(--ink)" stroke-width="12" stroke-linecap="round"/><circle cx="44" cy="17" r="9" fill="var(--moment)"/></svg>
+        Kairos
+      </div>
+      <p>Greek <i>καιρός</i>, the opportune moment, as against <i>χρόνος</i>, clock time. The dial is every hour; the opening is the one that matters; the point is now.</p>
+    </div>
+    <div class="mark">
+      <span class="role">The product</span>
+      <svg viewBox="0 0 120 120" role="img" aria-label="Tacit mark">
+        <rect x="6" y="6" width="108" height="108" rx="30" fill="var(--tile)"/>
+        <rect x="28" y="50" width="64" height="5" rx="2.5" fill="var(--tile-ink)"/>
+        <rect x="44" y="55" width="32" height="16" rx="3" fill="var(--moment)"/>
+      </svg>
+      <div class="lockup">
+        <svg viewBox="0 0 120 120" aria-hidden="true"><rect x="6" y="6" width="108" height="108" rx="30" fill="var(--tile)"/><rect x="28" y="50" width="64" height="5" rx="2.5" fill="var(--tile-ink)"/><rect x="44" y="55" width="32" height="16" rx="3" fill="var(--moment)"/></svg>
+        Tacit
+      </div>
+      <p>The mark is a musical rest: the written sign for a silence that means something. Tacit stays quiet until a moment is worth your attention, and when you are quiet, it understands.</p>
+    </div>
+  </div>
+
+  <section>
+    <h2>What everything is called now</h2>
+    <p class="small">Plain names, so nobody has to learn mythology to use the product. The old names stay in the code until the packages are renamed.</p>
+    <div class="table"><table>
+      <thead><tr><th>Name</th><th>What it is</th><th>Was</th></tr></thead>
+      <tbody>
+        <tr><td>Tacit</td><td>The one you talk to. Every other part is a way it answers.</td><td class="was">Hepta</td></tr>
+        <tr><td>Stage</td><td>How it answers: one card, one choice, and silence lets cheap things happen.</td><td class="was">AIUIC / IUI</td></tr>
+        <tr><td>Stage design</td><td>The visual language every screen is drawn in.</td><td class="was">EUI</td></tr>
+        <tr><td>Desk</td><td>Where every notification waits until it is worth interrupting you.</td><td class="was">notify</td></tr>
+        <tr><td>Morning</td><td>Your briefing: what is waiting for you, around you, and in what you follow.</td><td class="was">briefing</td></tr>
+        <tr><td>Context</td><td>What the world knows, shared by everyone, and never told anything about you.</td><td class="was">context memory</td></tr>
+        <tr><td>Tacit SDK</td><td>Bring your app, your API, your functions. It gets a Stage.</td><td class="was">InterMenu SDK</td></tr>
+        <tr><td>Tacit Shell</td><td>Later: Tacit as the desktop of a Linux machine.</td><td class="was">—</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Later editions</h2>
+    <p>One brand first. When a group of people is actually using Tacit, it gets its own edition: <b>Margin</b> for finance and law, <b>Cue</b> for creatives. Same product, tuned defaults, its own name.</p>
+  </section>
+
+  <section>
+    <h2>The numbers</h2>
+    <div class="table num"><table>
+      <thead><tr><th>Name</th><th>Pythagorean</th><th>Chaldean</th><th>English ordinal</th></tr></thead>
+      <tbody>
+        <tr><td>Kairos</td><td><span class="hit">28</span> → 1</td><td>16 → <span class="hit">7</span></td><td>73 → 1</td></tr>
+        <tr><td>Tacit</td><td>17 → 8</td><td>13 → 4</td><td>53 → 8</td></tr>
+        <tr><td>Cue</td><td><span class="hit">11</span></td><td>14 → 5</td><td>29 → <span class="hit">11</span></td></tr>
+        <tr><td>Margin</td><td>35 → 8</td><td>16 → <span class="hit">7</span></td><td>62 → 8</td></tr>
+      </tbody>
+    </table></div>
+    <p class="small">Kairos carries 28 and 7; Tacit carries the meaning. Trademark search for both names is still to do before anything is registered.</p>
+  </section>
+</div>
