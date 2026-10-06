@@ -64,3 +64,11 @@ describe('the words, written to be heard', () => {
     expect(t).toMatch(/I left out 4 more to keep it short\. Ask for the long version/);
   });
 });
+
+describe('asking is not choosing a length', () => {
+  it('"brief me" takes the default length, not the short one', async () => {
+    const { app } = await setup();
+    app.hear('brief me', { final: true });
+    expect(app.view()!.slots.find((s) => s.name === 'length')!.value).toBe(15);
+  });
+});

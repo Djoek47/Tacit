@@ -252,6 +252,13 @@ export class App {
       // it.
       run.offer(slot, list, 'spoken');
     }
+    // The person's own finished sentence started this act, and that is
+    // engagement — even when every slot was answered by its default and
+    // nothing was "spoken into" one. Without this, "brief me" (one slot, a
+    // default) could never start on silence. Only when the router was sure:
+    // a narrowed sentence has not chosen between its acts, so the person has
+    // not yet engaged with either.
+    if (final && decision.kind === 'start') run.markEngaged();
     run.evaluate();
     this.draw();
 

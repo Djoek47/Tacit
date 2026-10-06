@@ -12,7 +12,9 @@ import { defineAct, type ActDef } from '@intermenu/aiuic-core';
 import { brief, type Briefing, type ContextMemory, type Desk, type Profile } from './index.js';
 
 export const LENGTHS = [
-  { value: 5, label: 'Short', aliases: ['quick', 'short', 'brief', 'five minutes'] },
+  // Not 'brief': it is in "brief me", so every plain request came back as the
+  // short version. The words that name a length must not be the words that ask.
+  { value: 5, label: 'Short', aliases: ['quick', 'short', 'five minutes'] },
   { value: 15, label: 'Standard', aliases: ['normal', 'standard', 'usual'] },
   { value: 20, label: 'Long', aliases: ['long', 'full', 'everything', 'twenty minutes'] },
 ];
@@ -39,6 +41,12 @@ export type BriefingDeps = {
   now?: () => number;
   /** Where the words go: a voice, a screen, both. */
   speak?: (text: string, b: Briefing) => void | Promise<void>;
+  /**
+   * The length when the person does not say one. A host passes its setting
+   * here; a fixed 15 in the slot meant "make the briefing short" changed the
+   * setting and a plain "brief me" ignored it.
+   */
+  defaultMinutes?: () => number;
 };
 
 export function briefingAct(d: BriefingDeps): ActDef {
@@ -47,7 +55,7 @@ export function briefingAct(d: BriefingDeps): ActDef {
     domain: 'briefing',
     phrases: ['brief me', 'briefing', 'what did i miss', 'morning report', 'catch me up', 'update me'],
     slots: {
-      length: { primitive: 'chip', options: () => LENGTHS, default: () => 15, required: true, order: 1 },
+      length: { primitive: 'chip', options: () => LENGTHS, default: () => d.defaultMinutes?.() ?? 15, required: true, order: 1 },
     },
     radius: 'self',
     commit: async (f) => {

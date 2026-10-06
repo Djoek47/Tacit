@@ -84,7 +84,17 @@ export class Desk {
   private readonly interrupted: number[] = [];
   private readonly seen = new Set<string>();
 
-  constructor(private readonly budget: Budget = DEFAULT_BUDGET, private readonly hourOf: (t: number) => number = (t) => new Date(t).getHours()) {}
+  private readonly budgetOf: () => Budget;
+
+  /**
+   * `budget` may be a function, read on every notice, so a setting changed by
+   * voice or on the settings screen takes effect on the very next notice.
+   */
+  constructor(budget: Budget | (() => Budget) = DEFAULT_BUDGET, private readonly hourOf: (t: number) => number = (t) => new Date(t).getHours()) {
+    this.budgetOf = typeof budget === 'function' ? budget : () => budget;
+  }
+
+  private get budget(): Budget { return this.budgetOf(); }
 
   /** Take a notice in. Duplicates (same id) are kept once; nothing is ever discarded. */
   ingest(n: Notice): Decided {
