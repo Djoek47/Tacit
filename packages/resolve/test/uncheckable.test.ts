@@ -66,3 +66,28 @@ describe('a sentence that mentions things without asking for them (found by the 
     expect(at('did you pay Maya 20 dollars')).toBe('none');
   });
 });
+
+describe('a question may ask for something that changes nothing', () => {
+  const brief = defineAct({ name: 'get_briefing', phrases: ['brief me', 'what did i miss', 'catch me up'], radius: 'self',
+    commit: () => ({ id: '1' }), undo: () => {},
+    slots: { length: { primitive: 'chip', options: () => [{ value: 15, label: 'Standard' }], default: () => 15, required: true, order: 1 } } });
+  const swap = defineAct({ name: 'swap_chore', phrases: ['for'], radius: 'self', commit: () => ({ id: '2' }), undo: () => {},
+    slots: { who: { primitive: 'face', options: () => PEOPLE, required: true, order: 1 } } });
+  const pay = defineAct({ name: 'pay', phrases: ['did you pay', 'pay'], radius: 'external', commit: () => ({ id: '3' }),
+    slots: { who: { primitive: 'face', options: () => PEOPLE, required: true, order: 1 } } });
+  const opts = (a: ActDef, s: string) => (a.slots[s]?.options?.(ctx, {}) ?? []) as { value: unknown; label: string }[];
+  const at = (t: string, acts: ActDef[]) => {
+    const d = pickAct(new LocalResolver().scoreSync(t, acts, ctx, opts));
+    return d.kind === 'start' ? d.act : d.kind;
+  };
+
+  it('opens a briefing when it is asked for as a question', () => {
+    expect(at('what did I miss?', [brief])).toBe('get_briefing');
+  });
+  it('but a single common word never turns a question into a request', () => {
+    expect(at('who did the dishes for Sam?', [swap])).toBe('none');
+  });
+  it('and nothing that touches somebody else is ever started by a question, whatever phrase it matches', () => {
+    expect(at('did you pay Maya?', [pay])).toBe('none');
+  });
+});

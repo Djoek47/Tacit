@@ -110,8 +110,11 @@ export class LocalResolver implements Resolver {
       // something, so it is never evidence of which act was meant. Counting
       // it as coverage made every act whose only slot is free text lose to
       // its own trigger phrase.
+      // A slot with a default is not missing when nobody mentions it — it is
+      // already answered. Counting it as uncovered sank "what did I miss?",
+      // whose only slot is a briefing length that defaults to standard.
       const evaluable = Object.entries(act.slots).filter(
-        ([name, s]) => s.required && s.primitive !== 'ghostField' && (s.resolve || optionsFor(act, name).length > 0),
+        ([name, s]) => s.required && !s.default && s.primitive !== 'ghostField' && (s.resolve || optionsFor(act, name).length > 0),
       );
       let covered = 0;
       for (const [name, s] of evaluable) {
@@ -157,7 +160,24 @@ export class LocalResolver implements Resolver {
       //             the act led the stage and reached HOLD anyway.
       // A trigger phrase does not override this: "who did the dishes for Sam?"
       // matched "for". The person can always say the same thing as a request.
-      const asking = sentenceMood === 'request';
+      //
+      // One opening, and only one. A question may ASK for something that
+      // changes nothing — "what did I miss?" is how people ask for a
+      // briefing — so a question opens a card when both hold: the act costs
+      // nothing ('self', declared, not narrowed at runtime), and the words
+      // matched a phrase of two words or more. A single common word like
+      // "for" never turns a question into a request, and nothing that touches
+      // somebody else is ever started by a question.
+      const declared = typeof act.radius === 'string' ? act.radius : act.radius.max;
+      let askedFor = 0;
+      if (sentenceMood === 'question' && declared === 'self') {
+        for (const p of act.phrases ?? []) {
+          if (p.trim().split(/\s+/).length < 2) continue;
+          const m = matchPhrase(tokens, p);
+          if (m && m.score > askedFor) askedFor = m.score;
+        }
+      }
+      const asking = sentenceMood === 'request' || askedFor >= this.routing.phraseFloor;
       scores.push({
         act: act.name,
         phraseMatch,

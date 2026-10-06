@@ -305,3 +305,4 @@ export function brief(profile: Profile, desk: Desk, context: ContextMemory, now:
   return { sections, words: used, minutes: Math.round((used / WPM) * 10) / 10, leftOut };
 }
 export * from './worldmonitor.js';
+export * from './speak.js';
