@@ -12,9 +12,11 @@
         <p class="lede" id="intro">Tacit talks with you. Answer however you like, go off on tangents, say “skip” or “stop”. Commands like “turn off quiet hours” go straight to the card.</p>
         <div class="said" id="said" aria-live="polite"></div>
         <div class="tries" id="offers"></div>
+        <span class="eyebrow" id="voice-state" aria-live="polite"></span>
         <form class="ask" id="ask">
           <label for="q" class="eyebrow" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Say something</label>
           <input id="q" autocomplete="off" placeholder="Say something">
+          <button class="mic" id="mic" type="button" aria-label="Talk" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
           <button class="go" type="submit">Say</button>
         </form>
         <div class="tries" id="tries"></div>

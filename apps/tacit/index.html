@@ -54,6 +54,10 @@
   form.ask input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--raised); border-radius: 999px; padding: 12px 18px; }
   form.ask input:focus { outline: 2px solid var(--moment); outline-offset: 1px; }
   .go { border: 0; border-radius: 999px; padding: 0 20px; background: var(--moment); color: var(--moment-ink); font-weight: 700; cursor: pointer; }
+  .mic { flex: none; width: 48px; border: 0; border-radius: 999px; background: var(--tile); color: var(--tile-ink); cursor: pointer; display: grid; place-items: center; }
+  .mic svg { width: 22px; height: 22px; }
+  .mic.listening { background: var(--moment); color: var(--moment-ink); box-shadow: 0 0 0 6px var(--soft); }
+  .mic.hands { outline: 2px solid var(--moment); outline-offset: 2px; }
   .tries { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; cursor: pointer; font-size: 14px; }
   .chip:hover { border-color: var(--moment); }
@@ -136,9 +140,11 @@
         <p class="lede" id="intro">Tacit talks with you. Answer however you like, go off on tangents, say “skip” or “stop”. Commands like “turn off quiet hours” go straight to the card.</p>
         <div class="said" id="said" aria-live="polite"></div>
         <div class="tries" id="offers"></div>
+        <span class="eyebrow" id="voice-state" aria-live="polite"></span>
         <form class="ask" id="ask">
           <label for="q" class="eyebrow" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Say something</label>
           <input id="q" autocomplete="off" placeholder="Say something">
+          <button class="mic" id="mic" type="button" aria-label="Talk" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
           <button class="go" type="submit">Say</button>
         </form>
         <div class="tries" id="tries"></div>
@@ -381,8 +387,12 @@ ${s.join(`
     var p = document.createElement('div'); p.className = cls; p.textContent = text; said.appendChild(p);
     while (said.children.length > 10) said.removeChild(said.firstChild);
   }
+  // Inside the iPhone app the voice is native; on the web it is the browser's.
+  var N = window.TacitNative && window.TacitNative.available ? window.TacitNative : null;
+  function post(m) { try { window.webkit.messageHandlers.tacit.postMessage(m); } catch (e) {} }
   function speak(text) {
     line('reply', text);
+    if (N) { if (t && t.settings.get('voice')) post({ type: 'speak', text: text }); return; }
     try {
       if (window.speechSynthesis) { speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text)); }
     } catch (e) { /* the caption is the reply; the voice is a bonus */ }
@@ -433,6 +443,26 @@ ${s.join(`
     }
     save();
     setTimeout(renderAll, 50);
+  }
+  // ---- Voice (iPhone)
+  if (N) {
+    var mic = $('mic'), hands = false, pressed = 0;
+    mic.hidden = false;
+    N.heard = function (text, final) {
+      if (!final) { $('q').value = text; return; }
+      $('q').value = ''; say(text);
+    };
+    N.state = function (st) {
+      mic.classList.toggle('listening', st === 'listening');
+      $('voice-state').textContent = st === 'listening' ? 'Listening…' : st === 'speaking' ? 'Speaking' : st === 'denied' ? 'Microphone or speech recognition is off in Settings' : (hands ? 'Hands-free' : '');
+    };
+    // Tap: one turn. Hold half a second: hands-free, until tapped again.
+    mic.addEventListener('pointerdown', function () { pressed = Date.now(); });
+    mic.addEventListener('pointerup', function () {
+      if (hands) { hands = false; mic.classList.remove('hands'); post({ type: 'conversation', on: false }); post({ type: 'stop' }); N.state('idle'); return; }
+      if (Date.now() - pressed > 500) { hands = true; mic.classList.add('hands'); post({ type: 'conversation', on: true }); }
+      post({ type: 'listen' });
+    });
   }
   $('ask').addEventListener('submit', function (e) { e.preventDefault(); var q = $('q'); say(q.value); q.value = ''; });
 

@@ -54,6 +54,10 @@
   form.ask input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--raised); border-radius: 999px; padding: 12px 18px; }
   form.ask input:focus { outline: 2px solid var(--moment); outline-offset: 1px; }
   .go { border: 0; border-radius: 999px; padding: 0 20px; background: var(--moment); color: var(--moment-ink); font-weight: 700; cursor: pointer; }
+  .mic { flex: none; width: 48px; border: 0; border-radius: 999px; background: var(--tile); color: var(--tile-ink); cursor: pointer; display: grid; place-items: center; }
+  .mic svg { width: 22px; height: 22px; }
+  .mic.listening { background: var(--moment); color: var(--moment-ink); box-shadow: 0 0 0 6px var(--soft); }
+  .mic.hands { outline: 2px solid var(--moment); outline-offset: 2px; }
   .tries { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; cursor: pointer; font-size: 14px; }
   .chip:hover { border-color: var(--moment); }

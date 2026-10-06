@@ -1,0 +1,35 @@
+# Generate the Xcode project with XcodeGen:  brew install xcodegen && xcodegen
+name: Tacit
+options:
+  bundleIdPrefix: com.kairos
+  deploymentTarget:
+    iOS: "17.0"
+settings:
+  base:
+    DEVELOPMENT_TEAM: ""          # your Apple Developer team ID
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  Tacit:
+    type: application
+    platform: iOS
+    sources:
+      - path: Tacit
+      - path: ../apps/tacit/index.html
+        buildPhase: resources
+    preBuildScripts:
+      - name: Build the Tacit page
+        script: |
+          cd "$SRCROOT/.." && if command -v npm >/dev/null; then npm run build:tacit; else echo "warning: npm not found, using the last built page"; fi
+        inputFiles: []
+        outputFiles:
+          - $(SRCROOT)/../apps/tacit/index.html
+    info:
+      path: Tacit/Info.plist
+      properties:
+        CFBundleDisplayName: Tacit
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        NSMicrophoneUsageDescription: Tacit listens when you talk to it, and only then.
+        NSSpeechRecognitionUsageDescription: Tacit turns what you say into words, on this iPhone when it can.
+        UIBackgroundModes: [audio]

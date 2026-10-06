@@ -28,8 +28,12 @@
     var p = document.createElement('div'); p.className = cls; p.textContent = text; said.appendChild(p);
     while (said.children.length > 10) said.removeChild(said.firstChild);
   }
+  // Inside the iPhone app the voice is native; on the web it is the browser's.
+  var N = window.TacitNative && window.TacitNative.available ? window.TacitNative : null;
+  function post(m) { try { window.webkit.messageHandlers.tacit.postMessage(m); } catch (e) {} }
   function speak(text) {
     line('reply', text);
+    if (N) { if (t && t.settings.get('voice')) post({ type: 'speak', text: text }); return; }
     try {
       if (window.speechSynthesis) { speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text)); }
     } catch (e) { /* the caption is the reply; the voice is a bonus */ }
@@ -80,6 +84,26 @@
     }
     save();
     setTimeout(renderAll, 50);
+  }
+  // ---- Voice (iPhone)
+  if (N) {
+    var mic = $('mic'), hands = false, pressed = 0;
+    mic.hidden = false;
+    N.heard = function (text, final) {
+      if (!final) { $('q').value = text; return; }
+      $('q').value = ''; say(text);
+    };
+    N.state = function (st) {
+      mic.classList.toggle('listening', st === 'listening');
+      $('voice-state').textContent = st === 'listening' ? 'Listening…' : st === 'speaking' ? 'Speaking' : st === 'denied' ? 'Microphone or speech recognition is off in Settings' : (hands ? 'Hands-free' : '');
+    };
+    // Tap: one turn. Hold half a second: hands-free, until tapped again.
+    mic.addEventListener('pointerdown', function () { pressed = Date.now(); });
+    mic.addEventListener('pointerup', function () {
+      if (hands) { hands = false; mic.classList.remove('hands'); post({ type: 'conversation', on: false }); post({ type: 'stop' }); N.state('idle'); return; }
+      if (Date.now() - pressed > 500) { hands = true; mic.classList.add('hands'); post({ type: 'conversation', on: true }); }
+      post({ type: 'listen' });
+    });
   }
   $('ask').addEventListener('submit', function (e) { e.preventDefault(); var q = $('q'); say(q.value); q.value = ''; });
 
