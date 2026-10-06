@@ -88,3 +88,4 @@ export function createTacit(o: TacitOptions): Tacit {
     refresh: () => context.refresh(now()),
   };
 }
+export { worldRoute, type WorldReply } from './world.js';

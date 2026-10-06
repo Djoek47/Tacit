@@ -35,9 +35,17 @@
     } catch (e) { /* the caption is the reply; the voice is a bonus */ }
   }
 
+  // Served by the Tacit server, the world is real and the key stays there. Opened
+  // anywhere else, the page falls back to the labelled sample.
+  var served = /^https?:$/.test(location.protocol) ? { name: 'World Monitor', pull: function () {
+    return fetch('/api/world', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+      .then(function (b) { return b.items; })
+      .catch(function () { return world.pull(); });
+  } } : world;
+
   var t = T.createTacit({
     profile: { name: 'Cicentos', interests: ['trading', 'ai', 'cyber'] },
-    world: [world], speak: speak, el: $('stage'),
+    world: [served], speak: speak, el: $('stage'),
   });
 
   // ---- Talk

@@ -22,6 +22,8 @@
     "build:stage": "npx esbuild apps/stage/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=apps/stage/aiuic.bundle.js --log-level=warning && scripts/page.sh apps/stage",
     "build:pages": "npm run build:demo && npm run build:heckit && npm run build:console && npm run build:stage && npm run build:orb && npm run build:docs && npm run build:tacit",
     "build:docs": "npm run build:runtime && scripts/page.sh apps/docs head.html body.html packages/devkit/runtime/runtime.js",
-    "build:tacit": "npx esbuild apps/tacit/entry.ts --bundle --format=iife --global-name=Tacit --platform=browser --target=es2020 --minify --tsconfig=packages/tacit/tsconfig.json --outfile=apps/tacit/tacit.bundle.js --log-level=warning && scripts/page.sh apps/tacit head.html body.html apps/tacit/tacit.bundle.js"
+    "build:tacit": "npx esbuild apps/tacit/entry.ts --bundle --format=iife --global-name=Tacit --platform=browser --target=es2020 --minify --tsconfig=packages/tacit/tsconfig.json --outfile=apps/tacit/tacit.bundle.js --log-level=warning && scripts/page.sh apps/tacit head.html body.html apps/tacit/tacit.bundle.js",
+    "build:tacit-server": "cd apps/tacit && npx esbuild server.ts --bundle --platform=node --format=esm --target=node20 --tsconfig=../../packages/tacit/tsconfig.json --outfile=server.mjs --log-level=warning",
+    "tacit": "npm run build:tacit && npm run build:tacit-server && node apps/tacit/server.mjs"
   }
 }

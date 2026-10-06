@@ -244,6 +244,9 @@ export class ContextMemory {
     }).sort((a, b) => b.at - a.at);
   }
 
+  /** Everything held, newest first. */
+  all(): ContextItem[] { return [...this.items.values()].sort((a, b) => b.at - a.at); }
+
   get size(): number { return this.items.size; }
 }
 
