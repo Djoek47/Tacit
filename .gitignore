@@ -9,3 +9,8 @@ packages/devkit/.build/
 packages/devkit/test/.proto/
 packages/devkit/.scaffold-test/
 apps/tacit/server.mjs
+.env
+.env.*
+*.key
+ios/Tacit.xcodeproj/
+ios/Tacit/Info.plist
