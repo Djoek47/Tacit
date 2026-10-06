@@ -1,0 +1,60 @@
+<div class="shell">
+  <header class="top">
+    <svg viewBox="0 0 120 120" aria-hidden="true"><rect x="6" y="6" width="108" height="108" rx="30" fill="var(--tile)"/><rect x="28" y="50" width="64" height="5" rx="2.5" fill="var(--tile-ink)"/><rect x="44" y="55" width="32" height="16" rx="3" fill="var(--moment)"/></svg>
+    <span class="name">Tacit</span>
+    <span class="when" id="clock"></span>
+  </header>
+
+  <section class="view" id="v-talk">
+    <div class="talk">
+      <div class="view">
+        <h1>Say it once.</h1>
+        <p class="lede">Type what you would say. Cheap things that only touch you happen when you stay quiet; anything else waits for your yes.</p>
+        <div class="said" id="said" aria-live="polite"></div>
+        <form class="ask" id="ask">
+          <label for="q" class="eyebrow" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Say something</label>
+          <input id="q" autocomplete="off" placeholder="brief me">
+          <button class="go" type="submit">Say</button>
+        </form>
+        <div class="tries" id="tries"></div>
+      </div>
+      <eui-stage id="stage"></eui-stage>
+    </div>
+  </section>
+
+  <section class="view" id="v-desk" hidden>
+    <h1>Desk</h1>
+    <p class="lede">Nothing is hidden here. Every notice is kept; the Desk only decides whether it interrupts you now, waits in a bundle, or goes in your morning briefing.</p>
+    <div class="legend">
+      <span><i class="dot now"></i>Interrupted you</span>
+      <span><i class="dot bundle"></i>Bundled for later</span>
+      <span><i class="dot briefing"></i>Saved for the briefing</span>
+    </div>
+    <div class="list" id="desk"></div>
+    <h2>Send a test notice</h2>
+    <div class="incoming" id="incoming"></div>
+  </section>
+
+  <section class="view" id="v-morning" hidden>
+    <h1>Morning</h1>
+    <p class="lede" id="m-lede"></p>
+    <span class="meter" id="m-meter"></span>
+    <button class="play" id="m-play" type="button">Read it to me</button>
+    <div class="morning" id="m-body"></div>
+  </section>
+
+  <section class="view" id="v-settings" hidden>
+    <h1>Settings</h1>
+    <p class="lede">The one fixed screen. Everything on it can also be said: “turn off quiet hours”, “make the briefing short”.</p>
+    <div id="s-body" class="view"></div>
+    <h2>What changed</h2>
+    <div class="log" id="s-log">Nothing yet.</div>
+  </section>
+</div>
+
+<nav class="tabs" role="tablist" aria-label="Tacit">
+  <button role="tab" data-v="talk" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h6"/></svg>Talk<span class="badge"></span></button>
+  <button role="tab" data-v="desk" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="5" width="16" height="14" rx="3"/><path d="M4 13h5l1 2h4l1-2h5"/></svg>Desk<span class="badge" id="b-desk"></span></button>
+  <button role="tab" data-v="morning" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 18h18M7 18a5 5 0 0 1 10 0M12 6v3M5 10l2 2M19 10l-2 2"/></svg>Morning<span class="badge"></span></button>
+  <button role="tab" data-v="settings" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Settings<span class="badge"></span></button>
+</nav>

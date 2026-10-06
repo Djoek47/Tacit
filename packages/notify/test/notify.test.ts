@@ -29,6 +29,11 @@ describe('the desk may delay a notice; it may never hide one', () => {
     expect(new Desk(undefined, hourOf).ingest(notice({ urgency: 0.2 })).delivery).toBe('briefing');
   });
 
+  it('never files a person until morning, however low their urgency', () => {
+    const d = new Desk(undefined, hourOf);
+    expect(d.ingest(notice({ urgency: 0.2, from: 'person:maya' })).delivery).toBe('bundle');
+  });
+
   it('holds the hour budget: the fourth urgent notice in an hour waits', () => {
     const d = new Desk(undefined, hourOf);
     const out = [0, 1, 2, 3].map((i) => d.ingest(notice({ at: NOON + i * 60_000 })).delivery);

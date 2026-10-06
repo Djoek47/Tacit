@@ -111,6 +111,11 @@ export class Desk {
     while (this.interrupted.length && this.interrupted[0]! < hourAgo) this.interrupted.shift();
 
     if (n.urgency < this.budget.bar) {
+      // A person writing is never filed until morning: below the bar it still
+      // waits only until the next time the person looks, not the next briefing.
+      if (matches(n.from, this.budget.breakthrough)) {
+        return { notice: n, delivery: 'bundle', why: 'from a person; it waits for your next look, not for the briefing' };
+      }
       return { notice: n, delivery: 'briefing', why: 'not urgent enough to interrupt; it waits for the briefing' };
     }
     if (inQuiet(this.hourOf(n.at), this.budget.quiet) && !matches(n.from, this.budget.breakthrough)) {

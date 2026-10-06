@@ -20,7 +20,8 @@
     "build:hepta-dev": "cd apps/hepta-dev && npx esbuild src/cli.ts --bundle --platform=node --format=esm --target=node20 --outfile=hepta-dev.mjs --external:playwright --log-level=warning --banner:js=\"import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\" && cp ../../packages/devkit/runtime/runtime.js runtime.js",
     "build:studio": "cd apps/studio && npx esbuild entry.ts --bundle --format=iife --global-name=AIUIC --platform=browser --target=es2020 --minify --legal-comments=none --outfile=aiuic.bundle.js --log-level=warning && sed -e '1d' -e '$d' app.js > .app.tmp.js && npx esbuild .app.tmp.js --minify --target=es2020 --log-level=warning --outfile=.app.min.js && { cat head.html body.html; echo '<script>'; cat aiuic.bundle.js; echo '</script><script>'; cat .app.min.js; echo '</script>'; } | sed 's#(https://github.com/modelcontextprotocol/modelcontextprotocol/issues/986)#(MCP SEP 986)#' > index.html && rm -f .app.tmp.js .app.min.js",
     "build:stage": "npx esbuild apps/stage/entry.ts --bundle --format=iife --global-name=AIUIC --minify --outfile=apps/stage/aiuic.bundle.js --log-level=warning && scripts/page.sh apps/stage",
-    "build:pages": "npm run build:demo && npm run build:heckit && npm run build:console && npm run build:stage && npm run build:orb && npm run build:docs",
-    "build:docs": "npm run build:runtime && scripts/page.sh apps/docs head.html body.html packages/devkit/runtime/runtime.js"
+    "build:pages": "npm run build:demo && npm run build:heckit && npm run build:console && npm run build:stage && npm run build:orb && npm run build:docs && npm run build:tacit",
+    "build:docs": "npm run build:runtime && scripts/page.sh apps/docs head.html body.html packages/devkit/runtime/runtime.js",
+    "build:tacit": "npx esbuild apps/tacit/entry.ts --bundle --format=iife --global-name=Tacit --platform=browser --target=es2020 --minify --tsconfig=packages/tacit/tsconfig.json --outfile=apps/tacit/tacit.bundle.js --log-level=warning && scripts/page.sh apps/tacit head.html body.html apps/tacit/tacit.bundle.js"
   }
 }
