@@ -17,17 +17,13 @@ git remote set-url origin git@github.com:<you>/tacit.git
 git push -u origin v1:main   # all current work is on v1; it becomes main on GitHub
 ```
 
-## 3. Check it works
+## 3. Install and check it works
 
 ```sh
-npm install --prefix packages/core   # each package has its own node_modules; see below
-npm test          # 600-odd tests, all should pass
-npm run typecheck
-npm run eval      # the safety numbers: wrong confirms must stay 0
+sh scripts/setup.sh   # installs every package, then runs the tests, typecheck and eval
 ```
 
-The packages install separately today (one `node_modules` per package). The first job after the push is
-an npm workspaces setup so one `npm install` at the root does all of it.
+Needs Node 20 or later. Each package keeps its own node_modules for now; moving to npm workspaces can come later.
 
 ## Secrets
 
