@@ -5,7 +5,8 @@
  * absent" a mechanism rather than a hope.
  */
 
-import { mood } from './mood.js';
+import { defers, mood, refuses, stopping } from './mood.js';
+import { normalize } from './text.js';
 import type { ActDef, Candidate, Ctx, Filled, Option } from '@intermenu/aiuic-core';
 import { matchPhrase, tokenize, type Token } from './text.js';
 import {
@@ -177,7 +178,22 @@ export class LocalResolver implements Resolver {
           if (m && m.score > askedFor) askedFor = m.score;
         }
       }
-      const asking = sentenceMood === 'request' || askedFor >= this.routing.phraseFloor;
+      // Refusing, putting off and cancelling are not asking for this act.
+      //   "don't brief me"            refuses: starts nothing
+      //   "update me later"           defers: starts nothing now, unless the act
+      //                               has a time slot to hold the "later"
+      //   "cancel the briefing"       stops: only an act that owns the verb
+      //                               ("cancel", "skip") may take the sentence
+      // Words that are part of the act's own name do not count against it:
+      // "do not disturb" names the quiet-hours setting, it does not refuse it.
+      const own = (act.phrases ?? []).map((p) => normalize(p)).filter(Boolean)
+        .sort((a, b) => b.length - a.length);
+      let rest = ` ${normalize(text.replace(/[\u2019'-]/g, ' '))} `;
+      for (const p of own) rest = rest.split(` ${p} `).join(' ');
+      const hasTime = Object.values(act.slots).some((sd) => sd.primitive === 'when');
+      const verb = stopping(rest);
+      const declined = refuses(rest) || (defers(rest) && !hasTime) || !!verb;
+      const asking = !declined && (sentenceMood === 'request' || askedFor >= this.routing.phraseFloor);
       scores.push({
         act: act.name,
         phraseMatch,

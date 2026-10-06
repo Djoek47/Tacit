@@ -46,3 +46,37 @@ export function mood(text: string): Mood {
   if (i >= 0 && i <= 3 && !CLAUSE.has(words[i - 1] ?? '')) return 'statement';
   return 'request';
 }
+
+/**
+ * A sentence that refuses. "Don't brief me" names the briefing and asks for
+ * the opposite; the third review showed it playing the briefing aloud,
+ * because routing matched the act's name and nothing understood "don't".
+ * The same hole was older than that: "don't pay Maya" would open the payment
+ * card. A refusal starts nothing.
+ */
+const REFUSE = /(^|\s)(don t|dont|do not|never|not now|no need|no more|please don t)\b|^no\s+\w/;
+export function refuses(text: string): boolean {
+  const t = normalize(text.replace(/[’'-]/g, ' '));
+  return REFUSE.test(t);
+}
+
+/**
+ * A sentence that puts something off: "update me later", "catch me up after
+ * lunch". It starts nothing now — unless the act has a time slot to hold the
+ * "later", in which case "remind me tomorrow" is exactly its request.
+ */
+const DEFER = /\b(later|afterwards|after (lunch|dinner|work|the meeting|this)|tomorrow|tonight|next (week|month|time)|in (a|an|\d+|one|two|five|ten|twenty|thirty) (minute|minutes|hour|hours|day|days)|this (afternoon|evening|weekend)|demain|plus tard|ce soir)\b/;
+export function defers(text: string): boolean {
+  return DEFER.test(normalize(text.replace(/[’'-]/g, ' ')));
+}
+
+/**
+ * "Cancel the briefing", "skip the briefing": the word names a different act
+ * — the one that cancels — and never the thing being cancelled. Returns the
+ * verb, so routing can let an act that owns it ("cancel_meeting") through.
+ */
+const STOPPING = /\b(cancel|skip|stop|without|forget about|call off)\b/;
+export function stopping(text: string): string | null {
+  const m = STOPPING.exec(normalize(text.replace(/[’'-]/g, ' ')));
+  return m ? m[1]! : null;
+}
