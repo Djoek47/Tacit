@@ -12,5 +12,5 @@
  * provider cannot stop the conductor.
  */
 export { anthropicOrchestrator, type AnthropicOptions } from './anthropic.js';
-export { openaiOrchestrator, type OpenAIOptions } from './openai.js';
+export { openaiOrchestrator, grokOrchestrator, type OpenAIOptions } from './openai.js';
 export { actCards, checkPlan, planTools, describeInput, couldNot, redact, SYSTEM, LIMITS, type ActCard, type Checked, type Fetch } from './plan.js';

@@ -75,3 +75,14 @@ describe('what it accepts back', () => {
     expect(redact(`Bearer ${KEY} leaked`, { authorization: `Bearer ${KEY}` })).toBe('Bearer [key] leaked');
   });
 });
+
+describe('Grok, through the same adapter', () => {
+  it('posts to xAI\'s Responses endpoint, and names xAI when it fails', async () => {
+    const { grokOrchestrator } = await import('../src/index.js');
+    const f = stubFetch({ error: { message: 'bad key' } }, 401);
+    const h = build((acts) => grokOrchestrator({ apiKey: 'xai-SECRETSECRET', model: 'grok-4', acts, fetch: f.fetch }));
+    const out = (await h.pyramid.pursue('set my budget')) as { answer: string };
+    expect(f.sent[0]!.url).toBe('https://api.x.ai/v1/responses');
+    expect(out.answer).toMatch(/^I could not plan this: the xAI API answered 401/);
+  });
+});

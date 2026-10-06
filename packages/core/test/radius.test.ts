@@ -51,3 +51,26 @@ describe('admitting a value proposed from outside', () => {
     expect(admitValue(slot, '   ', ctx).ok).toBe(false);
   });
 });
+
+describe('authority is never granted by silence', () => {
+  it('waits for an explicit yes on an act that grants authority, even when it costs nothing', async () => {
+    const { createAIUIC, FakeClock } = await import('../src/index.js');
+    const clock = new FakeClock(1_700_000_000_000);
+    let committed = 0;
+    const ui = createAIUIC({ clock, ctx: () => ({ actor: { id: 'me', basePauseMs: 850 },
+      attention: { foreground: true, unlocked: true, proximityClear: true, listening: true },
+      reachLimit: 1, undoWindowMs: 5000 }) as never });
+    ui.defineAct(defineAct({ name: 'allow_away', grantsAuthority: true, radius: 'self',
+      slots: { on: { primitive: 'chip', options: () => [{ value: true, label: 'On' }], required: true, order: 1 } },
+      commit: () => { committed++; return { id: '1' }; }, undo: () => {} }));
+    const run = ui.start('allow_away');
+    run.setValue('on', true, 'spoken');
+    run.evaluate();
+    expect(run.status).toBe('explicit');
+    clock.advance(60_000);
+    await Promise.resolve(); await Promise.resolve();
+    expect(committed).toBe(0);
+    await run.assent();
+    expect(committed).toBe(1);
+  });
+});

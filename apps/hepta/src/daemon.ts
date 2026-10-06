@@ -38,7 +38,7 @@ import { Aggregator, Pyramid, type Orchestrator } from '../../../packages/pyrami
 import { Conductor, ConsoleNotifier, scoreActs, type InboxItem, type Notifier } from '../../../packages/conductor/src/index.js';
 import { connect, delegationAct, applyDelegations, type Connection } from '../../../packages/mcp/src/index.js';
 import { createHeptaServer } from '../../../packages/server/src/index.js';
-import { anthropicOrchestrator, openaiOrchestrator } from '../../../packages/orchestrators/src/index.js';
+import { anthropicOrchestrator, grokOrchestrator, openaiOrchestrator } from '../../../packages/orchestrators/src/index.js';
 
 type ServerEntry = { name?: string; command: string; args?: string[]; env?: Record<string, string>; prefix?: string };
 type Config = {
@@ -51,7 +51,7 @@ type Config = {
    * it found. The key is read from the environment, never from this file, so a
    * config can be shared without leaking it.
    */
-  planner?: { provider: 'anthropic' | 'openai'; model: string; baseUrl?: string };
+  planner?: { provider: 'anthropic' | 'openai' | 'xai'; model: string; baseUrl?: string };
 };
 
 // ------------------------------------------------------------------ storage
@@ -89,13 +89,14 @@ const localOrchestrator: Orchestrator = ({ findings }) => {
 /** The configured planner, or the local one with a note saying why. */
 function plannerFor(p: Config['planner'], acts: () => readonly ActDef[], ctx: () => Ctx): Orchestrator {
   if (!p) return localOrchestrator;
-  const env = p.provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
+  const env = p.provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : p.provider === 'xai' ? 'XAI_API_KEY' : 'OPENAI_API_KEY';
   const apiKey = process.env[env];
   if (!apiKey) { log(`planner: ${p.provider} is configured but ${env} is not set; planning locally`); return localOrchestrator; }
   log(`planner: ${p.provider} ${p.model} (it proposes; you decide)`);
-  return p.provider === 'anthropic'
-    ? anthropicOrchestrator({ apiKey, model: p.model, acts, ctx, ...(p.baseUrl ? { baseUrl: p.baseUrl } : {}) })
-    : openaiOrchestrator({ apiKey, model: p.model, acts, ctx, ...(p.baseUrl ? { baseUrl: p.baseUrl } : {}) });
+  const base = p.baseUrl ? { baseUrl: p.baseUrl } : {};
+  if (p.provider === 'anthropic') return anthropicOrchestrator({ apiKey, model: p.model, acts, ctx, ...base });
+  if (p.provider === 'xai') return grokOrchestrator({ apiKey, model: p.model, acts, ctx, ...base });
+  return openaiOrchestrator({ apiKey, model: p.model, acts, ctx, ...base });
 }
 
 // ----------------------------------------------------------------- notifier

@@ -25506,7 +25506,7 @@ var LocalResolver = class {
         if (m && m.score > phraseMatch) phraseMatch = m.score;
       }
       const evaluable = Object.entries(act.slots).filter(
-        ([name2, s]) => s.required && s.primitive !== "ghostField" && (s.resolve || optionsFor(act, name2).length > 0)
+        ([name2, s]) => s.required && !s.default && s.primitive !== "ghostField" && (s.resolve || optionsFor(act, name2).length > 0)
       );
       let covered = 0;
       for (const [name2, s] of evaluable) {
@@ -25523,7 +25523,16 @@ var LocalResolver = class {
       }
       weight += this.routing.coverageWeight;
       total += this.routing.coverageWeight * (evaluable.length > 0 ? requiredCoverage : this.routing.uncheckableCoverage);
-      const asking = sentenceMood === "request";
+      const declared = typeof act.radius === "string" ? act.radius : act.radius.max;
+      let askedFor = 0;
+      if (sentenceMood === "question" && declared === "self") {
+        for (const p of act.phrases ?? []) {
+          if (p.trim().split(/\s+/).length < 2) continue;
+          const m = matchPhrase(tokens3, p);
+          if (m && m.score > askedFor) askedFor = m.score;
+        }
+      }
+      const asking = sentenceMood === "request" || askedFor >= this.routing.phraseFloor;
       scores.push({
         act: act.name,
         phraseMatch,
@@ -46755,8 +46764,8 @@ function anthropicOrchestrator(opts) {
 }
 
 // ../../packages/orchestrators/src/openai.ts
-var WHO2 = "the OpenAI API";
 function openaiOrchestrator(opts) {
+  const WHO2 = opts.who ?? "the OpenAI API";
   const fetch2 = opts.fetch ?? globalThis.fetch;
   const url = `${(opts.baseUrl ?? "https://api.openai.com").replace(/\/$/, "")}/v1/responses`;
   return async (input) => {
@@ -46798,6 +46807,9 @@ function openaiOrchestrator(opts) {
     return { kind: "answer", answer: text2.slice(0, LIMITS.answer) };
   };
 }
+function grokOrchestrator(opts) {
+  return openaiOrchestrator({ ...opts, baseUrl: opts.baseUrl ?? "https://api.x.ai", who: "the xAI API" });
+}
 
 // src/daemon.ts
 var FileStore = class {
@@ -46830,14 +46842,17 @@ var localOrchestrator = ({ findings }) => {
 };
 function plannerFor(p, acts, ctx) {
   if (!p) return localOrchestrator;
-  const env = p.provider === "anthropic" ? "ANTHROPIC_API_KEY" : "OPENAI_API_KEY";
+  const env = p.provider === "anthropic" ? "ANTHROPIC_API_KEY" : p.provider === "xai" ? "XAI_API_KEY" : "OPENAI_API_KEY";
   const apiKey = process.env[env];
   if (!apiKey) {
     log(`planner: ${p.provider} is configured but ${env} is not set; planning locally`);
     return localOrchestrator;
   }
   log(`planner: ${p.provider} ${p.model} (it proposes; you decide)`);
-  return p.provider === "anthropic" ? anthropicOrchestrator({ apiKey, model: p.model, acts, ctx, ...p.baseUrl ? { baseUrl: p.baseUrl } : {} }) : openaiOrchestrator({ apiKey, model: p.model, acts, ctx, ...p.baseUrl ? { baseUrl: p.baseUrl } : {} });
+  const base = p.baseUrl ? { baseUrl: p.baseUrl } : {};
+  if (p.provider === "anthropic") return anthropicOrchestrator({ apiKey, model: p.model, acts, ctx, ...base });
+  if (p.provider === "xai") return grokOrchestrator({ apiKey, model: p.model, acts, ctx, ...base });
+  return openaiOrchestrator({ apiKey, model: p.model, acts, ctx, ...base });
 }
 var WebhookNotifier = class {
   constructor(url) {

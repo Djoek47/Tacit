@@ -31,13 +31,15 @@ export type OpenAIOptions = {
   /** 'auto' (default) or 'required'. */
   toolChoice?: 'auto' | 'required';
   includeAuthority?: boolean;
+  /** How failures name the provider. */
+  who?: string;
   /** The app's context, for reading slot options and checking proposed values against them. */
   ctx?: () => Ctx;
 };
 
-const WHO = 'the OpenAI API';
 
 export function openaiOrchestrator(opts: OpenAIOptions): Orchestrator {
+  const WHO = opts.who ?? 'the OpenAI API';
   const fetch = opts.fetch ?? (globalThis.fetch as unknown as Fetch);
   const url = `${(opts.baseUrl ?? 'https://api.openai.com').replace(/\/$/, '')}/v1/responses`;
 
@@ -82,4 +84,17 @@ export function openaiOrchestrator(opts: OpenAIOptions): Orchestrator {
     if (!text) return couldNot(WHO, 'answered with nothing');
     return { kind: 'answer', answer: text.slice(0, LIMITS.answer) };
   };
+}
+
+/**
+ * Grok, through xAI's Responses endpoint: POST https://api.x.ai/v1/responses
+ * with a bearer key (https://docs.x.ai/docs/guides/chat, read 6 Oct 2026).
+ * xAI calls the Responses API its preferred interface, so this is the OpenAI
+ * adapter pointed at another host. Not yet verified against the live API:
+ * whether it accepts `store: false` and returns tool calls in exactly
+ * OpenAI's shape. If it does not, the reply fails the check and becomes an
+ * honest answer — it never becomes an action.
+ */
+export function grokOrchestrator(opts: Omit<OpenAIOptions, 'baseUrl' | 'who'> & { baseUrl?: string }): Orchestrator {
+  return openaiOrchestrator({ ...opts, baseUrl: opts.baseUrl ?? 'https://api.x.ai', who: 'the xAI API' });
 }

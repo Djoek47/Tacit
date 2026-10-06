@@ -343,13 +343,19 @@ export class ActRun {
 
     const gate: GateResult = attentionGate(ctx.attention, this.engaged);
 
-    if (radius === 'external' || !gate.pass) {
+    // Handing the assistant more power is never consented to by silence,
+    // whatever it costs. Found by the settings tests: "act while I am away"
+    // is radius 'self' (it touches nobody else), so it held and committed on
+    // a pause — and `grantsAuthority` had only ever been checked against the
+    // conductor, never against a quiet person who had not actually said yes.
+    if (radius === 'external' || this.def.grantsAuthority || !gate.pass) {
       this.status = 'explicit';
       this.phase = 'explicit';
       this.emit({
         type: 'blocked',
         act: this.def.name,
-        reason: radius === 'external' ? 'radius is external' : 'attention gate failed',
+        reason: radius === 'external' ? 'radius is external'
+          : this.def.grantsAuthority ? 'it grants authority, which silence never does' : 'attention gate failed',
         ...(gate.pass ? {} : { failures: gate.failures }),
       });
       this.emit({ type: 'stage', state: this.state() });
