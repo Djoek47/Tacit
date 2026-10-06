@@ -16,6 +16,7 @@
 import type { ActDef, Clock, Ctx } from '@intermenu/aiuic-core';
 import { mount, type Mounted, type MountOptions } from '@intermenu/sdk';
 import { ContextMemory, DEFAULT_BUDGET, Desk, briefingAct, notifyAct, type Channel, type Notice, type Profile, type WorldSource } from '@intermenu/aiuic-notify';
+import { Interview, personKey, type Learned } from './interview.js';
 import { CORE_SETTINGS, Settings, settingActs, type SettingDef } from '@intermenu/aiuic-settings';
 
 export type TacitOptions = {
@@ -46,12 +47,19 @@ export type Tacit = Mounted & {
   settings: Settings;
   /** A notice arriving from anywhere: an app, the world, a person. */
   receive(n: Notice): ReturnType<Desk['ingest']>;
+  /** Who this is for, as the interview and the person last left it. */
+  readonly profile: TacitOptions['profile'] & { place?: string; people?: string[] };
+  /** The first conversation. Nothing it hears applies until `learn` is called with a confirmed result. */
+  interview(): Interview;
+  learn(l: Learned): void;
   /** Pull the world in. Run it daily, or when the person asks. */
   refresh(): ReturnType<ContextMemory['refresh']>;
 };
 
 export function createTacit(o: TacitOptions): Tacit {
   const now = o.now ?? Date.now;
+  // The profile is the person's, and the interview can change it; everything reads it fresh.
+  let profile: TacitOptions['profile'] & { place?: string; people?: string[] } = { ...o.profile };
   const settings = new Settings([...CORE_SETTINGS, ...(o.settings ?? [])], now);
 
   // The desk reads its budget from the settings on every notice, so a setting
@@ -60,13 +68,15 @@ export function createTacit(o: TacitOptions): Tacit {
     ...DEFAULT_BUDGET,
     perHour: Number(settings.get('interruptions_per_hour')),
     ...(settings.get('quiet_hours') ? { quiet: DEFAULT_BUDGET.quiet! } : { quiet: undefined as never }),
+    // Named people narrow who may break through; nobody named means any person may.
+    breakthrough: profile.people ? profile.people.map(personKey) : DEFAULT_BUDGET.breakthrough!,
   }), o.hourOf);
   const context = new ContextMemory(o.world ?? []);
 
   const own: ActDef[] = [
     briefingAct({
       desk, context, now,
-      profile: () => ({ ...o.profile, minutes: Number(settings.get('briefing_length')) }),
+      profile: () => ({ ...profile, minutes: Number(settings.get('briefing_length')) }),
       defaultMinutes: () => Number(settings.get('briefing_length')),
       ...(o.speak ? { speak: async (t: string) => { if (settings.get('voice')) await o.speak!(t); } } : {}),
     }),
@@ -84,8 +94,26 @@ export function createTacit(o: TacitOptions): Tacit {
 
   return {
     ...m, desk, context, settings,
+    get profile() { return profile; },
+    interview: () => new Interview(),
+    learn(l: Learned) {
+      // Only a confirmed interview reaches here. Settings go through the same
+      // store as the screen and the voice, so the change log shows them.
+      profile = {
+        ...profile,
+        ...(l.name ? { name: l.name } : {}),
+        ...(l.interests?.length ? { interests: l.interests } : {}),
+        ...(l.place ? { place: l.place } : {}),
+        ...(l.people ? { people: l.people } : {}),
+      };
+      if (l.briefing_time) settings.set('briefing_time', l.briefing_time, 'voice');
+      if (l.briefing_length) settings.set('briefing_length', l.briefing_length, 'voice');
+      if (l.quiet_hours !== undefined) settings.set('quiet_hours', l.quiet_hours, 'voice');
+      m.draw();
+    },
     receive: (n) => desk.ingest(n),
     refresh: () => context.refresh(now()),
   };
 }
 export { worldRoute, type WorldReply } from './world.js';
+export { Interview, QUESTIONS, summarize, personKey, type Learned, type Step } from './interview.js';

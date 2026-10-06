@@ -18,6 +18,7 @@
     --paper: #0F1222; --surface: #161A2E; --raised: #1D2238; --ink: #E7E9E2; --dim: #9AA0B2; --line: rgba(231,233,226,.12);
     --moment: #E0924A; --moment-ink: #14182B; --tile: #E7E9E2; --tile-ink: #14182B; --soft: rgba(224,146,74,.14); color-scheme: dark; }
 
+  [hidden] { display: none !important; }
   html, body { height: 100%; }
   body { background: var(--paper); color: var(--ink); font: 16px/1.55 var(--body); }
   button, input { font: inherit; color: inherit; }
@@ -56,6 +57,11 @@
   .tries { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; cursor: pointer; font-size: 14px; }
   .chip:hover { border-color: var(--moment); }
+
+  .iv { display: flex; flex-direction: column; gap: 10px; padding: 20px; border-radius: 20px; background: var(--soft); border: 1px solid var(--line); }
+  .iv[hidden] { display: none !important; }
+  .iv-sum { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+  .chip.primary { background: var(--moment); color: var(--moment-ink); border-color: var(--moment); font-weight: 700; }
 
   /* Desk */
   .list { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); overflow: hidden; }

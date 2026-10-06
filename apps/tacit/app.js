@@ -44,7 +44,7 @@
   } } : world;
 
   var t = T.createTacit({
-    profile: { name: 'Cicentos', interests: ['trading', 'ai', 'cyber'] },
+    profile: { interests: ['trading', 'ai', 'cyber'] },
     world: [served], speak: speak, el: $('stage'),
   });
 
@@ -57,11 +57,50 @@
   function say(text) {
     if (!text.trim()) return;
     line('bubble', text);
+    if (iv) { ivShow(iv.answer(text)); return; }
     var r = t.hear(text, { final: true });
     if (!r || !r.decision || r.decision.kind === 'none') line('reply', 'Nothing I can do matches that yet. Try one of these.');
     setTimeout(renderAll, 50);
   }
   $('ask').addEventListener('submit', function (e) { e.preventDefault(); var q = $('q'); say(q.value); q.value = ''; });
+
+  // ---- The first conversation
+  var iv = null;
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+  function ivStart() { iv = t.interview(); show('talk'); ivShow(iv.step()); }
+  function ivEnd() { iv = null; $('iv').hidden = true; $('hello').hidden = false; $('intro').hidden = false; $('tries').hidden = false; $('q').placeholder = 'brief me'; store('tacit.met', '1'); }
+  function ctl(label, words, primary) {
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'chip' + (primary ? ' primary' : '');
+    b.textContent = label; b.onclick = function () { say(words); }; $('iv-ctl').appendChild(b);
+  }
+  function ivShow(s) {
+    $('iv').hidden = false; $('hello').hidden = true; $('intro').hidden = true; $('tries').hidden = true; $('q').placeholder = 'Your answer'; $('iv-ctl').replaceChildren(); $('iv-sum').hidden = true;
+    if (s.kind === 'ask') {
+      $('iv-n').textContent = (s.index + 1) + ' of ' + s.of + ' · first conversation';
+      $('iv-q').textContent = s.ask; $('iv-h').textContent = s.hint;
+      speakQuiet(s.ask);
+      ctl('Skip', 'skip'); if (s.index > 0) ctl('Back', 'go back'); ctl('Stop', 'stop');
+      $('q').focus();
+    } else if (s.kind === 'confirm') {
+      $('iv-n').textContent = 'Did I hear you right?';
+      $('iv-q').textContent = 'Here is what I will remember.';
+      $('iv-h').textContent = 'Nothing changes until you say yes.';
+      var ul = $('iv-sum'); ul.replaceChildren(); ul.hidden = false;
+      s.summary.forEach(function (x) { var li = document.createElement('li'); li.textContent = x; ul.appendChild(li); });
+      speakQuiet(s.summary.join(' ') + ' Is that right?');
+      ctl('Yes, that is right', 'yes', true); ctl('No, go back', 'no');
+    } else if (s.kind === 'done') {
+      t.learn(s.learned); ivEnd();
+      line('reply', (t.profile.name ? 'Thank you, ' + t.profile.name + '. ' : 'Thank you. ') + 'Say “brief me” whenever you want your briefing.');
+      renderAll();
+    } else { ivEnd(); line('reply', 'Stopped. Nothing was changed. You can do it again from Settings.'); }
+  }
+  // Questions are spoken through the same voice setting as every reply, without filling the transcript.
+  function speakQuiet(text) {
+    if (!t.settings.get('voice')) return;
+    try { if (window.speechSynthesis) { speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text)); } } catch (e) {}
+  }
+  $('redo').onclick = ivStart;
 
   // ---- Desk
   var decided = [];
@@ -103,7 +142,7 @@
 
   // ---- Morning
   function renderMorning() {
-    var p = { interests: ['trading', 'ai', 'cyber'], minutes: Number(t.settings.get('briefing_length')) };
+    var p = { interests: t.profile.interests, minutes: Number(t.settings.get('briefing_length')) };
     var b = T.brief(p, t.desk, t.context, Date.now());
     $('m-lede').textContent = 'What waits for you, what is around you, and what moved in what you follow. Ready at ' +
       t.settings.screen().flatMap(function (s) { return s.items; }).find(function (i) { return i.key === 'briefing_time'; }).display +
@@ -193,6 +232,9 @@
     if (s !== sig) { sig = s; renderAll(); }
   }, 1000);
   var tok = (location.hash || '').slice(1);
-  t.refresh().then(function () { show(['desk', 'morning', 'settings'].indexOf(tok) >= 0 ? tok : 'talk'); });
+  t.refresh().then(function () {
+    show(['desk', 'morning', 'settings'].indexOf(tok) >= 0 ? tok : 'talk');
+    if (!store('tacit.met') || tok === 'hello') ivStart();
+  });
 })();
 </script>

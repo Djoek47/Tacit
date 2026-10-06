@@ -8,8 +8,15 @@
   <section class="view" id="v-talk">
     <div class="talk">
       <div class="view">
-        <h1>Say it once.</h1>
-        <p class="lede">Type what you would say. Cheap things that only touch you happen when you stay quiet; anything else waits for your yes.</p>
+        <div class="iv" id="iv" hidden>
+          <span class="eyebrow" id="iv-n"></span>
+          <h1 id="iv-q"></h1>
+          <p class="lede" id="iv-h"></p>
+          <ul class="iv-sum" id="iv-sum" hidden></ul>
+          <div class="tries" id="iv-ctl"></div>
+        </div>
+        <h1 id="hello">Say it once.</h1>
+        <p class="lede" id="intro">Type what you would say. Cheap things that only touch you happen when you stay quiet; anything else waits for your yes.</p>
         <div class="said" id="said" aria-live="polite"></div>
         <form class="ask" id="ask">
           <label for="q" class="eyebrow" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Say something</label>
@@ -47,6 +54,7 @@
     <h1>Settings</h1>
     <p class="lede">The one fixed screen. Everything on it can also be said: “turn off quiet hours”, “make the briefing short”.</p>
     <div id="s-body" class="view"></div>
+    <button class="play" id="redo" type="button">Redo the first conversation</button>
     <h2>What changed</h2>
     <div class="log" id="s-log">Nothing yet.</div>
   </section>

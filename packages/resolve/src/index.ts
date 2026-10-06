@@ -9,3 +9,4 @@ export * from './grammar.js';
 export * from './free.js';
 export * from './mood.js';
 export { amounts, endsInOpenNumber } from './numbers.js';
+export { normalize } from './text.js';
