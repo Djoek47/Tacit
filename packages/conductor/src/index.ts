@@ -109,7 +109,9 @@ export interface StateStore {
   save(v: string): void;
 }
 
-type State = { version: 1; inbox: InboxItem[]; lastRun: Record<string, number>; failures: Record<string, number>; seq: number };
+/** Written before an unattended commit, removed after it settles. One left behind means the commit was cut off. */
+export type Claim = { orderId: string; title: string; act: string; fill: Record<string, unknown>; at: number };
+type State = { version: 1; inbox: InboxItem[]; lastRun: Record<string, number>; failures: Record<string, number>; seq: number; claims?: Record<string, Claim> };
 
 // ---------------------------------------------------------------- authorise
 
@@ -186,6 +188,19 @@ export class Conductor {
         const p = JSON.parse(raw) as State;
         if (p?.version === 1) this.state = p;
       } catch { /* start clean; a bad file must not stop the conductor */ }
+    }
+    // Claim before act (the idea is from Odysseus's effect log; no code from
+    // it): a commit that was cut off by a crash or a restart is reported as
+    // "may have happened" — never as done, never silently forgotten, and never
+    // retried on its own, because doing it twice can be worse than once.
+    const left = Object.values(this.state.claims ?? {});
+    if (left.length) {
+      this.state.claims = {};
+      for (const c of left) {
+        this.push({ orderId: c.orderId, kind: 'notice', title: c.title, act: c.act, fill: c.fill,
+          detail: 'Tacit stopped while doing this, so it may or may not have happened. Please check before doing it again.' });
+      }
+      this.save();
     }
   }
 
@@ -325,7 +340,14 @@ export class Conductor {
     // Not assent(): that is a person's tap, and it counts as the person
     // engaging. This is the order's assent, given in advance, and the core
     // refuses it for anything that grants authority.
-    await run.assentUnattended();
+    const claimId = `c${this.config.clock.now().toString(36)}${(this.state.seq + 1).toString(36)}`;
+    (this.state.claims ??= {})[claimId] = { orderId: o.id, title, act: run.def.name, fill: { ...run.filled }, at: this.config.clock.now() };
+    this.save();
+    try {
+      await run.assentUnattended();
+    } finally {
+      delete this.state.claims[claimId];
+    }
     if (run.status === 'settled' && run.result) {
       this.push({ orderId: o.id, kind: 'done', title, detail: o.text, act: run.def.name, fill: { ...run.filled }, result: run.result });
     } else {

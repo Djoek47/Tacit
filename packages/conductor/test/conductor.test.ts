@@ -167,6 +167,42 @@ describe('what it may do while you are away', () => {
   });
 });
 
+describe('claim before act', () => {
+  it('writes down what it is about to do before doing it, and clears it once done', async () => {
+    const w = world();
+    const saved: string[] = [];
+    const save = w.store.save.bind(w.store);
+    w.store.save = (v: string) => { saved.push(v); save(v); };
+    w.order('milk', { schedule: hourly, ceiling: 'self', act: { name: 'add_item', fill: { item: 'milk' } } });
+    await w.clock.advance(60 * 60_000);
+    await w.conductor.tick();
+    await settle();
+    const before = saved.map((x) => JSON.parse(x)).find((st) => Object.keys(st.claims ?? {}).length);
+    expect(Object.values(before.claims)[0]).toMatchObject({ orderId: 'milk', act: 'add_item', title: 'milk on the list' });
+    expect(JSON.parse(saved.at(-1)!).claims).toEqual({});
+    expect(w.list).toEqual(['milk']);
+  });
+
+  it('after a crash mid-commit, says it may have happened — never that it did — and does not retry', async () => {
+    const w = world();
+    let snapshot = '';
+    const save = w.store.save.bind(w.store);
+    w.store.save = (v: string) => { if (!snapshot && Object.keys(JSON.parse(v).claims ?? {}).length) snapshot = v; save(v); };
+    w.order('milk', { schedule: hourly, ceiling: 'self', act: { name: 'add_item', fill: { item: 'milk' } } });
+    await w.clock.advance(60 * 60_000);
+    await w.conductor.tick();
+    await settle();
+    // The process died right after the claim was written: restart from that file.
+    w.store.save(snapshot);
+    const after = w.make();
+    const notice = after.inbox().find((i) => i.kind === 'notice')!;
+    expect(notice).toMatchObject({ orderId: 'milk', act: 'add_item', title: 'milk on the list' });
+    expect(notice.detail).toMatch(/may or may not have happened/);
+    expect(after.inbox().some((i) => i.kind === 'done' && i.id === notice.id)).toBe(false);
+    expect(w.make().inbox().filter((i) => i.kind === 'notice')).toHaveLength(1);
+  });
+});
+
 describe('a waiting item', () => {
   it('opens as a card that silence cannot commit, and a yes can', async () => {
     const w = world();
