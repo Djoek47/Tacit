@@ -61,7 +61,7 @@ export function stylesheet(): string {
 
 .eui-stage {
   font-family: var(--eui-font);
-  color: #E9EEF7;
+  color: var(--eui-ink, #E9EEF7);
   display: flex; flex-direction: column; gap: 12px;
   align-items: stretch;
 }
@@ -76,13 +76,13 @@ export function stylesheet(): string {
 .eui-card {
   position: relative;
   border-radius: var(--eui-radius-stage);
-  background: rgba(255,255,255, var(--eui-surface-card));
-  border: 1px solid rgba(255,255,255,.06);
+  background: rgba(var(--eui-tint, 255,255,255), var(--eui-surface-card));
+  border: 1px solid rgba(var(--eui-tint, 255,255,255),.06);
   padding: 18px;
   display: flex; flex-direction: column; gap: 10px;
   transition: opacity var(--eui-motion-smooth) ease, background var(--eui-motion-smooth) ease;
 }
-.eui-card[data-strong="true"] { background: rgba(255,255,255, var(--eui-surface-cardStrong)); }
+.eui-card[data-strong="true"] { background: rgba(var(--eui-tint, 255,255,255), var(--eui-surface-cardStrong)); }
 
 /* Board 13, NEVER: "A card inside a card." Made visible rather than documented. */
 .eui-card .eui-card { outline: 2px dashed var(--eui-danger); }
@@ -106,7 +106,7 @@ export function stylesheet(): string {
   min-height: var(--eui-target-min);
   padding: 6px 10px;
   border-radius: var(--eui-radius-sm);
-  background: rgba(255,255,255, var(--eui-surface-row));
+  background: rgba(var(--eui-tint, 255,255,255), var(--eui-surface-row));
   font-size: var(--eui-type-row-size); line-height: var(--eui-type-row-line);
   font-weight: var(--eui-type-row-weight);
 }
@@ -114,7 +114,7 @@ export function stylesheet(): string {
 .eui-row[data-state="empty"] { opacity: .38; }
 .eui-row[data-focused="true"] {
   opacity: 1;
-  outline: 1px dashed rgba(255,255,255,.28);
+  outline: 1px dashed rgba(var(--eui-tint, 255,255,255),.28);
 }
 .eui-row[data-provisional="true"] { opacity: .72; }
 .eui-detail {
@@ -125,7 +125,7 @@ export function stylesheet(): string {
 .eui-chip, .eui-drop {
   min-height: var(--eui-target-min); min-width: var(--eui-target-min);
   border-radius: var(--eui-radius-pill);
-  border: 1px solid rgba(255,255,255,.14);
+  border: 1px solid rgba(var(--eui-tint, 255,255,255),.14);
   background: transparent; color: inherit;
   padding: 0 14px; font: inherit; cursor: pointer;
   transition: transform var(--eui-motion-snappy) ease, background var(--eui-motion-snappy) ease;
@@ -190,12 +190,12 @@ export function stylesheet(): string {
   display: flex; align-items: center; gap: 10px; width: 100%;
   min-height: var(--eui-target-min); padding: 10px 14px; box-sizing: border-box;
   text-align: left; cursor: pointer; color: inherit; font: inherit;
-  background: rgba(255,255,255, var(--eui-surface-row));
+  background: rgba(var(--eui-tint, 255,255,255), var(--eui-surface-row));
   border: 1px solid transparent; border-left: 3px solid var(--eui-domain);
   border-radius: var(--eui-radius-md);
   transition: background var(--eui-motion-snappy) ease;
 }
-.eui-item:hover { background: rgba(255,255,255, var(--eui-surface-cardStrong)); }
+.eui-item:hover { background: rgba(var(--eui-tint, 255,255,255), var(--eui-surface-cardStrong)); }
 .eui-item:focus-visible { outline: 2px solid var(--eui-domain); outline-offset: 2px; }
 .eui-item[data-spotlit="true"] { border-color: var(--eui-domain); }
 .eui-item-label { flex: 1; }

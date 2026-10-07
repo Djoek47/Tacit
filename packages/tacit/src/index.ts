@@ -66,6 +66,10 @@ export type Tacit = Mounted & {
   talk(text: string): { line: Line | null; act: string | null; offers: Offer[] };
   accept(o: Offer): void;
   snapshot(): Snapshot;
+  /** What the conversation expects next: an ordinary answer ('talk'), a game pick, a yes or no… */
+  waiting(): string;
+  /** The person changed their own profile on the Settings screen. */
+  updateProfile(p: { name?: string; place?: string; interests?: string[] }): void;
   /** Pull the world in. Run it daily, or when the person asks. */
   refresh(): ReturnType<ContextMemory['refresh']>;
 };
@@ -134,6 +138,15 @@ export function createTacit(o: TacitOptions): Tacit {
       m.draw();
     },
     snapshot: () => person.snapshot(),
+    waiting: () => conversation.waitingFor,
+    updateProfile(p) {
+      profile = {
+        ...profile,
+        ...(p.name !== undefined ? { name: p.name.trim() || undefined } : {}),
+        ...(p.place !== undefined ? { place: p.place.trim() || undefined } : {}),
+        ...(p.interests ? { interests: p.interests.map((x) => x.trim()).filter(Boolean).slice(0, 12) } : {}),
+      } as typeof profile;
+    },
     receive: (n) => desk.ingest(n),
     refresh: () => context.refresh(now()),
   };
@@ -141,3 +154,4 @@ export function createTacit(o: TacitOptions): Tacit {
 export { worldRoute, type WorldReply } from './world.js';
 export { learnFrom, personKey, type Offer } from './learn.js';
 export { Conversation, Person, THREADS, DOMAINS, type Line, type Snapshot, type Fact } from '@intermenu/knowing';
+export { chat, PROVIDERS, ModelError, phrasePrompt, answerPrompt, summaryPrompt, type Provider, type ModelConfig, type Msg } from './model.js';

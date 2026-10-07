@@ -82,3 +82,14 @@ describe('coming back', () => {
     expect(b.t.open({ hour: 2 }).say).toMatch(/^Still up, Cicentos\?/);
   });
 });
+
+describe('the settings screen and the conversation agree', () => {
+  it('lets the person correct their profile, and says what the conversation expects', () => {
+    const { t } = setup();
+    t.open();
+    expect(t.waiting()).toBe('talk');
+    t.updateProfile({ name: 'Cisse', interests: ['markets', ' AI ', ''] });
+    expect(t.profile.name).toBe('Cisse');
+    expect(t.profile.interests).toEqual(['markets', 'AI']);
+  });
+});

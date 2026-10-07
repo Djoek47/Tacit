@@ -1,73 +1,162 @@
-<div class="shell">
-  <header class="top">
-    <svg viewBox="0 0 120 120" aria-hidden="true"><rect x="6" y="6" width="108" height="108" rx="30" fill="var(--tile)"/><rect x="28" y="50" width="64" height="5" rx="2.5" fill="var(--tile-ink)"/><rect x="44" y="55" width="32" height="16" rx="3" fill="var(--moment)"/></svg>
-    <span class="name">Tacit</span>
-    <span class="when" id="clock"></span>
-  </header>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="mark" viewBox="0 0 120 120"><rect x="6" y="6" width="108" height="108" rx="30" fill="var(--ink)"/><rect class="bar" x="28" y="50" width="64" height="5" rx="2.5" fill="var(--bg)"/><rect class="rest" x="44" y="55" width="32" height="16" rx="3" fill="var(--accent)"/></symbol>
+    <symbol id="i-talk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+    <symbol id="i-desk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="14" rx="3"/><path d="M4 13h5l1 2h4l1-2h5"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 18h18M7 18a5 5 0 0 1 10 0M12 6v3M5 10l2 2M19 10l-2 2"/></symbol>
+    <symbol id="i-you" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></symbol>
+    <symbol id="i-set" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></symbol>
+  </defs>
+</svg>
 
-  <section class="view" id="v-talk">
-    <div class="talk">
-      <div class="view">
-        <h1 id="hello">Say it once.</h1>
-        <p class="lede" id="intro">Tacit talks with you. Answer however you like, go off on tangents, say “skip” or “stop”. Commands like “turn off quiet hours” go straight to the card.</p>
-        <div class="said" id="said" aria-live="polite"></div>
-        <div class="tries" id="offers"></div>
-        <span class="eyebrow" id="voice-state" aria-live="polite"></span>
-        <form class="ask" id="ask">
-          <label for="q" class="eyebrow" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Say something</label>
-          <input id="q" autocomplete="off" placeholder="Say something">
-          <button class="mic" id="mic" type="button" aria-label="Talk" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
-          <button class="go" type="submit">Say</button>
-        </form>
-        <div class="tries" id="tries"></div>
+<!-- First visit: the door. -->
+<section class="welcome" id="welcome" hidden>
+  <div class="welcome-in">
+    <svg class="mark" aria-hidden="true"><use href="#mark"/></svg>
+    <h1>Say it <em>once</em>.</h1>
+    <p class="lede">Tacit is a companion you talk to. It gets to know you the way a friend would, keeps the noise away, and only acts when you say yes.</p>
+    <div class="points">
+      <div class="point"><b>A conversation, not a form</b>It asks, listens, follows your lead, and remembers in your own words.</div>
+      <div class="point"><b>Quiet by design</b>Notifications wait until they are worth your attention. Mornings start with one briefing.</div>
+      <div class="point"><b>Your AI, your tools</b>Bring Claude, GPT or Grok, and connect your own tools. Nothing happens without your yes.</div>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="w-start" type="button">Start talking</button>
+      <button class="btn" id="w-connect" type="button">Connect your AI</button>
+    </div>
+    <span class="by">Tacit · by Kairos</span>
+  </div>
+</section>
+
+<div class="app">
+  <aside class="rail" aria-label="Tacit">
+    <div class="brand"><svg aria-hidden="true"><use href="#mark"/></svg><div><b>Tacit</b><small>by Kairos</small></div></div>
+    <nav class="nav" id="nav">
+      <button type="button" data-v="talk" aria-current="page"><svg><use href="#i-talk"/></svg>Talk</button>
+      <button type="button" data-v="desk"><svg><use href="#i-desk"/></svg>Desk<span class="count" id="c-desk"></span></button>
+      <button type="button" data-v="morning"><svg><use href="#i-sun"/></svg>Morning</button>
+      <button type="button" data-v="you"><svg><use href="#i-you"/></svg>You<span class="count" id="c-you"></span></button>
+      <button type="button" data-v="settings"><svg><use href="#i-set"/></svg>Settings</button>
+    </nav>
+    <div class="rail-foot">
+      <button class="pill" id="pill-model" type="button"><i></i><span>No AI connected</span></button>
+      <span class="eyebrow" id="clock"></span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- Talk -->
+    <section class="view" id="v-talk">
+      <div class="talk">
+        <div class="convo">
+          <div class="presence">
+            <div class="orb" id="orb" data-state="idle"><svg aria-hidden="true"><use href="#mark"/></svg></div>
+            <div class="who"><b>Tacit</b><span id="orb-state">Here when you are</span></div>
+          </div>
+          <p class="now" id="now" aria-live="polite"></p>
+          <div class="offers" id="offers"></div>
+          <div class="log" id="log" aria-label="Conversation"></div>
+          <form class="composer" id="ask" autocomplete="off">
+            <label for="q" class="sr">Say something to Tacit</label>
+            <input id="q" placeholder="Say something…" enterkeyhint="send">
+            <button class="icon-btn" id="mic" type="button" aria-label="Talk" hidden><svg><use href="#i-mic"/></svg></button>
+            <button class="icon-btn send" type="submit" aria-label="Send"><svg><use href="#i-send"/></svg></button>
+          </form>
+          <div class="hint" id="hints"></div>
+        </div>
+        <aside class="side">
+          <div>
+            <h3>On your card <span class="eyebrow">the stage</span></h3>
+            <div class="card-wrap"><eui-stage id="stage"></eui-stage></div>
+          </div>
+          <div>
+            <h3>Getting to know you <span class="eyebrow" id="cov-n"></span></h3>
+            <div class="meter"><div class="track"><div class="fill" id="cov-fill" style="width:0"></div></div></div>
+            <div class="learned" id="learned" style="margin-top:12px"></div>
+          </div>
+        </aside>
       </div>
-      <eui-stage id="stage"></eui-stage>
-    </div>
-  </section>
+    </section>
 
-  <section class="view" id="v-desk" hidden>
-    <h1>Desk</h1>
-    <p class="lede">Nothing is hidden here. Every notice is kept; the Desk only decides whether it interrupts you now, waits in a bundle, or goes in your morning briefing.</p>
-    <div class="legend">
-      <span><i class="dot now"></i>Interrupted you</span>
-      <span><i class="dot bundle"></i>Bundled for later</span>
-      <span><i class="dot briefing"></i>Saved for the briefing</span>
-    </div>
-    <div class="list" id="desk"></div>
-    <h2>Send a test notice</h2>
-    <div class="incoming" id="incoming"></div>
-  </section>
+    <!-- Desk -->
+    <section class="view" id="v-desk" hidden>
+      <div class="page">
+        <div class="page-head">
+          <span class="eyebrow">Notifications</span>
+          <h1>The Desk</h1>
+          <p>Every notification lands here and stays here. The Desk only decides when it reaches you: now, later in a bundle, or in tomorrow's briefing. Nothing is ever hidden.</p>
+        </div>
+        <div class="legend">
+          <span><i class="dot now"></i>Reached you now</span>
+          <span><i class="dot bundle"></i>Waiting in a bundle</span>
+          <span><i class="dot briefing"></i>Saved for the briefing</span>
+        </div>
+        <div class="panel rows" id="desk"></div>
+        <div class="stack">
+          <span class="eyebrow">Try it: send a notification</span>
+          <div class="inline" id="incoming"></div>
+        </div>
+      </div>
+    </section>
 
-  <section class="view" id="v-morning" hidden>
-    <h1>Morning</h1>
-    <p class="lede" id="m-lede"></p>
-    <span class="meter" id="m-meter"></span>
-    <button class="play" id="m-play" type="button">Read it to me</button>
-    <div class="morning" id="m-body"></div>
-  </section>
+    <!-- Morning -->
+    <section class="view" id="v-morning" hidden>
+      <div class="page">
+        <div class="page-head">
+          <span class="eyebrow" id="m-date"></span>
+          <h1>Morning</h1>
+          <p id="m-lede"></p>
+        </div>
+        <div class="panel hero-brief">
+          <div style="flex:1;min-width:220px"><div class="big" id="m-big"></div><div class="eyebrow" id="m-meter" style="margin-top:8px"></div></div>
+          <button class="btn primary" id="m-play" type="button">Read it to me</button>
+        </div>
+        <div class="brief" id="m-body"></div>
+        <p class="eyebrow" id="m-source"></p>
+      </div>
+    </section>
 
-  <section class="view" id="v-you" hidden>
-    <h1>What Tacit knows</h1>
-    <p class="lede">Everything here came from you, in your words. Change it or forget it at any time. The number is how much of the map Tacit has covered, not how well it knows you.</p>
-    <div class="cover"><span class="big" id="y-pct"></span><span class="meter" id="y-min"></span></div>
-    <div class="bars" id="y-bars"></div>
-    <div id="y-pending"></div>
-    <div class="view" id="y-facts"></div>
-  </section>
+    <!-- You -->
+    <section class="view" id="v-you" hidden>
+      <div class="page">
+        <div class="page-head">
+          <span class="eyebrow">What Tacit knows</span>
+          <h1>You, in your words</h1>
+          <p>Everything here came from you. Change it or forget it whenever you like. The number is how much of Tacit's map it has covered, not how well it knows you.</p>
+        </div>
+        <div class="grid2">
+          <div class="panel panel-pad stat"><b id="y-pct">0%</b><span id="y-sub">of the map</span></div>
+          <div class="panel panel-pad stat"><b id="y-facts">0</b><span id="y-min">things you have told Tacit</span></div>
+        </div>
+        <div class="panel panel-pad"><div class="bars" id="y-bars"></div></div>
+        <div id="y-pending"></div>
+        <div class="stack" id="y-list"></div>
+      </div>
+    </section>
 
-  <section class="view" id="v-settings" hidden>
-    <h1>Settings</h1>
-    <p class="lede">The one fixed screen. Everything on it can also be said: “turn off quiet hours”, “make the briefing short”.</p>
-    <div id="s-body" class="view"></div>
-    <h2>What changed</h2>
-    <div class="log" id="s-log">Nothing yet.</div>
-  </section>
+    <!-- Settings -->
+    <section class="view" id="v-settings" hidden>
+      <div class="page">
+        <div class="page-head">
+          <span class="eyebrow">The one fixed screen</span>
+          <h1>Settings</h1>
+          <p>Everything here can also be said out loud: “turn off quiet hours”, “make the briefing short”.</p>
+        </div>
+        <div class="settings">
+          <nav class="snav" id="snav"></nav>
+          <div class="stack" style="gap:34px" id="s-body"></div>
+        </div>
+      </div>
+    </section>
+  </main>
 </div>
 
-<nav class="tabs" role="tablist" aria-label="Tacit">
-  <button role="tab" data-v="talk" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h6"/></svg>Talk<span class="badge"></span></button>
-  <button role="tab" data-v="desk" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="5" width="16" height="14" rx="3"/><path d="M4 13h5l1 2h4l1-2h5"/></svg>Desk<span class="badge" id="b-desk"></span></button>
-  <button role="tab" data-v="morning" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 18h18M7 18a5 5 0 0 1 10 0M12 6v3M5 10l2 2M19 10l-2 2"/></svg>Morning<span class="badge"></span></button>
-  <button role="tab" data-v="you" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>You<span class="badge" id="b-you"></span></button>
-  <button role="tab" data-v="settings" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Settings<span class="badge"></span></button>
+<nav class="tabs" id="tabs" aria-label="Tacit">
+  <button type="button" data-v="talk" aria-current="page"><svg><use href="#i-talk"/></svg>Talk</button>
+  <button type="button" data-v="desk"><svg><use href="#i-desk"/></svg>Desk</button>
+  <button type="button" data-v="morning"><svg><use href="#i-sun"/></svg>Morning</button>
+  <button type="button" data-v="you"><svg><use href="#i-you"/></svg>You</button>
+  <button type="button" data-v="settings"><svg><use href="#i-set"/></svg>Settings</button>
 </nav>
