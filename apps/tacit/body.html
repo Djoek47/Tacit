@@ -1,5 +1,7 @@
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
+    <symbol id="tetra" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"><path d="M50 8 L90 78 L10 78 Z"/><path d="M50 8 L58 58 L90 78 M58 58 L10 78" opacity=".55"/><circle cx="50" cy="8" r="3.5" fill="currentColor"/><circle cx="90" cy="78" r="3.5" fill="currentColor"/><circle cx="10" cy="78" r="3.5" fill="currentColor"/><circle cx="58" cy="58" r="3" fill="currentColor" opacity=".7"/></symbol>
+    <symbol id="i-lib" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"><path d="M12 3 L21 19 L3 19 Z"/><path d="M12 3 L14 14 L21 19 M14 14 L3 19" opacity=".6"/></symbol>
     <symbol id="mark" viewBox="0 0 120 120"><rect x="6" y="6" width="108" height="108" rx="30" fill="var(--ink)"/><rect class="bar" x="28" y="50" width="64" height="5" rx="2.5" fill="var(--bg)"/><rect class="rest" x="44" y="55" width="32" height="16" rx="3" fill="var(--accent)"/></symbol>
     <symbol id="i-talk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></symbol>
     <symbol id="i-desk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="14" rx="3"/><path d="M4 13h5l1 2h4l1-2h5"/></symbol>
@@ -14,7 +16,7 @@
 <!-- First visit: the door. -->
 <section class="welcome" id="welcome" hidden>
   <div class="welcome-in">
-    <svg class="mark" aria-hidden="true"><use href="#mark"/></svg>
+    <div class="orb welcome-orb" data-state="idle" aria-hidden="true"><span class="halo"></span><span class="ring"></span><span class="ring two"></span><span class="sphere"></span><svg class="tetra"><use href="#tetra"/></svg></div>
     <h1>Say it <em>once</em>.</h1>
     <p class="lede">Tacit is a companion you talk to. It gets to know you the way a friend would, keeps the noise away, and only acts when you say yes.</p>
     <div class="points">
@@ -32,12 +34,13 @@
 
 <div class="app">
   <aside class="rail" aria-label="Tacit">
-    <div class="brand"><svg aria-hidden="true"><use href="#mark"/></svg><div><b>Tacit</b><small>by Kairos</small></div></div>
+    <div class="brand"><svg aria-hidden="true" style="color:var(--holo-a)"><use href="#tetra"/></svg><div><b>Tacit</b><small>by Kairos</small></div></div>
     <nav class="nav" id="nav">
       <button type="button" data-v="talk" aria-current="page"><svg><use href="#i-talk"/></svg>Talk</button>
       <button type="button" data-v="desk"><svg><use href="#i-desk"/></svg>Desk<span class="count" id="c-desk"></span></button>
       <button type="button" data-v="morning"><svg><use href="#i-sun"/></svg>Morning</button>
       <button type="button" data-v="you"><svg><use href="#i-you"/></svg>You<span class="count" id="c-you"></span></button>
+      <button type="button" data-v="library"><svg><use href="#i-lib"/></svg>Library</button>
       <button type="button" data-v="settings"><svg><use href="#i-set"/></svg>Settings</button>
     </nav>
     <div class="rail-foot">
@@ -51,8 +54,9 @@
     <section class="view" id="v-talk">
       <div class="talk">
         <div class="convo">
+          <button class="voice-toggle" id="voice-toggle" type="button" aria-pressed="true">Show everything</button>
           <div class="presence">
-            <div class="orb" id="orb" data-state="idle"><svg aria-hidden="true"><use href="#mark"/></svg></div>
+            <div class="orb" id="orb" data-state="idle"><span class="halo"></span><span class="ring"></span><span class="ring two"></span><span class="sphere"></span><svg class="tetra" aria-hidden="true"><use href="#tetra"/></svg></div>
             <div class="who"><b>Tacit</b><span id="orb-state">Here when you are</span></div>
           </div>
           <p class="now" id="now" aria-live="polite"></p>
@@ -76,6 +80,14 @@
             <div class="meter"><div class="track"><div class="fill" id="cov-fill" style="width:0"></div></div></div>
             <div class="learned" id="learned" style="margin-top:12px"></div>
           </div>
+          <div>
+            <h3>Done today <span class="eyebrow">undo while you can</span></h3>
+            <div class="brief-host" id="receipts"></div>
+          </div>
+          <div>
+            <h3>Kept for you <span class="eyebrow">in this browser</span></h3>
+            <div class="kept" id="kept"></div>
+          </div>
         </aside>
       </div>
     </section>
@@ -88,6 +100,7 @@
           <h1>The Desk</h1>
           <p>Every notification lands here and stays here. The Desk only decides when it reaches you: now, later in a bundle, or in tomorrow's briefing. Nothing is ever hidden.</p>
         </div>
+        <div class="brief-host" id="d-card" hidden></div>
         <div class="legend">
           <span><i class="dot now"></i>Reached you now</span>
           <span><i class="dot bundle"></i>Waiting in a bundle</span>
@@ -113,8 +126,25 @@
           <div style="flex:1;min-width:220px"><div class="big" id="m-big"></div><div class="eyebrow" id="m-meter" style="margin-top:8px"></div></div>
           <button class="btn primary" id="m-play" type="button">Read it to me</button>
         </div>
+        <div class="brief-host" id="m-card" hidden></div>
         <div class="brief" id="m-body"></div>
         <p class="eyebrow" id="m-source"></p>
+      </div>
+    </section>
+
+    <!-- Library -->
+    <section class="view" id="v-library" hidden>
+      <div class="page">
+        <div class="page-head">
+          <span class="eyebrow">Everything Tacit can do, and everything it knows</span>
+          <h1>Library</h1>
+          <p>Skills are what you can ask for, with the words that reach them. Knowledge is what Tacit keeps, in your words. Both live on this device.</p>
+        </div>
+        <input id="lib-q" class="lib-search" type="search" placeholder="Search skills and knowledge" aria-label="Search the library">
+        <div class="grid2 lib">
+          <div class="panel panel-pad"><h3>Skills <span class="eyebrow" id="lib-sn"></span></h3><div id="lib-skills" class="lib-list"></div></div>
+          <div class="panel panel-pad"><h3>Knowledge <span class="eyebrow" id="lib-kn"></span></h3><div id="lib-know" class="lib-list"></div></div>
+        </div>
       </div>
     </section>
 
@@ -158,5 +188,6 @@
   <button type="button" data-v="desk"><svg><use href="#i-desk"/></svg>Desk</button>
   <button type="button" data-v="morning"><svg><use href="#i-sun"/></svg>Morning</button>
   <button type="button" data-v="you"><svg><use href="#i-you"/></svg>You</button>
+  <button type="button" data-v="library"><svg><use href="#i-lib"/></svg>Library</button>
   <button type="button" data-v="settings"><svg><use href="#i-set"/></svg>Settings</button>
 </nav>

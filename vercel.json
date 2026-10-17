@@ -1,0 +1,37 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm install --no-audit --no-fund",
+  "buildCommand": "test -f apps/tacit/public/index.html && test -f api/tacit.mjs",
+  "outputDirectory": "apps/tacit/public",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/tacit?p=:path*"
+    }
+  ],
+  "functions": {
+    "api/tacit.mjs": {
+      "maxDuration": 30
+    }
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "microphone=(self), camera=()"
+        }
+      ]
+    }
+  ]
+}

@@ -1,3 +1,5 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Tacit</title>
 <meta name="description" content="Tacit, by Kairos. A voice-first companion that gets to know you, and says it once.">
 <meta name="theme-color" content="#FFFFFF">
@@ -125,6 +127,13 @@
   .msg { max-width: 78%; padding: 10px 15px; border-radius: 18px; font-size: 15px; line-height: 1.45; white-space: pre-line; animation: rise .25s ease; }
   .msg.me { align-self: flex-end; background: var(--ink); color: var(--bg); border-bottom-right-radius: 6px; }
   .msg.it { align-self: flex-start; background: var(--sunk); border-bottom-left-radius: 6px; color: var(--ink); }
+  .marks { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; opacity: .55; transition: opacity .15s ease; }
+  .msg.it:hover .marks, .marks:focus-within, .marks:has([aria-pressed="true"]) { opacity: 1; }
+  .marks button { border: 1px solid var(--line-strong); background: var(--raised); color: var(--dim); border-radius: 999px; padding: 2px 9px; font-size: 11.5px; }
+  .marks button:hover { color: var(--ink); border-color: var(--accent); }
+  .marks button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  #notes-btn { color: var(--accent-deep) !important; }
+  #notes-btn[disabled] { color: var(--faint) !important; text-decoration: none; cursor: default; }
   .msg.note { align-self: center; background: none; color: var(--faint); font-size: 13px; padding: 2px 0; }
   @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
@@ -146,7 +155,32 @@
   .chip.yes { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
 
   /* The Stage card, re-skinned from the outside: its own rules stay its own. */
-  eui-stage { display: block; min-width: 0; --eui-ink: var(--ink); --eui-tint: var(--stage-tint);
+  .notice.read { opacity: .55; }
+  /* Voice-first: once set up, Talk is the presence, its words, and the mic.
+     The card appears only when something said builds one. */
+  .voice-toggle { justify-self: end; align-self: start; font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 999px;
+    border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; }
+  .voice-toggle:hover { color: var(--ink); border-color: var(--accent); }
+  body.voice .rail, body.voice .tabs, body.voice .log, body.voice .hint, body.voice .offers:empty { display: none !important; }
+  body.voice .main { margin-left: 0 !important; padding-bottom: 0 !important; }
+  body.voice #v-talk .talk { display: flex !important; flex-direction: column; align-items: center; max-width: 640px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; padding-block: 24px; gap: 20px; }
+  body.voice .convo { display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; flex: 1; }
+  body.voice .voice-toggle { align-self: flex-end; }
+  body.voice .presence { flex-direction: column; text-align: center; gap: 14px; margin-top: 8vh; }
+  body.voice .presence .orb { width: 132px; height: 132px; }
+  body.voice .now { text-align: center; font-size: clamp(20px, 4.4vw, 28px); line-height: 1.35; max-width: 34ch; min-height: 2.7em; }
+  body.voice .composer { margin-top: auto; width: 100%; position: sticky; bottom: max(16px, env(safe-area-inset-bottom, 0px)); }
+  body.voice .side { width: 100%; order: 2; }
+  body.voice .side > div { display: none; }
+  body.voice.has-card .side > div:first-child { display: block; }
+  body.voice .side > div:first-child h3 { display: none; }
+
+  .kept { display: grid; gap: 12px; }
+  .kept-group { display: grid; gap: 4px; }
+  .kept-row { font-size: 14px; line-height: 1.4; overflow-wrap: break-word; }
+  .kept-row small { display: block; opacity: .6; font-size: 12px; }
+  .brief-host + .legend { margin-top: 4px; }
+  eui-stage, .brief-host { display: block; min-width: 0; --eui-type-headline-size: 26px; --eui-type-headline-line: 1.15; --eui-ink: var(--ink); --eui-tint: var(--stage-tint);
     --eui-mint: var(--accent); --eui-planPurple: var(--accent); --eui-rewardsGold: var(--accent); --eui-cyan: var(--accent); --eui-poppinsCyan: var(--accent); --eui-neutral: var(--accent);
     --eui-success: var(--ok); --eui-warning: var(--accent); --eui-danger: var(--bad);
     --eui-font: var(--body); }
@@ -267,4 +301,161 @@
     .msg { max-width: 88%; }
   }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } .now .w { opacity: 1; } }
+
+  /* ================================================================ HOLO
+     The finish. One layer over everything: an ambient field of light, orbs
+     that hold their own glow, edges drawn with light instead of borders, and
+     a tetrahedron — four points, the smallest solid — as the mark. Kairos
+     orange leads; slate blue is the cool edge of the light, never a fill. */
+  :root {
+    --holo-a: #E8722C; --holo-b: #F6B27A; --holo-c: #8FA3BF; --holo-d: #FFFFFF;
+    --holo-edge: linear-gradient(135deg, rgba(232,114,44,.55), rgba(143,163,191,.35) 45%, rgba(255,255,255,.7) 70%, rgba(232,114,44,.35));
+    --holo-glow: 0 1px 0 rgba(255,255,255,.9) inset, 0 18px 50px -24px rgba(232,114,44,.35), 0 8px 24px -16px rgba(80,95,120,.25);
+    --holo-surface: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.74));
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --holo-a: #F08A47; --holo-b: #FFB98A; --holo-c: #9FB3D1; --holo-d: #F2F0EB;
+    --holo-edge: linear-gradient(135deg, rgba(240,138,71,.6), rgba(159,179,209,.28) 45%, rgba(255,255,255,.16) 70%, rgba(240,138,71,.3));
+    --holo-glow: 0 1px 0 rgba(255,255,255,.06) inset, 0 24px 60px -28px rgba(240,138,71,.38), 0 10px 30px -18px rgba(0,0,0,.6);
+    --holo-surface: linear-gradient(180deg, rgba(34,36,41,.86), rgba(24,25,29,.78));
+  } }
+  :root[data-theme="dark"] {
+    --holo-a: #F08A47; --holo-b: #FFB98A; --holo-c: #9FB3D1; --holo-d: #F2F0EB;
+    --holo-edge: linear-gradient(135deg, rgba(240,138,71,.6), rgba(159,179,209,.28) 45%, rgba(255,255,255,.16) 70%, rgba(240,138,71,.3));
+    --holo-glow: 0 1px 0 rgba(255,255,255,.06) inset, 0 24px 60px -28px rgba(240,138,71,.38), 0 10px 30px -18px rgba(0,0,0,.6);
+    --holo-surface: linear-gradient(180deg, rgba(34,36,41,.86), rgba(24,25,29,.78));
+  }
+
+  /* The field: two soft lights and a faint lattice, fixed behind everything. */
+  body { background:
+      radial-gradient(1200px 700px at 85% -10%, color-mix(in srgb, var(--holo-a) 14%, transparent), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, color-mix(in srgb, var(--holo-c) 16%, transparent), transparent 60%),
+      var(--bg);
+    background-attachment: fixed; }
+  body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image: linear-gradient(color-mix(in srgb, var(--holo-c) 10%, transparent) 1px, transparent 1px),
+                      linear-gradient(90deg, color-mix(in srgb, var(--holo-c) 10%, transparent) 1px, transparent 1px);
+    background-size: 56px 56px; mask-image: radial-gradient(ellipse at 50% 30%, #000 0%, transparent 70%); opacity: .55; }
+  .main, .rail, .tabs, .welcome { position: relative; z-index: 1; }
+
+  /* Edges drawn with light: a 1px gradient ring on any surface. */
+  .panel, .stat, .hero-brief, .notice, .brief .col, .composer, .kept-group, .s-card, .settings section, .card-wrap, .brief-host > div {
+    position: relative; }
+  .panel, .hero-brief, .brief .col, .composer {
+    background: var(--holo-surface) !important; border: 0 !important; border-radius: 22px !important; box-shadow: var(--holo-glow) !important;
+    backdrop-filter: blur(18px) saturate(1.2); -webkit-backdrop-filter: blur(18px) saturate(1.2); }
+  .panel::after, .hero-brief::after, .brief .col::after, .composer::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+    background: var(--holo-edge); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude; }
+
+  /* Type: tighter display, quieter eyebrows. */
+  h1 { letter-spacing: -.035em; font-weight: 700; }
+  .page-head h1 { background: linear-gradient(100deg, var(--ink) 30%, color-mix(in srgb, var(--holo-a) 70%, var(--ink)) 70%, var(--holo-c));
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .eyebrow { letter-spacing: .14em; }
+
+  /* Buttons: a lit primary, hairline the rest. */
+  .btn.primary, .chip.yes, .composer .send {
+    background: radial-gradient(120% 140% at 30% 0%, var(--holo-b), var(--holo-a) 55%, color-mix(in srgb, var(--holo-a) 70%, #000)) !important;
+    color: #fff !important; border: 0 !important; box-shadow: 0 10px 26px -12px var(--holo-a), inset 0 1px 0 rgba(255,255,255,.45) !important; }
+  .btn:not(.primary), .chip:not(.yes) { border-color: var(--line-strong) !important; background: color-mix(in srgb, var(--raised) 70%, transparent) !important; }
+  .btn, .chip, .icon-btn { transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+  .btn:hover, .chip:hover, .icon-btn:hover { transform: translateY(-1px); }
+  .btn:active, .chip:active, .icon-btn:active { transform: translateY(0) scale(.98); }
+
+  /* The rail: a column of light; the current screen holds a small orb. */
+  .rail { background: color-mix(in srgb, var(--paper) 72%, transparent) !important; backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+    border-right: 0 !important; box-shadow: 1px 0 0 color-mix(in srgb, var(--holo-c) 22%, transparent); }
+  .nav button { border-radius: 14px !important; position: relative; }
+  .nav button[aria-current="page"] { background: color-mix(in srgb, var(--holo-a) 9%, transparent) !important; color: var(--ink) !important; }
+  .nav button[aria-current="page"]::before { content: ""; position: absolute; left: -6px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff, var(--holo-a) 55%, color-mix(in srgb, var(--holo-a) 60%, #000)); box-shadow: 0 0 12px var(--holo-a); }
+  .tabs { background: color-mix(in srgb, var(--paper) 70%, transparent) !important; backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); border-top: 0 !important;
+    box-shadow: 0 -1px 0 color-mix(in srgb, var(--holo-c) 22%, transparent); }
+  .tabs button[aria-current="page"] { color: var(--holo-a) !important; }
+
+  /* The brand: a tetrahedron, drawn in light. */
+  .brand svg, .holo-tetra { width: 34px; height: 34px; }
+
+  /* THE ORB. A sphere that holds its own light: a moving iridescent shell,
+     a hot core, a highlight, a rim — and the tetrahedron turning inside. */
+  .orb { background: none !important; box-shadow: none !important; isolation: isolate; }
+  .orb > svg { display: none; }
+  .orb .sphere { position: absolute; inset: 0; border-radius: 50%; overflow: hidden;
+    background:
+      radial-gradient(circle at 34% 28%, rgba(255,255,255,.95), rgba(255,255,255,0) 26%),
+      radial-gradient(circle at 50% 58%, color-mix(in srgb, var(--holo-a) 85%, #fff) 0%, color-mix(in srgb, var(--holo-a) 40%, transparent) 38%, transparent 64%),
+      conic-gradient(from 210deg, var(--holo-b), var(--holo-c), var(--holo-d), var(--holo-a), var(--holo-b));
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.55), inset -14px -18px 40px -12px rgba(40,50,70,.35), inset 10px 12px 30px -10px rgba(255,255,255,.6),
+      0 30px 80px -30px var(--holo-a), 0 0 0 1px color-mix(in srgb, var(--holo-c) 30%, transparent); }
+  .orb .sphere::after { content: ""; position: absolute; inset: -40%; background: conic-gradient(from 0deg, transparent, rgba(255,255,255,.35), transparent 30%, transparent 60%, color-mix(in srgb, var(--holo-c) 40%, transparent), transparent);
+    animation: holo-spin 9s linear infinite; mix-blend-mode: soft-light; }
+  .orb .tetra { position: absolute; inset: 22%; width: 56%; height: 56%; color: #fff; filter: drop-shadow(0 0 1.5px rgba(40,30,20,.55)) drop-shadow(0 0 8px rgba(255,255,255,.9)); animation: holo-turn 14s linear infinite; }
+  .orb .halo { position: absolute; inset: -18%; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(circle, color-mix(in srgb, var(--holo-a) 26%, transparent) 0%, transparent 62%); opacity: .7; animation: holo-breathe 5.2s ease-in-out infinite; }
+  .orb .ring { position: absolute; inset: -9%; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--holo-c) 45%, transparent);
+    transform: rotateX(72deg); pointer-events: none; }
+  .orb .ring.two { inset: -16%; border-color: color-mix(in srgb, var(--holo-a) 35%, transparent); transform: rotateX(72deg) rotateY(28deg); }
+  .orb[data-state="listening"] .halo { animation-duration: 1.4s; opacity: 1; }
+  .orb[data-state="listening"] .tetra { animation-duration: 4s; }
+  .orb[data-state="thinking"] .sphere::after { animation-duration: 2.2s; }
+  .orb[data-state="speaking"] .halo { animation-duration: .9s; opacity: .95; }
+  .orb[data-state="speaking"] .sphere { filter: saturate(1.25) brightness(1.05); }
+  @keyframes holo-spin { to { transform: rotate(360deg); } }
+  @keyframes holo-turn { from { transform: rotate3d(1, 1, 0, 0deg); } to { transform: rotate3d(1, 1, 0, 360deg); } }
+  @keyframes holo-breathe { 0%, 100% { transform: scale(.94); } 50% { transform: scale(1.06); } }
+  @media (prefers-reduced-motion: reduce) { .orb .sphere::after, .orb .tetra, .orb .halo { animation: none !important; } }
+
+  /* Voice-first: the orb is the room. */
+  body.voice .presence .orb { width: min(46vw, 220px); height: min(46vw, 220px); margin-top: 4vh; }
+  body.voice .who b { font-size: 13px; letter-spacing: .22em; text-transform: uppercase; opacity: .7; }
+  body.voice .now { font-weight: 600; letter-spacing: -.01em; }
+  .composer { border-radius: 999px !important; padding: 6px 6px 6px 18px !important; }
+  .composer input { background: transparent !important; border: 0 !important; }
+  .composer input:focus-visible { outline: none !important; box-shadow: none !important; }
+  .composer:focus-within { box-shadow: var(--holo-glow), 0 0 0 3px color-mix(in srgb, var(--holo-a) 22%, transparent) !important; }
+  .composer .icon-btn { border-radius: 50% !important; }
+  .voice-toggle { backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); background: color-mix(in srgb, var(--raised) 60%, transparent); }
+
+  /* Lists and rows: hairlines of light, not boxes. */
+  .notice { border-radius: 14px !important; }
+  .notice:hover { background: color-mix(in srgb, var(--holo-a) 5%, transparent) !important; }
+  .meter .track { background: color-mix(in srgb, var(--holo-c) 18%, transparent) !important; border-radius: 99px; }
+  .meter .fill, .bar-row .fill { background: linear-gradient(90deg, var(--holo-c), var(--holo-a), var(--holo-b)) !important; border-radius: 99px; box-shadow: 0 0 14px -2px var(--holo-a); }
+  .stat b { background: linear-gradient(100deg, var(--holo-a), var(--holo-c)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { border-radius: 12px !important; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid color-mix(in srgb, var(--holo-a) 70%, transparent) !important; outline-offset: 2px; }
+  input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color: var(--holo-a); }
+
+  /* The card host: the Stage's card sits on a pool of light. */
+  eui-stage, .brief-host { --eui-radius-md: 18px; --eui-radius-sm: 14px; }
+  .card-wrap, .brief-host { filter: drop-shadow(0 24px 40px rgba(232,114,44,.12)); }
+
+  /* Library: skills and knowledge, searchable. Rows of light, not boxes. */
+  .lib-search { width: 100%; max-width: 560px; padding: 12px 16px; font: inherit; border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink); border-radius: 999px !important; margin-bottom: 16px; }
+  .grid2.lib { align-items: start; }
+  .lib-list { display: grid; gap: 6px; margin-top: 10px; }
+  .lib-row { display: grid; gap: 3px; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--holo-c) 6%, transparent); min-width: 0; overflow-wrap: anywhere; }
+  .lib-row:hover { background: color-mix(in srgb, var(--holo-a) 7%, transparent); }
+  .lib-row small { color: var(--dim); font-size: 12.5px; }
+  .lib-row .btn { justify-self: start; margin-top: 4px; }
+  .lib-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .lib-kind { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--holo-a); white-space: nowrap; }
+  .lib-fields { opacity: .8; }
+  .lib-group { margin-top: 10px; }
+  .lib-hint { color: var(--dim); font-size: 13px; margin-top: 8px; }
+  /* The lock: the orb, a passphrase, nothing else. */
+  .vault-lock { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px 16px; text-align: center;
+    background: radial-gradient(900px 600px at 50% 0%, color-mix(in srgb, var(--holo-a) 16%, transparent), transparent 70%), radial-gradient(800px 500px at 50% 100%, color-mix(in srgb, var(--holo-c) 16%, transparent), transparent 70%), var(--bg); }
+  .vault-lock h2 { margin: 8px 0 0; letter-spacing: -.02em; }
+  .vault-lock p { margin: 0; max-width: 38ch; color: var(--dim); }
+  .vault-form { display: flex; gap: 8px; width: min(100%, 380px); }
+  .vault-form input { flex: 1; min-width: 0; padding: 12px 14px; font: inherit; border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink); }
+  .vault-msg { min-height: 1.4em; }
+  /* Welcome: the same orb, larger, before anything is connected. */
+  .welcome-orb { width: 168px; height: 168px; margin: 0 auto 8px; }
+  .welcome { background:
+      radial-gradient(900px 600px at 50% 0%, color-mix(in srgb, var(--holo-a) 16%, transparent), transparent 70%),
+      radial-gradient(800px 500px at 50% 100%, color-mix(in srgb, var(--holo-c) 16%, transparent), transparent 70%), var(--bg) !important; }
 </style>

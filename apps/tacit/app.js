@@ -2,10 +2,63 @@
 (async function () {
   'use strict';
   var T = window.Tacit;
-  T.defineStageElement();
+  // The card's second line under an answer (a place's address and distance) comes from Tacit, once it exists.
+  T.defineStageElement({ tint: 'var(--accent)', detailFor: function (slot, v) { return t ? t.detailFor(slot, v) : null; } });
   var $ = function (id) { return document.getElementById(id); };
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
-  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
+  // ------------------------------------------------------------ vault
+  // What Tacit knows about you, your data, the Desk and your own AI key are
+  // encrypted at rest once you set a passphrase (Settings → Privacy). After
+  // unlock they live decrypted in memory only; every save is sealed again.
+  var VAULTED = ['tacit.person', 'tacit.data', 'tacit.desk', 'tacit.profile', 'tacit.marks', 'tacit.prefs'];
+  var vault = null, plain = {}, pending = {};
+  try { vault = new T.Vault(localStorage); } catch (e) { vault = null; }
+  function sealLater(k) {
+    pending[k] = (pending[k] || Promise.resolve()).then(function () {
+      if (!vault || !vault.unlocked) return;
+      if (k in plain) return vault.put(k, plain[k]);
+    }).catch(function () {});
+  }
+  function store(k, v) {
+    try {
+      if (vault && vault.unlocked && VAULTED.indexOf(k) >= 0) {
+        if (v === undefined) return k in plain ? plain[k] : null;
+        if (v === null) { delete plain[k]; localStorage.removeItem(k); return; }
+        plain[k] = String(v); sealLater(k); return;
+      }
+      if (v === undefined) return localStorage.getItem(k);
+      if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v);
+    } catch (e) { return null; }
+  }
+  function lockScreen() {
+    return new Promise(function (done) {
+      var o = el('div', 'vault-lock');
+      o.innerHTML = '<div class="orb welcome-orb" data-state="idle" aria-hidden="true"><span class="halo"></span><span class="ring"></span><span class="ring two"></span><span class="sphere"></span><svg class="tetra"><use href="#tetra"/></svg></div>';
+      var h = el('h2', '', 'Tacit is locked'); var p = el('p', '', 'What Tacit knows about you is encrypted on this device. Your passphrase opens it.');
+      var f = el('form', 'vault-form'); var i = el('input'); i.type = 'password'; i.autocomplete = 'current-password'; i.placeholder = 'Passphrase'; i.setAttribute('aria-label', 'Passphrase');
+      var b = el('button', 'btn primary', 'Unlock'); b.type = 'submit'; var msg = el('p', 'vault-msg', '');
+      var erase = el('button', 'btn small quiet', 'Forgot it? Start over'); erase.type = 'button'; var armed = false;
+      erase.onclick = function () {
+        if (!armed) { armed = true; erase.textContent = 'Tap again: this erases everything Tacit kept here'; return; }
+        VAULTED.concat(['tacit.vault', 'tacit.welcomed']).forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
+        location.reload();
+      };
+      f.append(i, b);
+      f.onsubmit = async function (e) {
+        e.preventDefault(); b.disabled = true; msg.textContent = 'Opening…';
+        var ok = false; try { ok = await vault.unlock(i.value); } catch (x) { ok = false; }
+        if (!ok) { msg.textContent = 'That passphrase doesn’t open it.'; b.disabled = false; i.select(); return; }
+        for (var n = 0; n < VAULTED.length; n++) { try { var val = await vault.get(VAULTED[n]); if (val !== null) plain[VAULTED[n]] = val; } catch (x) {} }
+        o.remove(); done();
+      };
+      o.append(h, p, f, msg, erase); document.body.appendChild(o); setTimeout(function () { i.focus(); }, 30);
+    });
+  }
+  if (vault && vault.exists) await lockScreen();
+  // Locked again after 15 quiet minutes: the key leaves memory with the page.
+  var lastActive = Date.now();
+  ['pointerdown', 'keydown'].forEach(function (ev) { document.addEventListener(ev, function () { lastActive = Date.now(); }, { passive: true }); });
+  setInterval(function () { if (vault && vault.unlocked && Date.now() - lastActive > 15 * 60000) location.reload(); }, 60000);
   function hhmm(at) { return new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
 
   // ------------------------------------------------------------ theme
@@ -13,48 +66,68 @@
   applyTheme();
 
   // ------------------------------------------------------------ server
-  // Served by `npm run tacit`, the page has a server: your model, your
-  // connections, the real world feed. Opened anywhere else, it runs on its own.
+  // On Vercel or `npm run tacit`, the page has a server: models, tools, the
+  // real world feed. Nothing about you is stored there. What this browser
+  // chose — the access code, a key of your own, your tools — stays here and
+  // rides along with each request.
+  var PREFS = (function () { try { return JSON.parse(store('tacit.prefs') || '{}') || {}; } catch (e) { return {}; } })();
+  function savePrefs() { store('tacit.prefs', JSON.stringify(PREFS)); }
+  PREFS.mcp = PREFS.mcp || [];
+  function heads() {
+    var h = {};
+    if (PREFS.code) h['x-tacit-code'] = PREFS.code;
+    if (PREFS.provider) h['x-tacit-provider'] = PREFS.provider;
+    if (PREFS.model) h['x-tacit-model'] = PREFS.model;
+    if (PREFS.key) h['x-tacit-key'] = PREFS.key;
+    return h;
+  }
   var STATUS = null;
   async function api(path, body, ms) {
     var ctl = new AbortController(); var timer = setTimeout(function () { ctl.abort(); }, ms || 15000);
     try {
-      var r = await fetch(path, body === undefined ? { cache: 'no-store', signal: ctl.signal } : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: ctl.signal });
+      var h = heads();
+      var init = body === undefined ? { cache: 'no-store', headers: h, signal: ctl.signal } : { method: 'POST', headers: Object.assign({ 'content-type': 'application/json' }, h), body: JSON.stringify(body), signal: ctl.signal };
+      var r = await fetch(path, init);
       var j = await r.json().catch(function () { return {}; });
       if (!r.ok && !j.error) j.error = 'the server answered ' + r.status;
       return j;
     } finally { clearTimeout(timer); }
   }
-  if (/^https?:$/.test(location.protocol)) {
-    try { var s0 = await api('/api/status', undefined, 2500); if (s0 && s0.providers) STATUS = s0; } catch (e) { STATUS = null; }
+  async function refreshStatus() {
+    if (!/^https?:$/.test(location.protocol)) return;
+    try { var s0 = await api('/api/status', undefined, 4000); STATUS = s0 && s0.providers ? s0 : null; } catch (e) { STATUS = null; }
   }
+  await refreshStatus();
   var SERVER = !!STATUS;
-  function hasModel() { return !!(STATUS && STATUS.model); }
+  function provider() { return PREFS.provider || (STATUS && STATUS.hosted) || 'anthropic'; }
+  function hostedUsable(pv) { return !!(STATUS && STATUS.providers[pv] && STATUS.providers[pv].hosted && (!STATUS.locked || STATUS.unlocked)); }
+  function hasModel() { return SERVER && (!!PREFS.key || hostedUsable(provider())); }
+  function modelLabel() { var pv = provider(); var P = STATUS && STATUS.providers[pv]; return (P ? P.label : pv) + ' · ' + (PREFS.model || (P ? P.models[0] : '')); }
 
   // ------------------------------------------------------------ connections
-  // Each approved MCP server is reached through the Tacit server; this stand-in
-  // client gives the bridge exactly the calls it needs, nothing else.
-  function proxyClient(id) {
+  // Each tool server you approved is reached through the Tacit server, which
+  // refuses private addresses. This stand-in client gives the bridge the few
+  // calls it needs.
+  function proxyClient(m) {
     var caps = null, ver = null;
     function rpc(method, params) {
-      return api('/api/mcp/' + id + '/rpc', { method: method, params: params }, 30000).then(function (j) { if (j.error) throw new Error(j.error); return j.result; });
+      return api('/api/mcp/rpc', { url: m.url, token: m.token || '', method: method, params: params }, 30000).then(function (j) { if (j.error) throw new Error(j.error); return j.result; });
     }
     return {
       prime: async function () { caps = await rpc('getServerCapabilities'); ver = await rpc('getServerVersion'); },
       getServerCapabilities: function () { return caps || {}; },
-      getServerVersion: function () { return ver || { name: id, version: '0' }; },
+      getServerVersion: function () { return ver || { name: m.id, version: '0' }; },
       listTools: function (p) { return rpc('listTools', p || {}); },
       callTool: function (p) { return rpc('callTool', p); },
       readResource: function (p) { return rpc('readResource', p); },
     };
   }
   var connections = [], connectionErrors = [];
-  if (SERVER) {
-    for (var mi = 0; mi < STATUS.mcp.length; mi++) {
-      var m = STATUS.mcp[mi];
-      if (!m.approved) continue;
+  if (SERVER && (!STATUS.locked || STATUS.unlocked)) {
+    for (var mi = 0; mi < PREFS.mcp.length; mi++) {
+      var m = PREFS.mcp[mi];
       try {
-        var pc = proxyClient(m.id); await pc.prime();
+        var pc = proxyClient(m); await pc.prime();
         var conn = await T.connect(pc, { prefix: m.id + '_', id: m.id });
         await conn.approve();
         connections.push(conn);
@@ -94,7 +167,7 @@
     $('orb').dataset.state = state;
     $('orb-state').textContent = words || { idle: 'Here when you are', listening: 'Listening…', thinking: 'Thinking…', speaking: 'Speaking' }[state];
   }
-  function audible(text) {
+  function audible(text, finished) {
     if (!voiceOn()) { orb('idle'); return; }
     if (N) { post({ type: 'speak', text: text }); return; }
     try {
@@ -104,7 +177,8 @@
       var v = pickVoice(); if (v) u.voice = v;
       u.rate = Number(store('tacit.rate') || 1);
       u.onstart = function () { orb('speaking'); };
-      u.onend = u.onerror = function () { orb('idle'); if (handsFree) setTimeout(listen, 250); };
+      u.onend = function () { orb('idle'); if (handsFree) setTimeout(listen, 250); if (finished) finished(); };
+      u.onerror = function () { orb('idle'); if (handsFree) setTimeout(listen, 250); };
       speechSynthesis.speak(u);
     } catch (e) { orb('idle'); }
   }
@@ -125,10 +199,43 @@
     audible(text);
     if (!voiceOn() || (!N && !window.speechSynthesis)) setTimeout(function () { orb('idle'); }, Math.min(4000, 400 + text.length * 25));
   }
+  // Tuning notes: during a test conversation, mark any line of Tacit's that
+  // should have gone differently. Kept in this browser; exported with Copy notes.
+  var transcript = [], lastSaid = '';
+  var MARKS = [['follow', 'Should have followed up'], ['move', 'Should have moved on'], ['off', 'Felt off'], ['good', 'Good']];
+  function marks() { try { return JSON.parse(store('tacit.marks') || '[]'); } catch (e) { return []; } }
+  function mark(entry, kind, row) {
+    var all = marks().filter(function (m) { return m.id !== entry.id; });
+    all.push({ id: entry.id, at: new Date().toISOString(), mark: kind, tacit: entry.text, before: entry.before });
+    store('tacit.marks', JSON.stringify(all.slice(-300)));
+    row.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.k === kind)); });
+    renderNotes();
+  }
   function log(who, text) {
-    var box = $('log'); box.appendChild(el('div', 'msg ' + who, text));
+    var box = $('log'); var m = el('div', 'msg ' + who, text);
+    if (who === 'me') lastSaid = text;
+    transcript.push({ who: who, text: text, at: new Date().toISOString() }); if (transcript.length > 400) transcript.shift();
+    if (who === 'it') {
+      var entry = { id: 'm' + Date.now() + Math.random().toString(36).slice(2, 6), text: text, before: lastSaid };
+      var row = el('div', 'marks');
+      MARKS.forEach(function (k) {
+        var b = el('button', '', k[1]); b.type = 'button'; b.dataset.k = k[0]; b.setAttribute('aria-pressed', 'false');
+        b.onclick = function () { mark(entry, k[0], row); }; row.appendChild(b);
+      });
+      m.appendChild(row);
+    }
+    box.appendChild(m);
     while (box.children.length > 60) box.removeChild(box.firstChild);
     box.scrollTop = box.scrollHeight;
+  }
+  function notesText() {
+    var label = {}; MARKS.forEach(function (k) { label[k[0]] = k[1]; });
+    return marks().map(function (m, i) { return (i + 1) + '. ' + label[m.mark].toUpperCase() + '\n   You said: ' + (m.before || '(start)') + '\n   Tacit said: ' + m.tacit; }).join('\n\n');
+  }
+  function renderNotes() {
+    var b = $('notes-btn'); if (!b) return;
+    var n = marks().length; b.textContent = n ? 'Copy tuning notes (' + n + ')' : 'Mark lines below to leave tuning notes';
+    b.disabled = !n;
   }
 
   // ------------------------------------------------------------ Tacit
@@ -137,6 +244,9 @@
   t = T.createTacit({
     profile: { interests: ['markets', 'ai', 'cyber'] },
     restore: saved || undefined,
+    // What Tacit's own actions keep (the grocery list, plans, reminders, drafts), saved in this browser.
+    data: (function () { try { return JSON.parse(store('tacit.data') || 'null') || undefined; } catch (e) { return undefined; } })(),
+    onData: function (d) { store('tacit.data', JSON.stringify(d)); if (typeof renderKept === 'function') renderKept(); },
     world: [served],
     speak: function (s) { speak(s, 'answer'); },
     el: $('stage'),
@@ -144,6 +254,59 @@
   });
   try { var over = JSON.parse(store('tacit.profile') || 'null'); if (over) t.updateProfile(over); } catch (e) {}
   function save() { store('tacit.person', JSON.stringify(t.snapshot())); }
+
+  // ------------------------------------------------------------ kept for you
+  // What Tacit's actions have kept, in plain words, beside the conversation.
+  function whenText(w) {
+    var d = new Date(w.at);
+    var day = d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+    return w.granularity === 'day' ? day : day + ' · ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+  // What Tacit did today, each with its undo while undo is still honest.
+  var receiptsCard = null;
+  function renderReceipts() {
+    var host = $('receipts'); if (!host || !t) return;
+    if (!receiptsCard) {
+      briefStyles();
+      var inner = document.createElement('div'); host.replaceChildren(inner);
+      receiptsCard = new T.ReceiptsPresenter(inner, document, { accent: 'var(--accent)', showOut: false });
+      receiptsCard.mount({
+        undo: function (id) { t.receipts.undo(id).then(function (ok) { if (!ok) log('note', 'That one can’t be taken back any more.'); renderReceipts(); renderKept(); }); },
+        done: function () {},
+      });
+    }
+    receiptsCard.render({ rows: t.receipts.today().map(function (r) {
+      return { id: r.id, line: r.line, when: new Date(r.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+        state: r.undone ? 'undone' : r.final ? 'final' : 'done', note: r.final === 'reached someone else' ? 'sent' : 'final' };
+    }) });
+  }
+  function renderKept() {
+    renderReceipts();
+    var box = $('kept'); if (!box) return; box.replaceChildren();
+    var d = t.data, any = false;
+    function group(title, rows) {
+      if (!rows.length) return; any = true;
+      var g = el('div', 'kept-group'); g.appendChild(el('span', 'eyebrow', title));
+      rows.forEach(function (r) { var row = el('div', 'kept-row', r[0]); if (r[1]) row.appendChild(el('small', '', r[1])); g.appendChild(row); });
+      box.appendChild(g);
+    }
+    var names = {}; T.GROCERIES.forEach(function (g) { names[g.value] = g.label; });
+    var groceries = (d.lists.groceries || []).map(function (x) { return names[x] || x; });
+    if (groceries.length) group('Groceries · ' + groceries.length, [[groceries.join(', ')]]);
+    var soon = Date.now() - 3600000;
+    group('Plans', d.plans.filter(function (p) { return p.at.at >= soon; }).sort(function (a, b) { return a.at.at - b.at.at; })
+      .map(function (p) { return [p.with.charAt(0).toUpperCase() + p.with.slice(1) + ' · ' + p.place.label, whenText(p.at)]; }));
+    group('Reminders', d.reminders.filter(function (r) { return !r.fired; }).sort(function (a, b) { return a.at.at - b.at.at; })
+      .map(function (r) { return [r.what, whenText(r.at)]; }));
+    group('Drafts', d.drafts.filter(function (x) { return !x.sent; }).map(function (x) { return ['To ' + x.to.charAt(0).toUpperCase() + x.to.slice(1) + ': ' + x.text, 'not sent'] }));
+    if (!any) box.appendChild(el('p', 'empty', 'Lists, plans and reminders you ask for show up here. Try “add milk and eggs”.'));
+  }
+  // Reminders land when their time comes: said aloud, and on the Desk.
+  setInterval(function () {
+    var due = t.due();
+    due.forEach(function (r) { log('note', 'Reminder: ' + r.what); speak('Reminder: ' + r.what + '.'); });
+    if (due.length) { saveDesk(); renderBadges(); renderKept(); if (current === 'desk') renderDesk(); }
+  }, 20000);
 
   // ------------------------------------------------------------ talk
   var lastLine = null, busy = false;
@@ -162,6 +325,8 @@
   async function say(text) {
     text = String(text || '').trim();
     if (!text || busy) return;
+    if (briefHeard(text)) return;
+    if (/^(brief me|briefing|morning report|catch me up|what did i miss)\b/i.test(text)) { show('morning'); startBrief(); return; }
     busy = true; offers([]);
     settleNow();
     log('me', text);
@@ -226,6 +391,14 @@
     });
   }
   $('ask').addEventListener('submit', function (e) { e.preventDefault(); var q = $('q'); var v = q.value; q.value = ''; say(v); });
+  (function () {
+    var b = el('button', '', ''); b.type = 'button'; b.id = 'notes-btn';
+    b.onclick = function () {
+      var text = notesText() + '\n\n--- full transcript ---\n' + transcript.map(function (x) { return (x.who === 'me' ? 'You: ' : x.who === 'it' ? 'Tacit: ' : '· ') + x.text; }).join('\n');
+      try { navigator.clipboard.writeText(text).then(function () { b.textContent = 'Copied. Paste it to Claude'; }, function () { b.textContent = 'Copy blocked: use Settings → Privacy → Export'; }); } catch (e) { b.textContent = 'Copy blocked: use Settings → Privacy → Export'; }
+    };
+    $('hints').appendChild(b);
+  })();
   [['skip', 'skip'], ['why do you ask?', 'why do you ask?'], ['brief me', 'brief me'], ['stop for now', 'stop']].forEach(function (h) {
     var b = el('button', '', h[0]); b.type = 'button'; b.onclick = function () { say(h[1]); }; $('hints').appendChild(b);
   });
@@ -280,7 +453,10 @@
   }
 
   // ------------------------------------------------------------ desk
-  var decided = [];
+  // The Desk is saved in this browser: every notice, what was decided for it and why, and what was read.
+  try { var deskSaved = JSON.parse(store('tacit.desk') || 'null'); if (deskSaved) t.desk.restore(deskSaved); } catch (e) {}
+  function saveDesk() { try { store('tacit.desk', JSON.stringify(t.desk.snapshot())); } catch (e) {} }
+  var decided = t.desk.all().map(function (n) { return t.desk.decision(n.id); }).filter(Boolean);
   var INCOMING = [
     { label: 'Bank: card used abroad', n: { from: 'app:bank', title: 'Card used abroad', body: 'A payment in another country.', topics: ['money'], urgency: 0.95 } },
     { label: 'A friend writes', n: { from: 'person:sylla', title: 'Sylla: are you up?', topics: ['people'], urgency: 0.6 } },
@@ -293,17 +469,43 @@
     var b = el('button', 'chip', x.label); b.type = 'button';
     b.onclick = function () {
       var full = Object.assign({ id: 'n' + (++nid) + Date.now(), at: Date.now() }, x.n);
-      var d = t.receive(full); decided.unshift(d);
+      var d = t.receive(full); decided.unshift(d); saveDesk();
+      deskDeck = null; deskDismissed = false;
       if (d.delivery === 'now') log('note', 'Notification: ' + full.title);
       renderDesk(); renderBadges();
     };
     $('incoming').appendChild(b);
   });
+  // What the Desk held back, as one card per sender or story. "Got it" marks
+  // a bundle read (it stays on the Desk); "Later" leaves it waiting.
+  var deskDeck = null, deskCard = null, deskDismissed = false;
+  function renderDeskCard() {
+    var host = $('d-card');
+    if (!deskDeck) deskDeck = new T.BundleDeck(t.desk);
+    var v = deskDeck.view();
+    if (deskDismissed || (v.mode === 'clear' && v.total === 0)) { host.hidden = true; host.replaceChildren(); deskCard = null; return; }
+    briefStyles();
+    if (!deskCard) {
+      var inner = document.createElement('div'); host.replaceChildren(inner);
+      deskCard = new T.BundlePresenter(inner, document);
+      deskCard.mount({
+        open: function (id) { deskDeck.open(id); saveDesk(); renderDesk(); renderBadges(); },
+        expand: function () { deskDeck.expand(); renderDesk(); },
+        read: function () { deskDeck.markRead(); saveDesk(); renderDesk(); renderBadges(); },
+        later: function () { deskDeck.later(); renderDesk(); },
+        act: function (sentence) { show('talk'); say(sentence); },
+        done: function () { deskDismissed = true; renderDesk(); },
+      });
+    }
+    host.hidden = false;
+    deskCard.render(v);
+  }
   function renderDesk() {
+    renderDeskCard();
     var box = $('desk'); box.replaceChildren();
     if (!decided.length) { box.appendChild(el('p', 'empty', 'Nothing has arrived yet. Send one below to see what the Desk does with it.')); return; }
     decided.forEach(function (d) {
-      var r = el('div', 'notice');
+      var r = el('div', 'notice' + (t.desk.isRead(d.notice.id) ? ' read' : ''));
       var mid = el('div'); mid.append(el('div', 't', d.notice.title), el('div', 'w', d.why));
       var tm = el('time', '', hhmm(d.notice.at));
       r.append(el('i', 'dot ' + d.delivery), mid, tm); box.appendChild(r);
@@ -327,14 +529,176 @@
       var col = el('div', 'col'); col.appendChild(el('h3', '', s.name));
       s.items.forEach(function (it) {
         var d = el('div', 'item', it.title);
-        d.appendChild(el('div', 'why', it.why.indexOf(it.source) >= 0 ? it.why : it.why + ' · ' + it.source));
+        var from = T.sourceLabel(it.source);
+        d.appendChild(el('div', 'why', !from || it.why.toLowerCase().indexOf(from.toLowerCase()) >= 0 ? it.why : it.why + ' · ' + from));
         col.appendChild(d);
       });
       box.appendChild(col);
     });
     $('m-source').textContent = 'World: ' + (worldSource === 'sample' ? 'sample feed (connect World Monitor in Settings for the real one)' : 'World Monitor');
   }
-  $('m-play').onclick = function () { show('talk'); say('brief me'); };
+  // The briefing card: the morning one item at a time. Read aloud when the
+  // voice is on, and it moves on by itself only when the speech really ended;
+  // with the voice off it waits for Next. "Next", "back", "more", "stop" and
+  // "continue" are heard while it is open; anything else goes to the talk.
+  var reader = null, briefCard = null, briefTimer = 0;
+  function briefStyles() {
+    if (document.getElementById('eui-brief-css')) return;
+    var st = document.createElement('style'); st.id = 'eui-brief-css'; st.textContent = T.stageStylesheet(); document.head.appendChild(st);
+  }
+  function briefDraw() { if (briefCard && reader) briefCard.render(reader.view()); }
+  function briefSay() {
+    clearTimeout(briefTimer);
+    briefDraw();
+    var line = reader.line();
+    if (!line) { try { speechSynthesis.cancel(); } catch (e) {} orb('idle'); return; }
+    var mine = reader;
+    audible(line, function () {
+      if (reader !== mine || reader.done) return;
+      var m = reader.view().mode;
+      if (m !== 'item' && m !== 'more') return;
+      briefTimer = setTimeout(function () { if (reader === mine) { reader.next(); briefSay(); } }, 900);
+    });
+  }
+  function briefEnd() {
+    clearTimeout(briefTimer);
+    reader = null;
+    try { speechSynthesis.cancel(); } catch (e) {}
+    if (N) post({ type: 'stop' });
+    orb('idle');
+    $('m-card').hidden = true; $('m-card').replaceChildren(); briefCard = null;
+  }
+  function startBrief() {
+    briefStyles();
+    var p = { interests: t.profile.interests, minutes: Number(t.settings.get('briefing_length')) };
+    reader = new T.BriefingReader(T.brief(p, t.desk, t.context, Date.now()), t.profile.name || undefined);
+    var host = $('m-card'); host.hidden = false;
+    var inner = document.createElement('div'); host.replaceChildren(inner);
+    briefCard = new T.BriefingPresenter(inner, document, { kicker: 'Morning' });
+    briefCard.mount({
+      next: function () { reader.next(); briefSay(); },
+      back: function () { reader.back(); briefSay(); },
+      more: function () { reader.more(); briefSay(); },
+      stop: function () { reader.stop(); briefSay(); },
+      resume: function () { reader.resume(); briefSay(); },
+      act: function (sentence) { briefEnd(); show('talk'); say(sentence); },
+      done: briefEnd,
+    });
+    briefSay();
+    host.scrollIntoView({ block: 'nearest' });
+  }
+  function briefHeard(text) {
+    if (!reader || current !== 'morning') return false;
+    var r = reader.hear(text);
+    if (!r) return false;
+    if (r.command === 'act') { briefEnd(); show('talk'); setTimeout(function () { say(r.say); }, 0); return true; }
+    briefSay();
+    return true;
+  }
+  $('m-play').onclick = function () { startBrief(); };
+
+  // ------------------------------------------------------------ library
+  // Skills: every action Tacit can take, how to say it, and where it came from
+  // (built in, built by you, a connection). Knowledge: everything it keeps.
+  function human(n) { var s = String(n).replace(/^set_/, '').replace(/^log_/, '').replace(/_/g, ' '); return s.charAt(0).toUpperCase() + s.slice(1); }
+  function renderLibrary() {
+    var q = ($('lib-q').value || '').trim().toLowerCase();
+    var hit = function (s) { return !q || String(s).toLowerCase().indexOf(q) >= 0; };
+    var built = {}; (t.data.menus.specs || []).forEach(function (s) { built[s.name] = s; });
+    var skills = t.app.ui.definitions.map(function (d) {
+      var kind = built[d.name] ? 'Built by you' : /^set_/.test(d.name) ? 'Setting' : d.name.indexOf('__') >= 0 || /\//.test(d.name) ? 'Connection' : 'Built in';
+      var title = built[d.name] ? built[d.name].title : human(d.name);
+      var say = (d.phrases || []).slice(0, 3).map(function (p) { return '“' + p + '”'; }).join(' · ');
+      var used = (t.data.receipts || []).filter(function (r) { return r.act === d.name; }).length;
+      return { d: d, kind: kind, title: title, say: say, used: used, slots: Object.keys(d.slots).join(', ') };
+    }).filter(function (x) { return hit(x.title + ' ' + x.say + ' ' + x.kind + ' ' + x.slots); });
+    var order = { 'Built by you': 0, 'Built in': 1, 'Connection': 2, 'Setting': 3 };
+    skills.sort(function (a, b) { return order[a.kind] - order[b.kind] || a.title.localeCompare(b.title); });
+    var sbox = $('lib-skills'); sbox.replaceChildren(); $('lib-sn').textContent = String(skills.length);
+    skills.forEach(function (x) {
+      var row = el('div', 'lib-row'); var top = el('div', 'lib-top');
+      top.append(el('b', '', x.title), el('span', 'lib-kind', x.kind + (x.used ? ' · used ' + x.used + '×' : '')));
+      row.append(top, el('small', '', x.say || 'Pick it from the menu'), el('small', 'lib-fields', 'Asks for: ' + x.slots));
+      if (built[x.d.name]) {
+        var rm = el('button', 'btn small quiet', 'Remove'); rm.type = 'button';
+        rm.onclick = function () { t.data.menus.specs = t.data.menus.specs.filter(function (s) { return s.name !== x.d.name; }); store('tacit.data', JSON.stringify(t.data)); location.reload(); };
+        row.appendChild(rm);
+      }
+      sbox.appendChild(row);
+    });
+    if (!skills.length) sbox.appendChild(el('p', 'empty', q ? 'No skill matches.' : 'No skills yet.'));
+    var hint = el('p', 'lib-hint', 'Build a new one by saying: “make a menu for … with …, … and …”.'); sbox.appendChild(hint);
+    // Ready to add: the catalogue, one tap each.
+    var have = {}; t.app.ui.definitions.forEach(function (d) { have[d.name] = 1; });
+    var lastG = null;
+    T.CATALOG.forEach(function (c) {
+      var spec; try { spec = T.validateMenu(c.spec); } catch (e) { return; }
+      if (have[spec.name] || !hit(c.group + ' ' + spec.title + ' ' + spec.fields.map(function (f) { return f.label; }).join(' '))) return;
+      if (c.group !== lastG) { sbox.appendChild(el('span', 'eyebrow lib-group', 'Ready to add · ' + c.group)); lastG = c.group; }
+      var row = el('div', 'lib-row'); var top = el('div', 'lib-top');
+      top.append(el('b', '', spec.title), el('span', 'lib-kind', 'Ready'));
+      var add = el('button', 'btn small', 'Add'); add.type = 'button';
+      add.onclick = function () { t.buildMenu(spec); renderLibrary(); };
+      row.append(top, el('small', '', spec.phrases.slice(0, 2).map(function (p) { return '“' + p + '”'; }).join(' · ')), el('small', 'lib-fields', 'Asks for: ' + spec.fields.map(function (f) { return f.label; }).join(', ')), add);
+      sbox.appendChild(row);
+    });
+
+    var know = [];
+    t.person.all().forEach(function (f) { var th = T.THREADS.find(function (x) { return x.id === f.thread; }); know.push(['About you', f.text, th ? th.topic : '']); });
+    var names = {}; T.GROCERIES.forEach(function (g) { names[g.value] = g.label; });
+    if ((t.data.lists.groceries || []).length) know.push(['Lists', 'Groceries: ' + t.data.lists.groceries.map(function (x) { return names[x] || x; }).join(', '), '']);
+    t.data.plans.forEach(function (p) { know.push(['Plans', p.with + ' · ' + p.place.label, whenText(p.at)]); });
+    t.data.reminders.forEach(function (r) { know.push(['Reminders', r.what, (r.fired ? 'done · ' : '') + whenText(r.at)]); });
+    t.data.drafts.forEach(function (d) { know.push(['Drafts', 'To ' + d.to + ': ' + d.text, d.sent ? 'sent' : 'not sent']); });
+    Object.keys(t.data.menus.entries || {}).forEach(function (k) {
+      var spec = built[k]; (t.data.menus.entries[k] || []).forEach(function (e) {
+        var vals = Object.keys(e.values).map(function (f) { var v = e.values[f]; return v && typeof v === 'object' && 'label' in v ? v.label : String(v); }).join(' · ');
+        know.push([spec ? spec.title : human(k), vals, new Date(e.at).toLocaleDateString([], { month: 'short', day: 'numeric' })]);
+      });
+    });
+    t.desk.all().slice(0, 30).forEach(function (n) { know.push(['Desk', n.title, T.sourceLabel(n.from) || '']); });
+    know = know.filter(function (k) { return hit(k.join(' ')); });
+    var kbox = $('lib-know'); kbox.replaceChildren(); $('lib-kn').textContent = String(know.length);
+    var last = null;
+    know.forEach(function (k) {
+      if (k[0] !== last) { kbox.appendChild(el('span', 'eyebrow lib-group', k[0])); last = k[0]; }
+      var row = el('div', 'lib-row'); row.appendChild(el('span', '', k[1])); if (k[2]) row.appendChild(el('small', '', k[2])); kbox.appendChild(row);
+    });
+    if (!know.length) kbox.appendChild(el('p', 'empty', q ? 'Nothing matches.' : 'Nothing kept yet. Talk to Tacit and this fills in.'));
+  }
+  $('lib-q').addEventListener('input', function () { renderLibrary(); });
+
+  // ------------------------------------------------------------ voice-first
+  // Once set up, Talk opens to the voice alone. A card shows only while
+  // something said has built one; "Show everything" brings the app back.
+  function setVoice(on) {
+    document.body.classList.toggle('voice', on);
+    if (on) $('stage').setAttribute('nomenu', ''); else $('stage').removeAttribute('nomenu');
+    $('voice-toggle').textContent = on ? 'Show everything' : 'Voice only';
+    $('voice-toggle').setAttribute('aria-pressed', String(on));
+    store('tacit.mode', on ? 'voice' : 'full');
+    if (t) t.draw();
+  }
+  $('voice-toggle').onclick = function () { setVoice(!document.body.classList.contains('voice')); if (!document.body.classList.contains('voice')) show(current); };
+  setInterval(function () {
+    if (!t) return;
+    var v = t.app.view();
+    document.body.classList.toggle('has-card', !!(v && v.act && v.status !== 'discarded'));
+  }, 250);
+  // The briefing card from the keyboard: → next, ← back, M more, Space pause or continue, Esc close.
+  document.addEventListener('keydown', function (e) {
+    if (!reader || current !== 'morning' || e.metaKey || e.ctrlKey || e.altKey) return;
+    var tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    var m = reader.view().mode, done = true;
+    if (e.key === 'ArrowRight') { reader.next(); briefSay(); }
+    else if (e.key === 'ArrowLeft') { reader.back(); briefSay(); }
+    else if (e.key === 'm' || e.key === 'M') { reader.more(); briefSay(); }
+    else if (e.key === ' ') { if (m === 'stopped') reader.resume(); else reader.stop(); briefSay(); }
+    else if (e.key === 'Escape') briefEnd();
+    else done = false;
+    if (done) e.preventDefault();
+  });
 
   // ------------------------------------------------------------ you
   function renderYou() {
@@ -403,13 +767,11 @@
   function panelOf() { var p = el('div', 'panel rows'); for (var i = 0; i < arguments.length; i++) p.appendChild(arguments[i]); return p; }
   var shownHow = false;
   function needsServer(box) {
-    if (shownHow) { box.appendChild(el('div', 'status', 'Needs Tacit running on your computer: see AI model above.')); return; }
+    if (shownHow) { box.appendChild(el('div', 'status', 'Available in the full version: see AI model above.')); return; }
     shownHow = true;
-    box.appendChild(el('div', 'status', 'This part needs Tacit running on your computer, where your keys stay private. You need Git and Node.js 20 or newer; nothing else to install.'));
-    box.appendChild(el('div', 'code', 'git clone https://github.com/Djoek47/tacit\ncd tacit\nnpm run tacit\n\nthen open  http://127.0.0.1:7373'));
+    box.appendChild(el('div', 'status', 'This is a preview running entirely in your browser, so it cannot reach an AI or your tools. The full version of Tacit does: it runs on its own site, or on your computer with “npm run tacit”.'));
   }
 
-  var aiDraft = { provider: (STATUS && STATUS.model && STATUS.model.provider) || 'anthropic' };
   var mcpPreview = null, confirmForget = false;
 
   function renderSettings() {
@@ -429,48 +791,61 @@
     body.appendChild(you);
 
     // AI model
-    var ai = section('ai', 'AI model', 'Bring your own: Claude, GPT or Grok. Tacit’s conversation decides what to ask; your model decides how to say it, answers your questions, and writes clean notes of what you said.');
+    var ai = section('ai', 'AI model', 'Bring your own: Claude, GPT or Grok. Tacit’s conversation decides what to ask; the model decides how to say it, answers your questions, and writes clean notes of what you said.');
     if (!SERVER) needsServer(ai);
     else {
-      var st = el('div', 'status' + (STATUS.model ? ' ok' : ''), STATUS.model ? 'Connected: ' + STATUS.model.label + ' · ' + STATUS.model.model + (STATUS.model.from === 'environment' ? ' (from your environment)' : '') : 'No model connected. Tacit still talks, in plainer words.');
-      ai.appendChild(st);
-      var prov = STATUS.providers;
-      var provSeg = seg(Object.keys(prov).map(function (k) { return [k, prov[k].label + ' · ' + prov[k].maker]; }), aiDraft.provider, function (k) { aiDraft.provider = k; renderSettings(); });
-      var key = el('input', 'input'); key.type = 'password'; key.autocomplete = 'off'; key.placeholder = prov[aiDraft.provider].keyHint + (STATUS.model && STATUS.model.provider === aiDraft.provider ? '  (saved — leave empty to keep it)' : '');
-      var mdl = el('input', 'input'); mdl.setAttribute('list', 'models'); mdl.value = (STATUS.model && STATUS.model.provider === aiDraft.provider) ? STATUS.model.model : prov[aiDraft.provider].models[0];
-      var dl = el('datalist'); dl.id = 'models'; prov[aiDraft.provider].models.forEach(function (m) { var o = el('option'); o.value = m; dl.appendChild(o); });
-      var go = el('button', 'btn primary small', 'Connect and test'); go.type = 'button';
+      var pv = provider(), P = STATUS.providers[pv];
+      var line = PREFS.key ? 'Using your own ' + P.label + ' key, kept in this browser.'
+        : hostedUsable(pv) ? 'Using this site’s ' + P.label + '.'
+        : P.hosted && STATUS.locked ? 'This site has ' + P.label + '. Enter the access code to use it, or add your own key.'
+        : 'This site has no ' + P.label + ' key. Add your own below, or pick another provider.';
+      ai.appendChild(el('div', 'status' + (hasModel() ? ' ok' : ''), line));
+      var provSeg = seg(Object.keys(STATUS.providers).map(function (k) { var Q = STATUS.providers[k]; return [k, Q.label + (Q.hosted ? ' ✓' : '')]; }), pv, function (k) { PREFS.provider = k; delete PREFS.model; savePrefs(); renderPill(); renderSettings(); });
+      var rows = [field('Provider', '✓ means this site has a key for it.', provSeg)];
+      if (STATUS.locked) {
+        var code = el('input', 'input'); code.type = 'password'; code.placeholder = STATUS.unlocked ? 'Accepted' : 'Access code'; code.value = '';
+        var cbtn = el('button', 'btn small', STATUS.unlocked ? 'Change' : 'Unlock'); cbtn.type = 'button';
+        cbtn.onclick = async function () { PREFS.code = code.value.trim(); savePrefs(); await refreshStatus(); if (STATUS.unlocked) { location.reload(); } else { code.value = ''; code.placeholder = 'That code did not work'; } };
+        var crow = el('div', 'inline'); crow.append(code, cbtn);
+        rows.push(field('Access code', STATUS.unlocked ? 'Accepted. This browser can use the site’s AI and tools.' : 'From whoever shared Tacit with you.', crow));
+      }
+      var key = el('input', 'input'); key.type = 'password'; key.autocomplete = 'off'; key.placeholder = PREFS.key ? 'Your key is saved in this browser' : P.keyHint + '  (optional)';
+      rows.push(field('Your own key', 'Optional. Stays in this browser and is sent only with your own requests; the server never stores it.', key));
+      var mdl = el('input', 'input'); mdl.setAttribute('list', 'models'); mdl.value = PREFS.model || P.models[0];
+      var dl = el('datalist'); dl.id = 'models'; P.models.forEach(function (x) { var o = el('option'); o.value = x; dl.appendChild(o); });
+      rows.push(field('Model', 'Pick one or type any model name.', mdl));
+      var go = el('button', 'btn primary small', 'Save and test'); go.type = 'button';
       var out = el('div', 'status'); out.hidden = true;
       go.onclick = async function () {
-        go.disabled = true; go.textContent = 'Testing…'; out.hidden = false; out.className = 'status'; out.textContent = 'Asking ' + prov[aiDraft.provider].maker + '…';
-        var r = await api('/api/model', { provider: aiDraft.provider, key: key.value, model: mdl.value }, 30000).catch(function (e) { return { ok: false, error: e.message }; });
-        go.disabled = false; go.textContent = 'Connect and test';
-        if (r.ok) { STATUS = r.status; out.className = 'status ok'; out.textContent = 'It answered. ' + prov[aiDraft.provider].label + ' is connected.'; renderPill(); setTimeout(renderSettings, 900); }
+        if (key.value.trim()) PREFS.key = key.value.trim();
+        PREFS.model = mdl.value.trim() || undefined; PREFS.provider = pv; savePrefs();
+        go.disabled = true; go.textContent = 'Testing…'; out.hidden = false; out.className = 'status'; out.textContent = 'Asking ' + P.maker + '…';
+        var r = await api('/api/model/test', { provider: pv, model: PREFS.model }, 30000).catch(function (e) { return { ok: false, error: e.message }; });
+        go.disabled = false; go.textContent = 'Save and test';
+        if (r.ok) { out.className = 'status ok'; out.textContent = 'It answered. ' + r.label + ' (' + r.model + ') is ready.'; renderPill(); }
         else { out.className = 'status bad'; out.textContent = r.error || 'It did not work.'; }
       };
-      var row = el('div', 'inline'); row.appendChild(go);
-      if (STATUS.model && STATUS.model.from === 'settings') {
-        var forget = el('button', 'btn quiet small', 'Disconnect'); forget.type = 'button';
-        forget.onclick = async function () { STATUS = await api('/api/model/forget', {}); renderPill(); renderSettings(); };
-        row.appendChild(forget);
-      }
-      ai.appendChild(panelOf(field('Provider', null, provSeg), field('API key', 'Kept on your computer, in a file only you can read. Never sent to this page.', key), field('Model', 'Pick one or type any model name your key can use.', mdl), row));
-      ai.appendChild(dl); ai.appendChild(out);
+      var brow = el('div', 'inline'); brow.appendChild(go);
+      if (PREFS.key) { var fk = el('button', 'btn quiet small', 'Remove my key'); fk.type = 'button'; fk.onclick = function () { delete PREFS.key; savePrefs(); renderPill(); renderSettings(); }; brow.appendChild(fk); }
+      rows.push(brow);
+      ai.appendChild(panelOf.apply(null, rows)); ai.appendChild(dl); ai.appendChild(out);
     }
     body.appendChild(ai);
 
     // Connections
-    var cx = section('connections', 'Connections', 'Connect any MCP server. Its tools become actions on your card. Tacit reads the list of tools first and shows you what each would cost; nothing is called until you approve the server, and anything that reaches outside still waits for your yes every time.');
+    var cx = section('connections', 'Connections', 'Connect any MCP server. Its tools become actions on your card. Tacit reads the list of tools first and shows what each would cost; nothing is called until you approve, and anything that reaches outside still waits for your yes every time. Your connections are kept in this browser.');
     if (!SERVER) needsServer(cx);
+    else if (STATUS.locked && !STATUS.unlocked) cx.appendChild(el('div', 'status', 'Enter the access code above to connect tools.'));
     else {
-      if (STATUS.mcp.length) {
+      if (PREFS.mcp.length) {
         var lst = el('div', 'panel rows');
-        STATUS.mcp.forEach(function (m) {
+        PREFS.mcp.forEach(function (m) {
           var r = el('div', 'tool');
           var l = el('div'); l.appendChild(el('b', '', m.name)); l.appendChild(el('small', '', ' ' + m.url));
           var actions = el('div', 'inline');
-          actions.appendChild(el('span', 'badge' + (m.approved ? ' read' : ''), m.approved ? (m.tools + ' tools · approved') : 'not approved'));
-          var rm = el('button', 'link', 'Remove'); rm.type = 'button'; rm.onclick = async function () { STATUS = await api('/api/mcp/remove', { id: m.id }); renderSettings(); };
+          var live = connections.some(function (c) { return c.id === m.id; });
+          actions.appendChild(el('span', 'badge' + (live ? ' read' : ''), live ? 'connected' : 'not reachable'));
+          var rm = el('button', 'link', 'Remove'); rm.type = 'button'; rm.onclick = function () { PREFS.mcp = PREFS.mcp.filter(function (x) { return x !== m; }); savePrefs(); location.reload(); };
           actions.appendChild(rm);
           r.append(l, actions); lst.appendChild(r);
         });
@@ -483,11 +858,11 @@
       var res = el('div', 'stack');
       add.onclick = async function () {
         add.disabled = true; add.textContent = 'Connecting…';
-        var r = await api('/api/mcp/add', { url: u.value, token: tok.value }, 30000).catch(function (e) { return { ok: false, error: e.message }; });
+        var r = await api('/api/mcp/preview', { url: u.value.trim(), token: tok.value.trim() }, 30000).catch(function (e) { return { ok: false, error: e.message }; });
         add.disabled = false; add.textContent = 'Look at its tools';
-        mcpPreview = r; renderMcpPreview(res);
+        mcpPreview = r.ok ? Object.assign(r, { url: u.value.trim(), token: tok.value.trim() }) : r; renderMcpPreview(res);
       };
-      cx.appendChild(panelOf(field('Server address', 'Streamable HTTP or SSE.', u), field('Token', null, tok), (function () { var d = el('div', 'inline'); d.appendChild(add); return d; })()));
+      cx.appendChild(panelOf(field('Server address', 'https, Streamable HTTP or SSE.', u), field('Token', null, tok), (function () { var d = el('div', 'inline'); d.appendChild(add); return d; })()));
       cx.appendChild(res); renderMcpPreview(res);
     }
     body.appendChild(cx);
@@ -522,15 +897,7 @@
 
     // World
     var wo = section('world', 'World feed', 'What the briefing knows about the world: conflict, markets, energy, cyber, climate and more, from World Monitor. Shared by everyone, and it is never told anything about you.');
-    if (!SERVER) needsServer(wo);
-    else {
-      wo.appendChild(el('div', 'status' + (STATUS.world ? ' ok' : ''), STATUS.world ? 'World Monitor is connected.' : 'Using the sample feed.'));
-      var wk = el('input', 'input'); wk.type = 'password'; wk.placeholder = 'World Monitor API key';
-      var wsave = el('button', 'btn small', 'Save'); wsave.type = 'button';
-      wsave.onclick = async function () { STATUS = await api('/api/world/key', { key: wk.value }); wsave.textContent = 'Saved — reload to use it'; };
-      var wrow = el('div', 'inline'); wrow.append(wk, wsave);
-      wo.appendChild(panelOf(field('API key', 'Stays on your computer.', wrow)));
-    }
+    wo.appendChild(el('div', 'status' + (SERVER && STATUS.world ? ' ok' : ''), SERVER && STATUS.world ? 'World Monitor is connected on this site.' : 'Using the sample feed. The site owner adds a World Monitor key to turn on the real one.'));
     body.appendChild(wo);
 
     // Permissions
@@ -545,10 +912,10 @@
     body.appendChild(ap);
 
     // Privacy
-    var pr = section('privacy', 'Privacy', 'What Tacit knows about you lives in this browser' + (SERVER ? ', and your keys in a private file on this computer.' : '.') + ' Nothing about you goes into the shared world feed.');
+    var pr = section('privacy', 'Privacy', 'What Tacit knows about you, your own key and your connections all live in this browser. The server keeps nothing about you, and nothing about you goes into the shared world feed.');
     var ex = el('button', 'btn small', 'Export everything'); ex.type = 'button';
     ex.onclick = function () {
-      var data = JSON.stringify({ exported: new Date().toISOString(), person: t.snapshot(), profile: t.profile, settings: t.settings.changes() }, null, 2);
+      var data = JSON.stringify({ exported: new Date().toISOString(), person: t.snapshot(), profile: t.profile, settings: t.settings.changes(), tuning: marks(), transcript: transcript }, null, 2);
       try { var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' })); a.download = 'tacit-export.json'; a.click(); } catch (e) {}
       try { navigator.clipboard.writeText(data); ex.textContent = 'Exported (also copied)'; } catch (e) { ex.textContent = 'Exported'; }
     };
@@ -556,10 +923,37 @@
     fz.onclick = function () { confirmForget = true; renderSettings(); };
     var prow = el('div', 'inline'); prow.append(ex, fz);
     pr.appendChild(panelOf(prow));
+    // The passphrase lock.
+    var lk = el('div', 'stack');
+    if (vault && vault.exists) {
+      lk.appendChild(el('p', '', 'Locked with a passphrase. Everything Tacit keeps here is encrypted on this device, and it locks again after 15 quiet minutes.'));
+      var now = el('button', 'btn small', 'Lock now'); now.type = 'button'; now.onclick = function () { location.reload(); };
+      lk.appendChild(now);
+    } else if (vault) {
+      lk.appendChild(el('p', '', 'Lock what Tacit keeps with a passphrase. It is encrypted on this device and never leaves it. If you forget the passphrase, nothing can open it: export first if you want a copy.'));
+      var p1 = el('input'); p1.type = 'password'; p1.placeholder = 'New passphrase (8+ characters)'; p1.autocomplete = 'new-password';
+      var p2 = el('input'); p2.type = 'password'; p2.placeholder = 'Same again'; p2.autocomplete = 'new-password';
+      var go = el('button', 'btn small primary', 'Lock with this passphrase'); go.type = 'button'; var lm = el('span', 'eyebrow', '');
+      go.onclick = async function () {
+        if (p1.value.length < 8) { lm.textContent = 'Use at least 8 characters.'; return; }
+        if (p1.value !== p2.value) { lm.textContent = 'The two don’t match.'; return; }
+        go.disabled = true; lm.textContent = 'Locking…';
+        try {
+          VAULTED.forEach(function (k) { var raw = localStorage.getItem(k); if (raw !== null) plain[k] = raw; });
+          await vault.create(p1.value);
+          for (var n = 0; n < VAULTED.length; n++) if (VAULTED[n] in plain) await vault.put(VAULTED[n], plain[VAULTED[n]]);
+          lm.textContent = 'Locked.'; renderSettings();
+        } catch (x) { lm.textContent = 'Could not lock: ' + (x && x.message ? x.message : 'unknown'); go.disabled = false; }
+      };
+      var lrow = el('div', 'inline'); lrow.append(p1, p2, go); lk.append(lrow, lm);
+    } else {
+      lk.appendChild(el('p', '', 'This browser cannot encrypt, so Tacit cannot lock here.'));
+    }
+    pr.appendChild(panelOf(lk));
     if (confirmForget) {
       var cf = el('div', 'confirm'); cf.appendChild(el('span', '', 'This erases everything Tacit has learned in this browser. It cannot be undone.'));
       var yes = el('button', 'btn small danger', 'Erase it'); yes.type = 'button';
-      yes.onclick = function () { ['tacit.person', 'tacit.profile', 'tacit.welcomed'].forEach(function (k) { store(k, null); }); location.reload(); };
+      yes.onclick = function () { VAULTED.concat(['tacit.welcomed', 'tacit.vault']).forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} }); location.reload(); };
       var no2 = el('button', 'btn small quiet', 'Keep it'); no2.type = 'button'; no2.onclick = function () { confirmForget = false; renderSettings(); };
       cf.append(yes, no2); pr.appendChild(cf);
     }
@@ -569,7 +963,7 @@
     var ab = section('about', 'About');
     var log2 = t.settings.changes().slice(-6).reverse().map(function (c) { return hhmm(c.at) + '  ' + c.key + ': ' + c.from + ' → ' + c.to + '  (' + c.by + ')'; }).join('\n');
     ab.appendChild(panelOf(
-      field('Tacit', 'Version 0.1 · by Kairos · ' + (SERVER ? 'running on your computer' : 'preview, running in this page'), el('span')),
+      field('Tacit', 'Version 0.1 · by Kairos · ' + (SERVER ? (location.hostname === '127.0.0.1' || location.hostname === 'localhost' ? 'running on your computer' : 'running on ' + location.hostname) : 'preview, running in this page'), el('span')),
       field('Recent changes', null, el('div', 'code', log2 || 'None yet.'))));
     body.appendChild(ab);
     window.scrollTo(0, keepY);
@@ -578,7 +972,7 @@
     box.replaceChildren();
     if (!mcpPreview) return;
     if (!mcpPreview.ok) { box.appendChild(el('div', 'status bad', mcpPreview.error || 'Could not connect.')); return; }
-    box.appendChild(el('b', '', (mcpPreview.name || mcpPreview.id) + ' offers ' + mcpPreview.tools.length + ' tools:'));
+    box.appendChild(el('b', '', (mcpPreview.name || 'This server') + ' offers ' + mcpPreview.tools.length + ' tools:'));
     var lst = el('div', 'panel rows');
     mcpPreview.tools.slice(0, 40).forEach(function (tl) {
       var r = el('div', 'tool'); r.appendChild(el('b', '', tl.name));
@@ -588,9 +982,13 @@
     });
     box.appendChild(lst);
     var ok = el('button', 'btn primary small', 'Approve this server'); ok.type = 'button';
-    ok.onclick = async function () { await api('/api/mcp/approve', { id: mcpPreview.id }); location.reload(); };
+    ok.onclick = function () {
+      var id = String(mcpPreview.name || 'server').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 24) || 'server';
+      while (PREFS.mcp.some(function (x) { return x.id === id; })) id += '2';
+      PREFS.mcp.push({ id: id, name: mcpPreview.name || id, url: mcpPreview.url, token: mcpPreview.token || undefined }); savePrefs(); location.reload();
+    };
     var no = el('button', 'btn quiet small', 'Don’t'); no.type = 'button';
-    no.onclick = async function () { STATUS = await api('/api/mcp/remove', { id: mcpPreview.id }); mcpPreview = null; renderSettings(); };
+    no.onclick = function () { mcpPreview = null; renderSettings(); };
     var row = el('div', 'inline'); row.append(ok, no); box.appendChild(row);
   }
 
@@ -598,7 +996,7 @@
   function renderPill() {
     var p = $('pill-model');
     p.className = 'pill' + (hasModel() ? ' on' : SERVER ? '' : ' demo');
-    p.lastChild.textContent = hasModel() ? STATUS.model.label + ' · ' + STATUS.model.model : SERVER ? 'No AI yet: connect one' : 'Preview mode';
+    p.lastChild.textContent = hasModel() ? modelLabel() : SERVER ? (STATUS.locked && !STATUS.unlocked ? 'Enter access code' : 'No AI yet: connect one') : 'Preview mode';
   }
   $('pill-model').onclick = function () { show('settings'); setTimeout(function () { var a = $('s-ai'); if (a) a.scrollIntoView({ behavior: 'smooth' }); }, 60); };
   function renderBadges() {
@@ -610,19 +1008,24 @@
   }
   var current = 'talk';
   function show(v) {
+    if (v !== 'morning' && reader) briefEnd();
+    // Any other screen is the full app: voice-only belongs to Talk.
+    if (v !== 'talk' && document.body.classList.contains('voice')) { document.body.classList.remove('voice'); $('stage').removeAttribute('nomenu'); $('voice-toggle').textContent = 'Voice only'; }
+    if (v === 'desk' && current !== 'desk') { deskDeck = null; deskDismissed = false; }
     current = v;
     document.querySelectorAll('[data-v]').forEach(function (b) { if (b.dataset.v === v) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
-    ['talk', 'desk', 'morning', 'you', 'settings'].forEach(function (k) { $('v-' + k).hidden = k !== v; });
+    ['talk', 'desk', 'morning', 'you', 'library', 'settings'].forEach(function (k) { $('v-' + k).hidden = k !== v; });
     window.scrollTo(0, 0);
     renderAll();
     if (v === 'talk') setTimeout(function () { $('q').focus({ preventScroll: true }); }, 30);
   }
   document.querySelectorAll('[data-v]').forEach(function (b) { b.onclick = function () { show(b.dataset.v); }; });
   function renderAll() {
-    renderPill(); renderBadges(); renderLearned();
+    renderPill(); renderBadges(); renderLearned(); renderNotes(); renderKept();
     if (current === 'desk') renderDesk();
     if (current === 'morning') renderMorning();
     if (current === 'you') renderYou();
+    if (current === 'library') renderLibrary();
     if (current === 'settings') renderSettings();
   }
   try { speechSynthesis.onvoiceschanged = function () { if (current === 'settings') renderSettings(); }; } catch (e) {}
@@ -633,6 +1036,7 @@
     store('tacit.welcomed', '1');
     $('welcome').hidden = true;
     show('talk');
+    if (store('tacit.mode') !== 'full') setVoice(true);
     var first = t.open(); lastLine = first;
     speak(first.say);
   }
@@ -640,7 +1044,7 @@
   $('w-connect').onclick = function () { store('tacit.welcomed', '1'); $('welcome').hidden = true; show('settings'); setTimeout(function () { var a = $('s-ai'); if (a) a.scrollIntoView(); }, 60); };
   await t.refresh().catch(function () {});
   var tok = (location.hash || '').slice(1);
-  if (['desk', 'morning', 'you', 'settings'].indexOf(tok) >= 0) { store('tacit.welcomed', '1'); show(tok); }
+  if (['desk', 'morning', 'you', 'library', 'settings'].indexOf(tok) >= 0) { store('tacit.welcomed', '1'); show(tok); }
   else if (!store('tacit.welcomed')) { $('welcome').hidden = false; renderAll(); }
   else begin();
 })();

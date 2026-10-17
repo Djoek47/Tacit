@@ -1,128 +1,154 @@
-<!doctype html>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The EUI Stage</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Azeret+Mono:wght@300;400;500&display=swap">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stage Kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-  :root{
-    color-scheme:dark;
-    --void:#0B1220; --deep:#111827; --up:#1B2434;
-    --edge:rgba(255,255,255,.09); --ink:#E9EEF7; --dim:#9aa6bb; --faint:#6c7689;
+  :root {
+    --bg: #FFFFFF; --paper: #FAF8F5; --raised: #FFFFFF; --sunk: #F4F1EC;
+    --ink: #1D1E22; --dim: #6B6E78; --faint: #9A9CA4; --line: rgba(29,30,34,.09); --line-strong: rgba(29,30,34,.16);
+    --accent: #E8722C; --accent-deep: #C85A17; --accent-ink: #FFFFFF; --accent-soft: rgba(232,114,44,.10);
+    --blue: #6F8FB6; --ok: #2F9E6B; --bad: #C8443B; --stage-tint: 29,30,34;
+    --shadow: 0 1px 2px rgba(29,30,34,.04), 0 8px 28px rgba(29,30,34,.06);
+    --display: "Familjen Grotesk", "Segoe UI", system-ui, sans-serif;
+    --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
   }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--void);color:var(--ink);
-    font:15px/1.6 "Bricolage Grotesque",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:1120px;margin:0 auto;padding:26px 16px 80px}
-  .mono,.lbl,pre,code{font-family:"Azeret Mono",ui-monospace,monospace}
-  h1{font-size:clamp(28px,4.6vw,44px);font-weight:700;letter-spacing:-.025em;line-height:1.06;margin:0}
-  h2{font-size:clamp(19px,2.4vw,24px);font-weight:600;letter-spacing:-.01em;margin:0}
-  .lbl{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint)}
-  .lede{color:var(--dim);font-size:17px;max-width:64ch;margin:16px 0 0}
-  .lede b{color:var(--ink);font-weight:600}
-  header{padding-bottom:30px;border-bottom:1px solid var(--edge);margin-bottom:34px}
-  section{margin-bottom:52px}
-  .shead{display:flex;align-items:baseline;gap:12px;margin-bottom:6px;flex-wrap:wrap}
-  .note{color:var(--dim);max-width:66ch;margin:8px 0 20px}
-  .grid{display:grid;gap:18px}
-  @media(min-width:900px){.two{grid-template-columns:minmax(360px,1fr) minmax(0,1fr)}}
-  .panel{background:var(--deep);border:1px solid var(--edge);border-radius:20px;padding:18px}
-  .panel.tight{padding:14px}
-  .rowbtns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-  button.b{background:transparent;border:1px solid var(--edge);color:var(--ink);
-    border-radius:999px;padding:9px 15px;font:inherit;font-size:13px;cursor:pointer;min-height:40px}
-  button.b:hover{background:rgba(255,255,255,.05)}
-  button.b[aria-pressed="true"]{border-color:currentColor}
-  input.t,textarea.t{width:100%;background:#0d1524;border:1px solid var(--edge);color:var(--ink);
-    border-radius:12px;padding:11px 13px;font:inherit;font-size:14px}
-  textarea.t{font-family:"Azeret Mono",monospace;font-size:12.5px;line-height:1.55;min-height:230px}
-  pre{background:#0d1524;border:1px solid var(--edge);border-radius:12px;padding:13px;
-    overflow:auto;font-size:12px;line-height:1.6;margin:0;color:var(--dim)}
-  .beats{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
-  .beat{font-size:10px;letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--edge);
-    border-radius:999px;padding:4px 10px;color:var(--faint)}
-  .beat[data-on="true"]{color:var(--ink);border-color:currentColor}
-  .swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px}
-  .sw{border:1px solid var(--edge);border-radius:14px;padding:12px;background:var(--deep)}
-  .sw i{display:block;height:28px;border-radius:8px;margin-bottom:9px}
-  .sw b{display:block;font-size:12px;font-weight:600}
-  .sw span{font-size:11px;color:var(--faint);font-family:"Azeret Mono",monospace}
-  .lint{font-size:12.5px;line-height:1.7;font-family:"Azeret Mono",monospace;white-space:pre-wrap;margin:0}
-  .lint .error{color:#F87171} .lint .warn{color:#FB923C} .lint .note{color:var(--faint)}
-  .ok{color:#34D399}
-  .stagewrap{min-height:260px;display:flex;flex-direction:column;justify-content:center;
-    background:var(--void);border:1px solid var(--edge);border-radius:24px;padding:20px}
-  .meta{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--faint);
-    font-family:"Azeret Mono",monospace;margin-top:12px}
-  .meta b{color:var(--dim);font-weight:400}
-  /* Fingers are wider than cursors: every tap target is at least 44 px where the pointer is coarse. */
-  @media (pointer:coarse){ button.b{min-height:44px} }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #131417; --paper: #18191D; --raised: #1E2024; --sunk: #101114;
+    --ink: #F2F0EB; --dim: #A3A5AD; --faint: #6E7079; --line: rgba(242,240,235,.08); --line-strong: rgba(242,240,235,.16);
+    --accent: #F08A47; --accent-deep: #F5A06A; --accent-ink: #1A1206; --accent-soft: rgba(240,138,71,.13);
+    --blue: #93AED0; --ok: #5CC795; --bad: #E77A70; --stage-tint: 255,255,255;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35); color-scheme: dark; } }
+  :root[data-theme="dark"] {
+    --bg: #131417; --paper: #18191D; --raised: #1E2024; --sunk: #101114;
+    --ink: #F2F0EB; --dim: #A3A5AD; --faint: #6E7079; --line: rgba(242,240,235,.08); --line-strong: rgba(242,240,235,.16);
+    --accent: #F08A47; --accent-deep: #F5A06A; --accent-ink: #1A1206; --accent-soft: rgba(240,138,71,.13);
+    --blue: #93AED0; --ok: #5CC795; --bad: #E77A70; --stage-tint: 255,255,255;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35); color-scheme: dark; }
+  [hidden] { display: none !important; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 var(--body); -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  h1, h2, h3 { font-family: var(--display); margin: 0; letter-spacing: -.015em; text-wrap: balance; }
+  p { margin: 0; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding-inline: clamp(16px, 4vw, 40px); padding-block: 40px 96px; display: flex; flex-direction: column; gap: 48px; }
+  .eyebrow { font: 500 11.5px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
+  header.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+  header.top .t { display: flex; flex-direction: column; gap: 10px; }
+  header.top h1 { font-size: clamp(36px, 6vw, 60px); line-height: 1; }
+  header.top h1 em { font-style: normal; color: var(--accent); }
+  header.top p { color: var(--dim); max-width: 58ch; }
+  .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 999px; padding: 3px; background: var(--raised); }
+  .seg button { border: 0; background: none; border-radius: 999px; padding: 6px 14px; font-size: 14px; color: var(--dim); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+  section { display: flex; flex-direction: column; gap: 18px; }
+  section > h2 { font-size: 26px; }
+  section > p { color: var(--dim); max-width: 64ch; }
+  .tile.wide { grid-column: 1 / -1; }
+  .what.said { font-style: italic; min-height: 1.4em; }
+  .again { font: inherit; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--accent); background: none; color: var(--accent); cursor: pointer; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
+  .tile { background: var(--raised); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .tile header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .tile h3 { font-size: 17px; }
+  .tile .what { color: var(--dim); font-size: 13.5px; }
+  .tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+  .tabs button { border: 1px solid var(--line); background: none; border-radius: 999px; padding: 3px 10px; font-size: 12.5px; color: var(--dim); }
+  .tabs button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent-deep); background: var(--accent-soft); }
+  .host { min-height: 140px; }
+  .replay { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+  .said { font: 600 clamp(20px, 2.6vw, 28px)/1.35 var(--display); letter-spacing: -.01em; min-height: 3.5em; }
+  .said .heard { color: var(--ink); }
+  .said .coming { color: var(--faint); }
+  .btn { border: 1px solid var(--line-strong); background: var(--raised); border-radius: 999px; padding: 9px 18px; font-weight: 700; font-size: 14px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .note { font-size: 13.5px; color: var(--dim); }
+  .rules { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .rule { border-top: 2px solid var(--accent); padding-top: 10px; font-size: 14px; color: var(--dim); }
+  .rule b { display: block; color: var(--ink); font-family: var(--display); font-size: 15.5px; margin-bottom: 2px; }
+  footer { color: var(--faint); font: 500 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+  @media (max-width: 760px) { .replay { grid-template-columns: minmax(0, 1fr); } }
+  /* The Stage, in Tacit's colours: its own rules stay its own. */
+  .host { --eui-ink: var(--ink); --eui-tint: var(--stage-tint); --eui-font: var(--body);
+    --eui-mint: var(--accent); --eui-planPurple: var(--accent); --eui-rewardsGold: var(--accent); --eui-cyan: var(--accent); --eui-poppinsCyan: var(--accent); --eui-neutral: var(--accent);
+    --eui-success: var(--ok); --eui-warning: var(--accent); --eui-danger: var(--bad); --eui-on-domain: var(--accent-ink); }
+  /* One accent in Tacit: the card's domain colour is always Kairos orange. */
+  .host .eui-card, .host .eui-item { --eui-domain: var(--accent) !important; }
 </style>
 <div class="wrap">
-<header>
-  <div class="lbl">aiuic-eui · the visual language</div>
-  <h1 style="margin-top:14px">A design system that can fail a build</h1>
-  <p class="lede">A design language written on boards is read once and then drifts. This one is a
-  package: <b>one mint</b>, three springs, seven beats, and a set of rules about what an act in each
-  part of an app is allowed to be. Those rules are lint, not advice — <b>"groceries: items only,
-  never a person"</b> is a sentence on a board and an error against an act definition.</p>
-</header>
-
-<section>
-  <div class="shead"><h2>Say something</h2><span class="lbl">the card follows the sentence</span></div>
-  <p class="note">Type as if you were speaking. The card lands, fills in the order you said things,
-  holds, and commits on silence — drawn in the language rather than in whatever the renderer felt
-  like. Switch the domain and watch the colour follow the meaning, never the theme.</p>
-  <div class="grid two">
-    <div>
-      <div class="rowbtns" id="domains"></div>
-      <input class="t" id="say" placeholder="dishes for Maya tomorrow" autocomplete="off">
-      <div class="rowbtns" style="margin-top:12px" id="scenes"></div>
-      <div class="beats" id="beats"></div>
-      <div class="meta" id="meta"></div>
+  <header class="top">
+    <div class="t">
+      <span class="eyebrow">Tacit · the Stage</span>
+      <h1>Stage <em>Kit</em></h1>
+      <p>Every answer Tacit can ask for has its own face, and every moment of an action has its own beat. These are the real components: the same code Tacit draws its card with, in every state.</p>
     </div>
-    <div class="stagewrap"><div id="stage"></div></div>
-  </div>
-</section>
+    <div class="seg" id="theme" role="group" aria-label="Theme">
+      <button type="button" data-t="system" aria-pressed="true">System</button>
+      <button type="button" data-t="light" aria-pressed="false">Light</button>
+      <button type="button" data-t="dark" aria-pressed="false">Dark</button>
+    </div>
+  </header>
 
-<section>
-  <div class="shead"><h2>Break the language</h2><span class="lbl">board 12, as lint</span></div>
-  <p class="note">Edit the act below. It is composed against the closed capability registry — a model
-  cannot lower blast radius — and then checked against the domain it claims. Give a grocery an
-  assignee, or let an allowance settle on silence, and the check fails before anything is drawn.</p>
-  <div class="grid two">
-    <div><textarea class="t" id="spec" spellcheck="false"></textarea>
-      <div class="rowbtns" style="margin-top:12px" id="breaks"></div></div>
-    <div class="panel"><div class="lbl" style="margin-bottom:10px">the audit</div>
-      <p class="lint" id="lint"></p></div>
-  </div>
-</section>
+  <section>
+    <span class="eyebrow">Live</span>
+    <h2>Say it once</h2>
+    <p>One sentence, heard word by word. The card fills as you speak, each answer in its own form, then holds: silence lets a cheap thing happen, a word or a tap changes it.</p>
+    <div class="replay">
+      <div class="stack" style="display:flex;flex-direction:column;gap:14px">
+        <p class="said" id="said"></p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn primary" id="play" type="button">Play again</button><button class="btn" id="next" type="button">Another sentence</button></div>
+        <p class="note" id="replay-note"></p>
+      </div>
+      <div class="tile"><div class="host" id="live"></div></div>
+    </div>
+  </section>
 
-<section>
-  <div class="shead"><h2>The material</h2><span class="lbl">board 13</span></div>
-  <p class="note">Fixed domain colours, emitted from one place. A member's accent pack never
-  repaints them: <code>resolveColours()</code> takes the accent so that it can visibly not use it.</p>
-  <div class="swatches" id="swatches"></div>
-</section>
+  <section>
+    <span class="eyebrow">Kinds of answer</span>
+    <h2>Seven primitives</h2>
+    <p>Pick a state on any of them. Tap a choice to fill it; tap × to empty it again. The words on screen are always the answer itself, so a screen reader hears exactly what you see.</p>
+    <div class="grid" id="kinds"></div>
+  </section>
 
-<section>
-  <div class="shead"><h2>The budget</h2><span class="lbl">board 10</span></div>
-  <p class="note">"Miss these and it stops feeling like a reflex." Measured on the clock, so a
-  regression that adds 90 ms between the words ending and the card landing fails a test instead of
-  being noticed in six months by someone who says the app feels heavier than it used to.</p>
-  <div class="panel"><pre id="budget"></pre></div>
-</section>
+  <section>
+    <span class="eyebrow">Beats</span>
+    <h2>The moments of an action</h2>
+    <p>From the first reading to the receipt. Only cheap things that touch nobody else are allowed to happen on silence; everything else waits for a yes.</p>
+    <div class="grid" id="beats"></div>
+  </section>
+
+  <section>
+    <span class="eyebrow">Surfaces</span>
+    <h2>Cards that tell, not do</h2>
+    <p>Same card, same way out, but nothing here commits. A follow-up like “Reply to Vincent” is handed to the conversation, where the rules above decide what silence may do.</p>
+    <div class="grid" id="surfaces"></div>
+  </section>
+
+  <section>
+    <span class="eyebrow">Rules the components keep</span>
+    <h2>Held in the code, not in a style guide</h2>
+    <div class="rules">
+      <div class="rule"><b>One card at a time</b>Drawing a card replaces the last one. There is no way to stack two.</div>
+      <div class="rule"><b>A way out, always</b>“Not that”, “Undo” or “Done” is drawn in every state. A test fails without it.</div>
+      <div class="rule"><b>Your words above it</b>What you said sits outside the card, so the reading is never confused with the hearing.</div>
+      <div class="rule"><b>Never a spinner</b>Nothing loops. Motion only marks a change: an answer landing, a mark drawing itself.</div>
+      <div class="rule"><b>A guess looks like a guess</b>A value Tacit inferred is dimmed and waits for one tap to become yours.</div>
+      <div class="rule"><b>Two readings, never a list</b>When an answer is ambiguous, the card shows the two it is deciding between.</div>
+    </div>
+  </section>
+
+  <footer>Tacit · by Kairos · Stage Kit</footer>
 </div>
 <script>
-var AIUIC=(()=>{var ae=Object.defineProperty;var mt=Object.getOwnPropertyDescriptor;var ft=Object.getOwnPropertyNames;var gt=Object.prototype.hasOwnProperty;var yt=(i,e)=>{for(var t in e)ae(i,t,{get:e[t],enumerable:!0})},bt=(i,e,t,n)=>{if(e&&typeof e=="object"||typeof e=="function")for(let s of ft(e))!gt.call(i,s)&&s!==t&&ae(i,s,{get:()=>e[s],enumerable:!(n=mt(e,s))||n.enumerable});return i};var vt=i=>bt(ae({},"__esModule",{value:!0}),i);var Yt={};yt(Yt,{AIUIC:()=>H,ActDefinitionError:()=>U,ActRun:()=>M,BASE_PAUSE_MS:()=>Fe,BUDGET_MS:()=>E,BudgetMonitor:()=>ie,ComposeError:()=>m,Composer:()=>Z,DELTA_FILL:()=>Pe,DOMAINS:()=>D,DOMAIN_COLOUR:()=>y,FakeClock:()=>ce,HOLD_MULTIPLIER:()=>Me,LocalResolver:()=>W,MIN_TARGET_PX:()=>te,ORB_PX:()=>O,ORB_TINT:()=>Oe,Outbox:()=>T,PRIMITIVES:()=>Ee,RADIUS_ORDER:()=>Ne,SEMANTIC:()=>w,SPRING:()=>A,StagePresenter:()=>I,TAU_FILL:()=>je,TYPE:()=>ee,UNDO_WINDOW_MS:()=>B,UNKNOWN_ATTENTION:()=>qe,admitValue:()=>Ct,attachPresenters:()=>Ke,attentionGate:()=>C,beatOf:()=>oe,classify:()=>V,cloneSlots:()=>Ie,commitRadius:()=>Te,createAIUIC:()=>kt,cssVariables:()=>De,defineAct:()=>N,display:()=>j,domainColour:()=>ht,effectiveRadius:()=>_,explain:()=>st,explainRadius:()=>L,formatLints:()=>it,holdDurationMs:()=>$,lintActs:()=>ot,lintDomains:()=>dt,maxRadius:()=>le,pickAct:()=>ye,radiusRank:()=>f,realClock:()=>ue,requiresModel:()=>pe,resolveColours:()=>P,resolveQuantity:()=>Y,resolveWhen:()=>X,skipsShow:()=>re,slotOrder:()=>x,springFor:()=>pt,staticMax:()=>de,stylesheet:()=>$e,toView:()=>Ae});var Ne=["self","shared","other-person","external"];function f(i){return Ne.indexOf(i)}function le(...i){let e="self";for(let t of i)f(t)>f(e)&&(e=t);return e}var ue={now:()=>Date.now(),setTimeout:(i,e)=>setTimeout(i,e),clearTimeout:i=>clearTimeout(i)},ce=class{t;seq=1;queue=[];constructor(e=0){this.t=e}now(){return this.t}setTimeout(e,t){let n=this.seq++;return this.queue.push({id:n,at:this.t+t,fn:e}),n}clearTimeout(e){this.queue=this.queue.filter(t=>t.id!==e)}advance(e){let t=this.t+e;for(;;){let n=this.queue.filter(s=>s.at<=t).sort((s,o)=>s.at-o.at||s.id-o.id)[0];if(!n)break;this.queue=this.queue.filter(s=>s.id!==n.id),this.t=n.at,n.fn()}this.t=t}get pending(){return this.queue.length}};function de(i){return typeof i=="string"?i:i.max}function Te(i,e,t){return typeof i.radius=="string"?i.radius:i.radius.of(e,t)}function L(i,e,t){let n=Te(i,e,t),s=t.reachLimit??1,o=[],l=n,a;return!i.undo&&f(l)<f("external")&&(l="external",a="no undo() \u2014 nothing could take it back, so it cannot commit on silence"),(i.effects??[]).forEach((r,u)=>{let c=r.name??`effect[${u}]`;if(r.when&&!r.when(e,t)){o.push({name:c,radius:"self",why:"skipped by when()"});return}let d=r.radius,p;if(!r.reversible&&f(d)<f("external")&&(d="external",p="effect is irreversible"),r.reach){let h=r.reach(e,t);h>s&&(d="external",p=`reach ${h} exceeds reachLimit ${s}`)}o.push(p?{name:c,radius:d,why:p}:{name:c,radius:d}),l=le(l,d)}),a?{radius:l,commit:n,effects:o,why:a}:{radius:l,commit:n,effects:o}}function _(i,e,t){return L(i,e,t).radius}var Me={self:1,shared:1,"other-person":1.6,external:0},Fe=850;function $(i,e){let t=e.actor.basePauseMs??Fe;return Math.round(t*Me[i])}var U=class extends Error{act;constructor(e,t){super(`[${e}] ${t}`),this.name="ActDefinitionError",this.act=e}},wt=f("external");function N(i){let e=l=>{throw new U(i.name,l)};i.name||e("act needs a name"),i.commit||e("act needs a commit function"),typeof i.radius!="string"&&((!i.radius||typeof i.radius.of!="function")&&e("a function-valued radius needs { max, of }"),i.radius.max||e("a function-valued radius must declare a static max, or it cannot be checked here"));let t=de(i.radius),n=f(t)<wt,s=Object.entries(i.slots??{});s.length===0&&e("act needs at least one slot");let o=new Set;for(let[l,a]of s){let r=a;r.primitive||e(`slot "${l}" needs a primitive`),typeof r.order!="number"&&e(`slot "${l}" needs an order`),o.has(r.order)&&e(`slot "${l}" reuses order ${r.order}`),o.add(r.order),!r.options&&!r.resolve&&!r.default&&e(`slot "${l}" needs options, resolve, or default \u2014 nothing can fill it`),r.fill==="model"&&r.required}n&&!i.undo&&e(`radius max "${t}" is below "external" but no undo() is declared; silence-assent requires a reversal`);for(let[l,a]of(i.effects??[]).entries()){let r=a.name??`effect[${l}]`;typeof a.run!="function"&&e(`${r} needs run()`),a.radius||e(`${r} needs a radius`),typeof a.reversible!="boolean"&&e(`${r} needs reversible`),typeof a.deferrable!="boolean"&&e(`${r} needs deferrable`),!a.deferrable&&n&&e(`${r} is not deferrable, so it fires before undo is possible; declare radius max "external"`),!a.reversible&&n&&e(`${r} is irreversible; declare radius max "external"`),f(a.radius)>f(t)&&e(`${r} declares radius "${a.radius}" above the act's max "${t}"`)}return i}function pe(i){return Object.values(i.slots).some(e=>e.required===!0&&e.fill==="model")}function x(i){return Object.entries(i.slots).sort(([,e],[,t])=>e.order-t.order).map(([e])=>e)}var qe={foreground:!1,unlocked:!1,proximityClear:!1,listening:!1};function C(i,e){let t=i??qe,n=[];return t.foreground||n.push("app not in foreground"),t.unlocked||n.push("device locked"),t.proximityClear||n.push("proximity sensor covered"),t.listening||n.push("not listening, so a veto could not be heard"),e||n.push("user has not touched or spoken during this act"),{pass:n.length===0,failures:n}}var B=5e3,T=class{constructor(e,t,n={}){this.clock=e;this.ctx=t;this.events=n}clock;ctx;events;entries=new Map;seq=1;get size(){return this.entries.size}has(e){return this.entries.has(e)}add(e,t,n,s){let o=`ob_${this.seq++}`,l=this.clock.now()+s,a=n.map((u,c)=>u.name??`effect[${c}]`),r={id:o,act:e,result:t,deadlineAt:l,effectNames:a,effects:n,timer:null};return r.timer=this.clock.setTimeout(()=>{this.fire(o)},s),this.entries.set(o,r),o}cancel(e){let t=this.entries.get(e);return t?(t.timer!==null&&this.clock.clearTimeout(t.timer),this.entries.delete(e),!0):!1}async fire(e){let t=this.entries.get(e);if(!t)return;this.entries.delete(e);let n=this.ctx();for(let s of t.effects)try{await s.run(t.result,n)}catch(o){this.events.onEffectError?.(t,s,o)}this.events.onFire?.(t)}serialize(){return[...this.entries.values()].map(({id:e,act:t,result:n,deadlineAt:s,effectNames:o})=>({id:e,act:t,result:n,deadlineAt:s,effectNames:o}))}restore(e,t){for(let n of e){let s=Math.max(0,n.deadlineAt-this.clock.now()),o={...n,effects:t(n.act,n.effectNames),timer:null};o.timer=this.clock.setTimeout(()=>{this.fire(n.id)},s),this.entries.set(n.id,o)}}};var je=.85,Pe=.15;function Ie(i){let e={};for(let[t,n]of Object.entries(i))e[t]=n.candidates?{...n,candidates:n.candidates.map(s=>({...s}))}:{...n};return e}function V(i,e=je,t=Pe){let n=[...i].sort((r,u)=>u.score-r.score),s=n[0];if(!s)return{outcome:"empty",provisional:!1,ranked:n};let o=n[1],l=s.score-(o?.score??0),a=s.calibrated!==!1;return s.score>=e&&l>=t?{outcome:"filled",value:s.value,provisional:!a,ranked:n}:o&&l<t?{outcome:"narrowed",provisional:!0,ranked:n}:{outcome:"filled",value:s.value,provisional:!0,ranked:n}}var M=class{constructor(e,t,n,s,o){this.clock=t;this.ctxOf=n;this.outbox=s;this.emit=o;this.def=e;for(let l of Object.keys(e.slots))this.slots[l]={status:"empty",provisional:!1};this.applyDefaults()}clock;ctxOf;outbox;emit;def;status="resolving";phase="show";slots={};result=null;undoId=null;speculative=!1;holdTimer=null;holdEndsAt=0;holdMs=0;engaged=!1;get filled(){let e={};for(let[t,n]of Object.entries(this.slots))n.status==="filled"&&(e[t]=n.value);return e}get radius(){return _(this.def,this.filled,this.ctxOf())}get requiredNames(){return x(this.def).filter(e=>this.def.slots[e]?.required===!0)}get missingRequired(){return this.requiredNames.filter(e=>this.slots[e]?.status!=="filled")}state(){let e=this.status!=="settled"&&this.status!=="discarded",t=C(this.ctxOf().attention,this.engaged),n=e?this.radius:null,s=this.missingRequired[0],o={act:this.def.name,status:this.status,phase:this.phase,slots:Ie(this.slots),radius:n,assent:this.status==="hold"?"silence":this.status==="explicit"?"explicit":null,visible:this.status==="resolving"&&s?[s]:x(this.def),outbox:this.outbox.size};return this.status==="hold"&&(o.holdRemainingMs=Math.max(0,this.holdEndsAt-this.clock.now())),s&&(o.focus=s),t.pass||(o.gateFailures=t.failures),o}applyDefaults(){let e=this.ctxOf();for(let[t,n]of Object.entries(this.def.slots)){if(!n.default)continue;let s=this.slots[t];if(!s||s.status!=="empty")continue;let o=n.default(e,this.filled);o!==void 0&&(this.slots[t]={status:"filled",value:o,source:"default",provisional:!1})}}markEngaged(){this.engaged=!0}setValue(e,t,n){if(!this.def.slots[e])throw new Error(`[${this.def.name}] unknown slot "${e}"`);(n==="spoken"||n==="touched")&&this.markEngaged();let s=this.status==="hold",o=this.slots[e],l=o?.status!=="filled"||o.value!==t;this.slots[e]={status:"filled",value:t,source:n,provisional:!1,...n==="model"&&s&&l?{corrected:!0}:{}},this.status==="frozen"&&(n==="touched"||n==="spoken")&&(this.status="resolving"),s&&l&&this.cancelHold("slot changed under a running HOLD"),this.evaluate()}offer(e,t,n){if(!this.def.slots[e])throw new Error(`[${this.def.name}] unknown slot "${e}"`);(n==="spoken"||n==="touched")&&this.markEngaged();let s=this.status==="hold",o=V(t);o.outcome==="empty"?this.slots[e]={status:"empty",provisional:!1}:o.outcome==="narrowed"?this.slots[e]={status:"narrowed",candidates:o.ranked,provisional:!0,source:n}:this.slots[e]={status:"filled",value:o.value,source:n,provisional:o.provisional,candidates:o.ranked.length>1?o.ranked:void 0},this.status==="frozen"&&(n==="touched"||n==="spoken")&&(this.status="resolving"),s&&this.cancelHold("slot changed under a running HOLD"),this.evaluate()}markStale(e){let t=this.slots[e];t&&(this.slots[e]={...t,stale:!0},this.status==="hold"&&this.cancelHold("a filled value went stale"),this.evaluate())}freeze(e="bare negation"){this.status==="settled"||this.status==="discarded"||(this.markEngaged(),this.cancelHold(e),this.status="frozen",this.phase="frozen",this.emit({type:"frozen",act:this.def.name,reason:e}),this.emit({type:"stage",state:this.state()}))}discard(){this.cancelHold("vetoed"),this.status="discarded",this.emit({type:"discarded",act:this.def.name})}pause(){this.status==="hold"&&this.cancelHold("paused"),this.status!=="settled"&&this.status!=="discarded"&&(this.status="frozen")}resume(){this.status==="frozen"&&(this.status="resolving",this.evaluate())}evaluate(){if(["committing","settled","discarded","failed"].includes(this.status))return;if(this.status==="frozen"){this.emit({type:"stage",state:this.state()});return}let e=this.ctxOf(),t=this.missingRequired;if(t.length>0){this.status="resolving";let a=t[0],r=this.slots[a];this.phase=r.status==="narrowed"?"narrow":"unfold",this.emit({type:"stage",state:this.state()});return}let n=Object.entries(this.slots).find(([,a])=>a.stale);if(n){this.status="resolving",this.phase="show",this.emit({type:"blocked",act:this.def.name,reason:`slot "${n[0]}" is stale`}),this.emit({type:"stage",state:this.state()});return}let s=this.radius,o=this.requiredNames.filter(a=>this.slots[a]?.provisional);if(o.length>0&&f(s)>=f("other-person")){this.status="resolving",this.phase="show",this.emit({type:"blocked",act:this.def.name,reason:`provisional ${o.join(", ")} at radius "${s}"`}),this.emit({type:"stage",state:this.state()});return}if(this.speculative){this.status="speculating",this.phase="show",this.emit({type:"stage",state:this.state()});return}let l=C(e.attention,this.engaged);if(s==="external"||!l.pass){this.status="explicit",this.phase="explicit",this.emit({type:"blocked",act:this.def.name,reason:s==="external"?"radius is external":"attention gate failed",...l.pass?{}:{failures:l.failures}}),this.emit({type:"stage",state:this.state()});return}this.startHold(s)}startHold(e){let t=$(e,this.ctxOf());this.cancelHold("restart",!0),this.status="hold",this.phase="hold",this.holdMs=t,this.holdEndsAt=this.clock.now()+t,this.holdTimer=this.clock.setTimeout(()=>{this.holdTimer=null;let n=this.ctxOf(),s=_(this.def,this.filled,n),o=C(n.attention,this.engaged);if(s!==e||!o.pass||this.speculative){this.emit({type:"hold-cancel",act:this.def.name,reason:o.pass?s!==e?`the cost changed to "${s}"`:"speech resumed":"silence no longer counts"}),this.evaluate();return}this.commit("silence")},t),this.emit({type:"hold-start",act:this.def.name,ms:t,radius:e}),this.emit({type:"stage",state:this.state()})}cancelHold(e,t=!1){this.holdTimer!==null&&(this.clock.clearTimeout(this.holdTimer),this.holdTimer=null,t||this.emit({type:"hold-cancel",act:this.def.name,reason:e})),this.holdEndsAt=0}get holdDurationMsValue(){return this.holdMs}resumeSpeculation(){this.speculative||this.status==="settled"||this.status==="committing"||this.status==="discarded"||this.status==="failed"||(this.speculative=!0,this.cancelHold("speech resumed"),this.evaluate())}settleSpeculation(){this.speculative&&(this.speculative=!1,this.evaluate())}async assentUnattended(){if(this.def.grantsAuthority)throw new Error(`[${this.def.name}] changes what may happen without the person, so only the person can commit it`);if(this.speculative)throw new Error(`[${this.def.name}] cannot assent to a speculative act`);if(this.status!=="explicit"&&this.status!=="hold")throw new Error(`[${this.def.name}] nothing to assent to (status "${this.status}")`);if(this.missingRequired.length>0)throw new Error(`[${this.def.name}] required slots unfilled: ${this.missingRequired.join(", ")}`);this.cancelHold("assent from a standing order",!0),await this.commit("explicit")}async assent(){if(this.markEngaged(),this.speculative)throw new Error(`[${this.def.name}] cannot assent to a speculative act; settle it first`);if(this.status!=="explicit"&&this.status!=="hold"&&this.status!=="frozen")throw new Error(`[${this.def.name}] nothing to assent to (status "${this.status}")`);if(this.missingRequired.length>0)throw new Error(`[${this.def.name}] required slots unfilled: ${this.missingRequired.join(", ")}`);this.cancelHold("explicit assent",!0),await this.commit("explicit")}async commit(e){if(this.status==="committing"||this.status==="settled")return;this.status="committing";let t=this.ctxOf(),n=this.filled;try{let s=await this.def.commit(n,t);this.result=s,this.status="settled",this.phase="settle";let o=(this.def.effects??[]).filter(r=>!r.when||r.when(n,t)),l=o.filter(r=>r.deferrable),a=o.filter(r=>!r.deferrable);if(l.length>0){let r=t.undoWindowMs??5e3;this.undoId=this.outbox.add(this.def.name,s,l,r)}else this.def.undo&&(this.undoId=this.outbox.add(this.def.name,s,[],t.undoWindowMs??5e3));for(let r of a)e==="explicit"&&await r.run(s,t);this.emit({type:"commit",act:this.def.name,result:s,undoId:this.undoId}),this.emit({type:"stage",state:this.state()})}catch(s){this.status="failed",this.emit({type:"failed",act:this.def.name,error:s}),this.emit({type:"stage",state:this.state()})}}async undo(){return this.status!=="settled"||!this.result||!this.undoId||!this.outbox.has(this.undoId)?!1:(this.outbox.cancel(this.undoId),this.undoId=null,await this.def.undo?.(this.result,this.ctxOf()),this.emit({type:"undo",act:this.def.name,result:this.result}),!0)}get undoAvailable(){return this.status==="settled"&&!!this.undoId&&this.outbox.has(this.undoId)}};var xt={act:null,status:"resolving",phase:"idle",slots:{},radius:null,assent:null,visible:[],outbox:0},H=class{constructor(e){this.config=e;this.clock=e.clock??ue,this.outbox=new T(this.clock,()=>this.ctx())}config;acts=new Map;listeners=new Set;current=null;clock;outbox;ctx(){return{...this.config.ctx(),now:new Date(this.clock.now())}}emit=e=>{for(let t of this.listeners)t(e)};on(e){return this.listeners.add(e),()=>this.listeners.delete(e)}defineAct(e){let t=N(e);return this.acts.set(t.name,t),t}get definitions(){return[...this.acts.values()]}needsModel(e){let t=this.acts.get(e);if(!t)throw new Error(`unknown act "${e}"`);return pe(t)}start(e,t={}){let n=this.acts.get(e);if(!n)throw new Error(`unknown act "${e}"`);this.current&&["resolving","hold","explicit","frozen"].includes(this.current.status)&&this.current.discard();let s=new M(n,this.clock,()=>this.ctx(),this.outbox,this.emit);return t.speculative&&(s.speculative=!0),this.current=s,s.evaluate(),s}get act(){return this.current}state(){return this.current?this.current.state():{...xt,outbox:this.outbox.size}}serializeOutbox(){return this.outbox.serialize()}restoreOutbox(e){this.outbox.restore(e,(t,n)=>(this.acts.get(t)?.effects??[]).filter((o,l)=>n.includes(o.name??`effect[${l}]`)))}};function kt(i){return new H(i)}var he=i=>i.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim();function Le(i,e){if(i===e)return!0;if(typeof i!="object"||typeof e!="object"||!i||!e)return!1;let t=Object.keys(i),n=Object.keys(e);return t.length===n.length&&t.every(s=>Le(i[s],e[s]))}function ze(i){return typeof i=="string"?i:typeof i=="number"&&Number.isFinite(i)?String(i):i&&typeof i=="object"&&typeof i.label=="string"?i.label:null}function Ct(i,e,t,n={}){if(i.primitive==="ghostField"){let s=typeof e=="string"?e:ze(e);return s!==null&&s.trim()&&s.length<=500?{ok:!0,value:s.trim()}:{ok:!1,why:"it carries no text"}}if(i.options){let s;try{s=i.options(t,n)}catch{return{ok:!1,why:"its options could not be read"}}if(!Array.isArray(s))return{ok:!1,why:"its options are not available yet"};let o=s.find(l=>Le(l.value,e));if(o)return{ok:!0,value:o.value};if(typeof e=="string"){let l=he(e),a=s.filter(r=>he(r.label)===l||(r.aliases??[]).some(u=>he(u)===l));if(a.length===1)return{ok:!0,value:a[0].value};if(a.length>1)return{ok:!1,why:`"${e}" names more than one option`}}return{ok:!1,why:"it is not one of the options offered"}}if(i.resolve){let s=ze(e);if(s===null)return{ok:!1,why:"it carries no words to check"};let o=V(i.resolve(s,t,n));return o.outcome==="filled"&&!o.provisional?{ok:!0,value:o.value}:{ok:!1,why:`"${s.slice(0,40)}" does not read as one clear value`}}return typeof e=="string"&&e.length<=500?{ok:!0,value:e}:{ok:!1,why:"only plain text is accepted here"}}var Rt=/[.,!?;:'"`()[\]{}<>/\\|@#$%^&*_+=~]/g;function S(i){return i.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(Rt," ").replace(/\s+/g," ").trim()}function me(i){let e=[],t=/[^\s.,!?;:'"`()[\]{}<>/\\|@#$%^&*_+=~]+/g,n;for(;(n=t.exec(i))!==null;){let s=n[0],o=S(s);o&&e.push({raw:s,norm:o,start:n.index,end:n.index+s.length})}return e}function St(i,e){if(i===e)return 0;if(i.length===0)return e.length;if(e.length===0)return i.length;let t=Array.from({length:e.length+1},(s,o)=>o),n=new Array(e.length+1);for(let s=1;s<=i.length;s++){n[0]=s;for(let o=1;o<=e.length;o++){let l=i[s-1]===e[o-1]?0:1;n[o]=Math.min(n[o-1]+1,t[o]+1,t[o-1]+l)}[t,n]=[n,t]}return t[e.length]}function At(i,e){return!i||!e?0:i===e?1:1-St(i,e)/Math.max(i.length,e.length)}var Et=.72;function fe(i,e){let t=S(e).split(" ").filter(Boolean);if(t.length===0||i.length<t.length)return null;let n=null;for(let s=0;s+t.length<=i.length;s++){let o=0;for(let a=0;a<t.length;a++){let r=At(i[s+a].norm,t[a]);o+=r>=Et?r:0}let l=o/t.length;l>0&&(!n||l>n.score)&&(n={score:l,span:[i[s].start,i[s+t.length-1].end]})}return n}var Ot=/^(please|can you|could you|would you|will you|can we|could we|let s|lets|peux tu|pourrais tu|tu peux|pouvez vous|est ce que tu peux|est ce que vous pouvez)\b/,Dt=/^(i want|i need|i d like|id like|i would like|we need|we want|je veux|je voudrais|j ai besoin|jai besoin|il faut)\b/,$t=/^\s*(believe|imagine|see|tell|guess|remember|understand|feel|think|hear|croire|imaginer|voir|comprendre)\b/,Nt=/^\s*(to\s+)?(tell|say|know|ask|think|remember|let you know|mention|dire|savoir|demander|penser)\b/,Tt=/^(did|does|is|are|was|were|has|have|had|what|when|where|who|whom|whose|why|how|which|do (you|we|they|i)|est ce|qui|quand|ou est|pourquoi|comment|combien|quel|quelle|quels|quelles)\b/,Mt=/^(i|we|it|that|this|there|he|she|they|je|j|on|c|ca|il|elle|nous)\b/,Ft=new Set(["is","are","was","were","est","sont","etait"]),qt=new Set(["what","who","which","that","whatever","whoever","ce","qui","que","quoi"]);function _e(i){let e=S(i.replace(/[\u2019'-]/g," "));if(!e)return"statement";let t=Ot.exec(e),n=Dt.exec(e);if(t&&!$t.test(e.slice(t[0].length))||n&&!Nt.test(e.slice(n[0].length)))return"request";if(t||n)return"statement";if(i.trim().endsWith("?")||Tt.test(e))return"question";if(Mt.test(e))return"statement";let s=e.split(" "),o=s.findIndex(l=>Ft.has(l));return o>=0&&o<=3&&!qt.has(s[o-1]??"")?"statement":"request"}var F={tauAct:.5,deltaAct:.15,tauFill:.85,phraseWeight:.4,coverageWeight:.6,phraseFloor:.9,uncheckableCoverage:.25};function ge(i,e){let t=[];for(let n of e){let s=[n.label,...n.aliases??[]],o=null;for(let l of s){let a=fe(i,l);a&&(!o||a.score>o.score)&&(o=a)}o&&o.score>0&&t.push({value:n.value,label:n.label,...o})}return t.sort((n,s)=>s.score-n.score)}function jt(i){let e=[];for(let[s,o]of Object.entries(i))o.forEach((l,a)=>{l.span&&e.push({slot:s,index:a,span:l.span,score:l.score})});let t=new Set;for(let s=0;s<e.length;s++)for(let o=s+1;o<e.length;o++){let l=e[s],a=e[o];if(l.slot===a.slot||!(l.span[0]<a.span[1]&&a.span[0]<l.span[1]))continue;let u=l.span[1]-l.span[0],c=a.span[1]-a.span[0],d=u!==c?u<c?l:a:l.score<a.score?l:a;t.add(`${d.slot}:${d.index}`)}let n={};for(let[s,o]of Object.entries(i)){let l=o.filter((a,r)=>!t.has(`${s}:${r}`));l.length>0&&(n[s]=l)}return n}var W=class{constructor(e=F){this.routing=e}routing;name="local";local=!0;calibrated=!0;async score(e,t,n,s){return this.scoreSync(e,t,n,s)}async fill(e,t,n,s,o){return this.fillSync(e,t,n,s,o)}scoreSync(e,t,n,s){let o=me(e),l=[],a=_e(e);for(let r of t){let u=0;for(let k of r.phrases??[]){let b=fe(o,k);b&&b.score>u&&(u=b.score)}let c=Object.entries(r.slots).filter(([k,b])=>b.required&&b.primitive!=="ghostField"&&(b.resolve||s(r,k).length>0)),d=0;for(let[k,b]of c)((b.resolve?b.resolve(e,n,{}):ge(o,s(r,k)))[0]?.score??0)<this.routing.tauFill||(d+=this.discrimination(r,k,e,t,n,s,o));let p=c.length?d/c.length:0,h=0,g=0;u>=this.routing.phraseFloor&&(h+=this.routing.phraseWeight,g+=this.routing.phraseWeight*u),h+=this.routing.coverageWeight,g+=this.routing.coverageWeight*(c.length>0?p:this.routing.uncheckableCoverage);let z=a==="request";l.push({act:r.name,phraseMatch:u,requiredCoverage:p,score:z&&h>0?g/h:0})}return l.sort((r,u)=>u.score-r.score)}discrimination(e,t,n,s,o,l,a){let r=0;for(let u of s)if(u.name!==e.name)for(let[c,d]of Object.entries(u.slots)){if(!d.required||d.primitive==="ghostField")continue;if(((d.resolve?d.resolve(n,o,{}):ge(a,l(u,c)))[0]?.score??0)>=this.routing.tauFill){r++;break}}return 1/(1+r)}fillSync(e,t,n,s,o){let l=me(e),a={};for(let[r,u]of Object.entries(t.slots)){if(r in n||u.fill==="model")continue;if(u.resolve){let d=u.resolve(e,s,n);d.length>0&&(a[r]=[...d].sort((p,h)=>h.score-p.score));continue}let c=ge(l,o(t,r));c.length>0&&(a[r]=c)}return jt(a)}};function ye(i,e=F){let t=[...i].sort((o,l)=>l.score-o.score),n=t[0];if(!n||n.score<e.tauAct)return{kind:"none",scores:t};let s=t.filter(o=>o.score>=e.tauAct&&n.score-o.score<e.deltaAct);return s.length>1?{kind:"narrow",acts:s.map(o=>o.act),scores:t}:{kind:"start",act:n.act,scores:t}}var be={zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,deux:2,trois:3,quatre:4,cinq:5,sept:7,huit:8,neuf:9,dix:10,onze:11,douze:12,treize:13,quatorze:14,quinze:15,seize:16},ve={twenty:20,thirty:30,forty:40,fourty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90,vingt:20,vingts:20,trente:30,quarante:40,cinquante:50,soixante:60,septante:70,huitante:80,nonante:90},q={hundred:100,cent:100,cents:100,thousand:1e3,mille:1e3,million:1e6,millions:1e6,billion:1e9,milliard:1e9,milliards:1e9},Pt=new Set(["one","two","three","four","five","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen","twenty","thirty","forty","fourty","fifty","sixty","seventy","eighty","ninety","hundred","thousand","a","an"]),Be=new Set(["a","an","un","une"]),Ve=new Set(["and","et"]),He={dollar:"USD",dollars:"USD",buck:"USD",bucks:"USD",usd:"USD",euro:"EUR",euros:"EUR",eur:"EUR",pound:"GBP",pounds:"GBP",quid:"GBP",gbp:"GBP",$:"USD","\u20AC":"EUR","\xA3":"GBP"},Ue=new Set(["cents","cent","penny","pence","centimes","sous"]),It=["no","sorry","i mean","actually","rather","make that","wait","non","pardon","plutot","je veux dire","enfin"];function zt(i){let e=i.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(),t=[],n=/(\d{1,3}(?:([.,\u00a0 ])\d{3})(?:\2\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d+)?)|([$\u20ac\u00a3])|([a-z]+)|([,;.!?]+)/g,s;for(;(s=n.exec(e))!==null;)if(s[1]){let o=s[1];if(s[2]){let a=s[2],r=o.split(a).join("");t.push({kind:"num",n:parseFloat(r.replace(",",".")),raw:o});continue}let l=/^(\d+)[.,](\d+)$/.exec(o);if(l&&l[2].length===3){let a=Number(l[1]+l[2]),r=parseFloat(l[1]+"."+l[2]);t.push({kind:"num",n:a,raw:o,alts:[a,r]})}else l&&l[2].length>3?t.push({kind:"num",n:NaN,raw:o}):t.push({kind:"num",n:parseFloat(o.replace(",",".")),raw:o})}else s[3]?t.push({kind:"sym",code:He[s[3]]}):s[4]?t.push({kind:"word",w:s[4]}):t.push({kind:"break"});return t}var We=i=>be[i]!==void 0||ve[i]!==void 0||q[i]!==void 0;function G(i,e,t=!1){let n=0,s=0,o=!1,l=null,a=!1,r=e,u=c=>i[c]?.kind==="word"?i[c].w:void 0;for(;r<i.length;r++){let c=u(r);if(c===void 0)break;let d=u(r+1);if(Pt.has(c)&&(a=!0),Be.has(c)){if(!o&&d&&q[d]!==void 0){s=1,o=!0,l="ones";continue}if(o&&(c==="un"||c==="une")&&l==="tens"){s+=1,l="ones";continue}break}if(Ve.has(c)){if(o&&d&&(We(d)||d==="un"||d==="une"))continue;break}if(c==="quatre"&&(d==="vingt"||d==="vingts")){s+=80,r++,o=!0,l="tens";continue}if(q[c]!==void 0){if((c==="cents"||c==="cent")&&(t||a))break;if(!o&&(c==="cent"||c==="mille")){s=q[c],o=!0,l="scale",c==="mille"&&(n=1e3,s=0);continue}if(!o)break;let p=q[c];p>=1e3?(n+=(s||1)*p,s=0):s=(s||1)*p,l="scale";continue}if(ve[c]!==void 0){if(o&&(l==="tens"||l==="ones"&&s%100!==0))return{n:n+s,end:r,juxtaposed:!0};s+=ve[c],o=!0,l="tens";continue}if(be[c]!==void 0){let p=be[c];if(o&&l==="tens"){let h=s%100;if(!(p<10||(h===60||h===80)&&p>=10&&p<20))return{n:n+s,end:r,juxtaposed:!0}}else if(o&&l==="ones"&&!(s%100===10&&p<10))return{n:n+s,end:r,juxtaposed:!0};s+=p,o=!0,l="ones";continue}break}return o?{n:n+s,end:r,juxtaposed:!1}:null}function we(i){let e=zt(i),t=[],n=s=>{let o=e[s];if(o){if(o.kind==="sym")return o.code;if(o.kind==="word")return He[o.w]}};for(let s=0;s<e.length;s++){let o=e[s],l=null;if(o.kind==="sym"&&e[s+1]?.kind==="num"){let a=e[s+1];if(Number.isNaN(a.n))continue;let r=e[s+2]?.kind==="word"&&e[s+2].w==="k",u=r?1e3:1;l={n:a.n*u,code:o.code,start:s,end:s+2+(r?1:0),...a.alts?{alternatives:a.alts.map(c=>c*u)}:{}}}else if(o.kind==="num"){if(Number.isNaN(o.n))continue;let a=e[s+1];if(a?.kind==="word"&&["am","pm","h","oclock"].includes(a.w))continue;let r=a?.kind==="word"&&a.w==="k"?1:0,u=n(s+1+r),c=r?1e3:1;l={n:o.n*c,...u?{code:u}:{},start:s,end:s+1+r+(u?1:0),...o.alts?{alternatives:o.alts.map(d=>d*c)}:{}}}else if(o.kind==="word"&&(We(o.w)||Be.has(o.w))){let a=G(e,s);if(!a||a.end===s)continue;if(a.juxtaposed){let c=G(e,a.end);if(c&&!c.juxtaposed&&a.n<100&&c.n<100){let d=n(c.end);t.push({n:a.n,...d?{code:d}:{},start:s,end:c.end+(d?1:0),alternatives:[a.n+c.n/100,a.n*100+c.n]}),s=c.end-1+(d?1:0);continue}}let r=n(a.end),u=e[a.end]?.kind==="word"?e[a.end].w:"";if(!r&&Ue.has(u)){let c=u==="pence"||u==="penny"?"GBP":u==="centimes"?"EUR":"USD";t.push({n:a.n/100,code:c,start:s,end:a.end+1}),s=a.end;continue}l={n:a.n,...r?{code:r}:{},start:s,end:r?a.end+1:a.end}}if(l){if(l.code){let a=l.end,r=e[a]?.kind==="word"?e[a].w:void 0;r&&Ve.has(r)&&a++;let u=e[a]?.kind==="num"?{n:e[a].n,end:a+1}:G(e,a,!0),c=e[u?.end??-1],d=c?.kind==="word"&&Ue.has(c.w),p=!!u&&a===l.end&&!d;u&&u.n>0&&u.n<100&&Number.isInteger(l.n)&&!l.alternatives&&(d||p)&&(l={...l,n:l.n+u.n/100,end:u.end+(d?1:0)})}t.push(l),s=l.end-1}}return{found:t,toks:e}}function Ge(i,e,t){let n=i.slice(e,t).filter(s=>s.kind==="word").map(s=>s.w).join(" ");return It.some(s=>new RegExp(`(^|\\s)${s}(\\s|$)`).test(n))}function J(i){let e=i.map(t=>({kind:"word",w:t}));for(let t=0;t<e.length;t++){let n=G(e,t);if(n&&n.end>t)return n.n}return null}var xe=["sunday","monday","tuesday","wednesday","thursday","friday","saturday"],ke=["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"],Q=["january","february","march","april","may","june","july","august","september","october","november","december"];function Je(i,e){let t=e==="EUR"?"\u20AC":e==="GBP"?"\xA3":"$",n=Number.isInteger(i)?String(i):i.toFixed(2);return e?t+n:n}function Y(i,e){let{found:t,toks:n}=we(i),s=(r,u,c)=>({value:{n:r,label:Je(r,u),...u?{unit:u}:{}},label:Je(r,u),score:c,calibrated:!0});if(!t.length)return[];if(t.length===1){let r=t[0];return r.alternatives?r.alternatives.map(u=>s(u,r.code,.5)):[s(r.n,r.code,1)]}let o=t[t.length-1],l=t[t.length-2];if(Ge(n,l.end,o.start)&&!o.alternatives)return[s(o.n,o.code,.7),s(l.n,l.code,.2)];let a=t.filter(r=>r.code&&!r.alternatives);return a.length===1?[s(a[0].n,a[0].code,1)]:t.flatMap(r=>r.alternatives?r.alternatives.map(u=>s(u,r.code,.5)):[s(r.n,r.code,.5)])}var K=864e5;function v(i,e,t){let n=new Date(i.getTime());return n.setHours(9,0,0,0),n.setDate(n.getDate()+e),{at:n.getTime(),label:t,granularity:"day"}}function Qe(i,e,t){let n=i.getDay(),s=(e-n+7)%7;return s===0&&(s=7),t&&s<7&&(s+=0),s}var Ce=i=>i.charAt(0).toUpperCase()+i.slice(1);function Re(i,e,t){let n=(e%24+24)%24,s=new Date(i.getTime());s.setHours(n,t,0,0),s.getTime()<=i.getTime()&&s.setDate(s.getDate()+1);let o=(n%12===0?12:n%12)+(t?":"+String(t).padStart(2,"0"):"")+(n>=12?"pm":"am");return{at:s.getTime(),label:o,granularity:"minute"}}function X(i,e){let t=e?.now??new Date,n=S(i),s=[],o=(c,d=1)=>s.push({value:c,label:c.label,score:d,calibrated:!0});if(/\btoday\b/.test(n)&&o(v(t,0,"today")),/\btomorrow\b/.test(n)&&o(v(t,1,"tomorrow")),/\bday after tomorrow\b/.test(n)&&o(v(t,2,"the day after tomorrow")),/\byesterday\b/.test(n)&&o(v(t,-1,"yesterday")),/\baujourd[ '-]?hui\b/.test(n)&&o(v(t,0,"aujourd'hui")),/\bapres[ -]?demain\b/.test(n)?o(v(t,2,"apr\xE8s-demain")):/\bdemain\b/.test(n)&&o(v(t,1,"demain")),/\bhier\b/.test(n)&&o(v(t,-1,"hier")),/\bce soir\b/.test(n)){let c=new Date(t.getTime());c.setHours(20,0,0,0),o({at:c.getTime(),label:"ce soir",granularity:"minute"})}for(let c=0;c<ke.length;c++){let d=new RegExp("\\b"+ke[c]+"(\\s+prochain)?\\b").exec(n);d&&o(v(t,Qe(t,c,!!d[1]),Ce(ke[c])+(d[1]?" prochain":"")))}if(/\btonight\b/.test(n)){let c=new Date(t.getTime());c.setHours(20,0,0,0),o({at:c.getTime(),label:"tonight",granularity:"minute"})}/\bnow\b/.test(n)&&o({at:t.getTime()+6e4,label:"right now",granularity:"minute"});for(let c=0;c<xe.length;c++){let p=new RegExp("\\b(next\\s+)?"+xe[c]+"\\b").exec(n);if(p){let h=Qe(t,c,!!p[1]);o(v(t,h,(p[1]?"next ":"")+Ce(xe[c])))}}let l=/\bin (\d+|[a-z]+) (day|days|week|weeks)\b/.exec(n);if(l){let c=/^\d+$/.test(l[1])?Number(l[1]):J([l[1]]);if(c!==null){let d=l[2].startsWith("week")?7:1;o(v(t,c*d,"in "+c+" "+l[2]))}}for(let c=0;c<Q.length;c++){let d=new RegExp("\\b"+Q[c]+"\\s+(\\d{1,2})\\b").exec(n)||new RegExp("\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+of\\s+"+Q[c]+"\\b").exec(n);if(d){let p=Number(d[1]),h=new Date(t.getTime());h.setMonth(c,p),h.setHours(9,0,0,0),h.getTime()<t.getTime()&&h.setFullYear(h.getFullYear()+1),o({at:h.getTime(),label:Ce(Q[c])+" "+p,granularity:"day"})}}let a=/\b(\d{4})-(\d{2})-(\d{2})\b/.exec(n);if(a){let c=new Date(Number(a[1]),Number(a[2])-1,Number(a[3]),9,0,0,0);o({at:c.getTime(),label:a[0],granularity:"day"})}let r=i.toLowerCase(),u=/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/.exec(r);if(u){let c=Number(u[1]),d=u[2]?Number(u[2]):0;u[3]==="pm"&&c<12&&(c+=12),u[3]==="am"&&c===12&&(c=0),o(Re(t,c,d))}else{let c=/\b(?:at|to|around)\s+(\d{1,2})(?::(\d{2}))?\b/.exec(r),d=/\b(?:at|to|around)\s+([a-z]+)\b/.exec(r),p=null,h=0;if(c)p=Number(c[1]),h=c[2]?Number(c[2]):0;else if(d){let g=J([d[1]]);g!==null&&g>=1&&g<=12&&(p=g)}p!==null&&p>=1&&p<=12&&(o(Re(t,p,h),.5),o(Re(t,p+12,h),.5))}return s.sort((c,d)=>d.score-c.score)}var Gn={second:1e3,seconds:1e3,minute:6e4,minutes:6e4,min:6e4,mins:6e4,hour:36e5,hours:36e5,day:K,days:K,week:K*7,weeks:K*7};var Se=i=>i.replace(/[_-]+/g," ").replace(/([a-z])([A-Z])/g,"$1 $2").toLowerCase();function j(i){if(i==null)return"";if(typeof i=="object"){let e=i;return typeof e.label=="string"?e.label:typeof e.name=="string"?e.name:JSON.stringify(i)}return String(i)}function Lt(i,e){if(i!==null&&typeof i!="object"){let t=e.find(n=>n.value===i);if(t)return t.label}return j(i)}var _t={act:null,domain:null,status:"idle",phase:"idle",radius:null,assent:null,holdRemainingMs:null,holdTotalMs:null,slots:[],preview:"",gateFailures:[],canAssent:!1,canUndo:!1,canResume:!1};function Ae(i,e,t){if(!i)return{..._t};let n=i.state(),s=i.def,o=x(s).map(l=>{let a=s.slots[l],r=n.slots[l];return{name:l,primitive:a.primitive,label:Se(l),status:r.status,...r.value!==void 0?{value:r.value}:{},display:r.status==="filled"?Lt(r.value,e(i,l)):"",source:r.source??null,provisional:r.provisional,stale:r.stale===!0,required:a.required===!0,focused:n.focus===l,options:e(i,l),candidates:(r.candidates??[]).map(u=>({value:u.value,display:u.label??j(u.value),score:u.score}))}});return{act:s.name,domain:s.domain??null,status:n.status,phase:n.phase,radius:n.radius,assent:n.assent,holdRemainingMs:n.status==="hold"?Math.round(n.holdRemainingMs??0):null,holdTotalMs:n.status==="hold"?i.holdDurationMsValue:null,slots:o,preview:Ut(i,o),gateFailures:n.gateFailures??[],canAssent:n.status==="explicit"||n.status==="frozen",canUndo:i.undoAvailable,canResume:n.status==="frozen"}}function Ut(i,e){let t=i.def;if(t.preview)try{let o=t.preview(i.filled,{}).map(l=>typeof l=="string"?l:j(l)).filter(Boolean).join(" \xB7 ");if(o)return o}catch{}let n=e.filter(s=>s.status==="filled"&&s.display);return n.length===0?Se(t.name):Se(t.name)+": "+n.map(s=>s.display).join(" \xB7 ")}function Ke(i,e,t){let n=()=>{let o=Ae(i,t);for(let l of e)l.render(o)},s={touch:(o,l)=>{i.setValue(o,l,"touched"),n()},assent:()=>{i.assent().then(n)},discard:()=>{i.discard(),n()},undo:()=>{i.undo().then(n)},freeze:()=>{i.freeze("presenter"),n()},resume:()=>{i.resume(),n()}};for(let o of e)o.mount?.(s);return n(),{update:n,handlers:s}}var Ye=new Set(["a","an","the","to","my","please","can","you","could","for","me","on","in","into","list","and","i","want","need","would","like"]),Xe=new Set(["to","on","in","into","for","at","under","onto","by","before","after"]),Bt=new Set(["the","my","a","an","our"]),Vt=new Set(["today","tonight","tomorrow","yesterday","morning","afternoon","evening","night","noon","midnight","weekend","week","month","monday","tuesday","wednesday","thursday","friday","saturday","sunday","am","pm","next","this","o'clock","demain","aujourd'hui","ce","soir","matin"]),Ht=new Set(["dollars","dollar","bucks","euros","euro","pounds","cents","$","\u20AC","\xA3"]),Wt=/^[$€£]?\d/;function Ze(i,e=()=>new Set){let t=new Set(i.flatMap(n=>n.toLowerCase().split(/\s+/)));return n=>{let s=n.trim().split(/\s+/),o=s.map(d=>d.toLowerCase().replace(/[,.!?]+$/,"")),l=e(),a=0;for(;a<s.length&&(t.has(o[a])||Ye.has(o[a]));)a++;let r=s.length,u=!1;for(;!(r<=a);){let d=o[r-1];if(Ye.has(d)||t.has(d)){r--;continue}if(Vt.has(d)||Ht.has(d)||Wt.test(d)){r--,u=!0;continue}if(u&&Xe.has(d)){r--;continue}if(l.has(d)){let p=r-2;for(;p>=a&&Bt.has(o[p]);)p--;if(p>=a&&Xe.has(o[p])){r=p;continue}}break}let c=s.slice(a,r).join(" ").replace(/[,.;]+$/,"");return c?[{value:c,label:c,score:.6,calibrated:!1}]:[]}}var Ee=["face","chip","when","quantity","ghostField","objectCard","peek"],et=8,tt=40,m=class extends Error{constructor(e){super(e),this.name="ComposeError"}},Gt=["radius","commit","undo","effects","preview","reversible"];function nt(i,e){if(typeof i=="function")throw new m(`${e}: functions are not allowed in a spec`);if(i&&typeof i=="object")for(let[t,n]of Object.entries(i))nt(n,`${e}.${t}`)}var Z=class{caps=new Map;register(e){if(!e.name)throw new m("a capability needs a name");if(typeof e.run!="function")throw new m(`${e.name}: capability needs run()`);this.caps.set(e.name,e)}get capabilities(){return[...this.caps.values()]}menu(){return this.capabilities.map(e=>({capability:e.name,describe:e.describe,requires:e.requires??{},catalogs:Object.keys(e.catalogs??{})}))}compose(e){if(!e||typeof e!="object")throw new m("spec must be an object");nt(e,"spec");for(let l of Gt)if(l in e)throw new m(`spec may not set "${l}" \u2014 that belongs to the capability`);if(!e.name||!/^[a-z][a-z0-9_]{1,48}$/.test(e.name))throw new m(`"${String(e.name)}" is not a valid act name`);let t=this.caps.get(e.capability);if(!t)throw new m(`unknown capability "${e.capability}" \u2014 a composed act can only bind to one the host registered`);let n=Object.entries(e.slots??{});if(n.length===0)throw new m(`${e.name}: needs at least one slot`);if(n.length>et)throw new m(`${e.name}: at most ${et} slots`);let s={};for(let[l,a]of n){if(!/^[a-zA-Z][a-zA-Z0-9_]{0,32}$/.test(l))throw new m(`${e.name}: "${l}" is not a valid slot name`);if(!Ee.includes(a.primitive))throw new m(`${e.name}.${l}: "${a.primitive}" is not in the primitive set \u2014 the set is closed`);if(typeof a.order!="number")throw new m(`${e.name}.${l}: needs an order`);if(a.options&&a.catalog)throw new m(`${e.name}.${l}: give options or a catalog, not both`);let r;if(a.catalog){let c=t.catalogs?.[a.catalog];if(!c)throw new m(`${e.name}.${l}: unknown catalog "${a.catalog}" on capability "${t.name}"`);r=()=>c()}else if(a.options){if(a.options.length>tt)throw new m(`${e.name}.${l}: at most ${tt} options`);let c=a.options.map(d=>({...d}));r=()=>c}else r=()=>[];let u={primitive:a.primitive,order:a.order,options:r};if(!a.options&&!a.catalog){if(a.primitive==="when")u.resolve=(c,d)=>X(c,d);else if(a.primitive==="quantity")u.resolve=c=>Y(c);else if(a.primitive==="ghostField"){let c=()=>{let d=new Set;for(let[p,h]of Object.entries(s)){if(p===l||!h.options)continue;let g=h.options({},{});if(Array.isArray(g))for(let z of g)for(let k of[z.label,...z.aliases??[]])for(let b of String(k).toLowerCase().split(/\s+/))d.add(b)}return d};u.resolve=Ze(e.phrases??[],c),u.fill="either"}}a.required&&(u.required=!0),a.params&&(u.params=a.params),s[l]=u}for(let[l,a]of Object.entries(t.requires??{})){let r=s[l];if(!r)throw new m(`${e.name}: capability "${t.name}" requires a "${l}" slot`);if(r.primitive!==a)throw new m(`${e.name}.${l}: capability "${t.name}" requires primitive "${a}", got "${r.primitive}"`);r.required=!0}let o={name:e.name,slots:s,radius:t.radius,commit:(l,a)=>t.run(l,a)};return e.phrases&&(o.phrases=e.phrases.slice(0,12).map(String)),t.undo&&(o.undo=(l,a)=>t.undo(l,a)),t.effects&&(o.effects=t.effects),N(o)}composeJson(e){let t;try{t=JSON.parse(e)}catch{throw new m("spec is not valid JSON")}return this.compose(t)}};function Jt(i){switch(i.kind){case"missing":return`"${i.slot}" is empty and required`;case"narrowed":return`"${i.slot}" has ${i.candidates} live candidates, so it is narrowed rather than filled`;case"stale":return`"${i.slot}" went stale \u2014 its options or snapshot changed since it was chosen`;case"provisional":return`"${i.slot}" was filled on a weak or uncalibrated match, and "${i.radius}" is too costly to commit on a guess`;case"gate":return`the attention gate failed: ${i.failures.join("; ")}`;case"external":return`the radius is "external" \u2014 ${i.because}`;case"frozen":return"it is frozen: someone said no, or the session was paused";case"settled":return"it already committed";case"ready":return`it is holding \u2014 ${i.ms}ms of silence will commit it`}}function st(i,e){let t=i.state(),n=i.def,s=[];t.status==="settled"&&s.push({kind:"settled"}),t.status==="frozen"&&s.push({kind:"frozen"});for(let r of x(n)){let u=t.slots[r];u&&(n.slots[r]?.required&&u.status==="empty"&&s.push({kind:"missing",slot:r}),u.status==="narrowed"&&s.push({kind:"narrowed",slot:r,candidates:u.candidates?.length??0}),u.stale&&s.push({kind:"stale",slot:r}))}let o=t.radius;if(o&&f(o)>=f("other-person"))for(let r of x(n))n.slots[r]?.required&&t.slots[r]?.provisional&&s.push({kind:"provisional",slot:r,radius:o});if(o==="external"){let r=L(n,i.filled,e),u=r.effects.find(p=>p.radius==="external"),c=u?`effect "${u.name}" forces it (${u.why??"declared external"})`:null,d=r.commit==="external"?c?`the act declares it, and ${c} regardless`:"the act itself declares it":c??"something in it cannot be taken back";s.push({kind:"external",because:d})}let l=C(e.attention,t.gateFailures===void 0);t.gateFailures?.length?s.push({kind:"gate",failures:t.gateFailures}):!l.pass&&t.status==="explicit"&&s.push({kind:"gate",failures:l.failures}),s.length===0&&t.status==="hold"&&s.push({kind:"ready",ms:Math.round(t.holdRemainingMs??$(o??"self",e))});let a=s.length?Jt(s[0]):`status "${t.status}" with nothing blocking it`;return{act:n.name,status:t.status,radius:o,reasons:s,summary:a}}function it(i){if(i.length===0)return"clean";let e={error:0,warn:1,note:2};return[...i].sort((t,n)=>e[t.level]-e[n.level]||t.act.localeCompare(n.act)).map(t=>`${t.level.padEnd(5)} ${t.act}: ${t.message}`).join(`
-`)}function ot(i){let e=[],t=new Map;for(let n of i){let s=Object.entries(n.slots),o=s.filter(([,r])=>r.required),l=typeof n.radius=="string"?n.radius:n.radius.max;o.length===0&&e.push({act:n.name,level:"warn",message:"no required slots \u2014 this act reaches HOLD the instant it starts"}),n.phrases?.length||e.push({act:n.name,level:"note",message:"no trigger phrases \u2014 routing has only slot coverage to go on"});for(let r of n.phrases??[]){let u=t.get(r.toLowerCase());u&&u!==n.name&&e.push({act:n.name,level:"note",message:`shares the phrase "${r}" with "${u}" \u2014 expect a NARROW between them`}),t.set(r.toLowerCase(),n.name)}o.some(([,r])=>r.fill==="model")&&e.push({act:n.name,level:"warn",message:"a required slot is model-filled, so this act has no offline path"}),l!=="external"&&!n.undo&&e.push({act:n.name,level:"warn",message:"below external with no undo"}),n.effects?.length&&!n.effects.some(r=>r.when)&&l==="other-person"&&e.push({act:n.name,level:"note",message:"an unconditional effect at other-person \u2014 if it can ever be a no-op, give it when() so it stops costing radius"});let a=s.map(([,r])=>r.order);new Set(a).size!==a.length&&e.push({act:n.name,level:"warn",message:"duplicate slot order"}),n.preview||e.push({act:n.name,level:"note",message:"no preview \u2014 the user agrees to a row of slots rather than a sentence"})}return e}var y={mint:"#76C4AE",planPurple:"#A78BFA",rewardsGold:"#FAC775",cyan:"#378ADD",poppinsCyan:"#06B6D4",neutral:"#94A3B8"},w={success:"#34D399",warning:"#FB923C",danger:"#F87171"},rt={recessed:"#0B1220",base:"#111827",elevated:"#1B2434"},at={card:.05,cardStrong:.07,row:.03},lt={sm:12,md:20,stage:28,pill:999},ee={headline:{size:30,line:34,tracking:-.4,weight:600},row:{size:19,line:24,tracking:0,weight:500},detail:{size:13,line:18,tracking:0,weight:400},kicker:{size:11,line:14,tracking:1.3,weight:600,caps:!0}},ct="'Bricolage Grotesque', 'Inter var', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif",A={snappy:{damping:20,stiffness:300,mass:.8,approxMs:150},smooth:{damping:18,stiffness:180,mass:1,approxMs:300},settle:{damping:22,stiffness:90,mass:1.2,approxMs:600}},E={show:150,commit:1500,undo:600};var te=44,O={idle:196,cardUp:72,header:34},Oe={idle:y.poppinsCyan,listening:w.success,thinking:y.planPurple,speaking:y.poppinsCyan,done:w.success};var D={chores:{name:"chores",colour:"mint",kicker:"CHORES",does:"Assign, finish, ask for proof",shape:"what \u2192 who \u2192 when \xB7 a photo request rides along"},homework:{name:"homework",colour:"mint",kicker:"HOMEWORK",does:"Set work, review it",shape:"subject \u2192 child \u2192 due \xB7 review lands in the adult's inbox"},groceries:{name:"groceries",colour:"mint",kicker:"GROCERIES",does:"Add, clear, shop",shape:"items only \u2014 never a person \xB7 clothing is its own lane",forbids:{face:'a grocery has no assignee \u2014 "items only, never a person"'}},calendar:{name:"calendar",colour:"planPurple",kicker:"CALENDAR",does:"Events, with the clash check",shape:"what \u2192 when \u2192 who \xB7 leave-by time from the address"},trips:{name:"trips",colour:"planPurple",kicker:"TRIPS",does:"A run of stops, in order",shape:"saved places first, then geocoded \xB7 the list joins a shop stop"},places:{name:"places",colour:"planPurple",kicker:"PLACES",does:"Remember where things are",shape:'"work is on Ren\xE9-L\xE9vesque" becomes a saved place'},rewards:{name:"rewards",colour:"rewardsGold",kicker:"REWARDS",does:"Mint one, claim one, approve",shape:"a child's claim waits for an adult, never auto-settles",floor:"other-person"},allowance:{name:"allowance",colour:"rewardsGold",kicker:"ALLOWANCE",does:"Grant, hold, pay out",shape:"money always confirms \u2014 no silent hold on a payment",floor:"external"},ranks:{name:"ranks",colour:"rewardsGold",kicker:"RANKS",does:"Who's ahead, and why",shape:"read-only on the stage; fairness notes stay in-app",ceiling:"self"},household:{name:"household",colour:"cyan",kicker:"HOUSEHOLD",does:"People, iPad, house rules",shape:"the stage explains and walks you there \u2014 it never edits people",coachOnly:!0},teaching:{name:"teaching",colour:"cyan",kicker:"TEACHING",does:'"How do I\u2026" and walk-throughs',shape:"free, spotlighted on the real screen, stoppable at any step",coachOnly:!0,ceiling:"self"},memory:{name:"memory",colour:"neutral",kicker:"MEMORY",does:"What the house likes",shape:'"Noah hates mushrooms" \xB7 shown as a small note, never a card',noStage:!0}},Qt=["self","shared","other-person","external"],ne=i=>Qt.indexOf(i);function se(i,e){if(!i)return null;let t=D[i];if(t)return t;let n=e?.[i];return n?{name:i,colour:"neutral",hex:n.colour,kicker:n.kicker.toUpperCase().slice(0,24),does:"",shape:""}:null}function ut(i,e){return se(i.domain,e)}function P(i,e){let t=typeof i=="string"?D[i]:i,n=t?t.hex??y[t.colour]:y.neutral;return{domain:n,kicker:n,accent:e??null}}function dt(i,e){let t=[];for(let n of i){let s=n.domain,o=ut(n,e);if(!s){t.push({act:n.name,domain:null,level:"note",message:"no domain \u2014 the card has no kicker and falls back to neutral"});continue}if(!o){t.push({act:n.name,domain:null,level:"error",message:`unknown domain "${s}" \u2014 a colour it does not own cannot be earned by meaning`});continue}let l=typeof n.radius=="string"?n.radius:n.radius.max;for(let[a,r]of Object.entries(n.slots)){let u=o.forbids?.[r.primitive];u&&t.push({act:n.name,domain:o.name,level:"error",message:`slot "${a}" uses \`${r.primitive}\`, which ${o.name} forbids: ${u}`})}o.floor&&ne(l)<ne(o.floor)&&t.push({act:n.name,domain:o.name,level:"error",message:`declared ${l}, but ${o.name} floors at ${o.floor} \u2014 ${o.shape}`}),o.ceiling&&ne(l)>ne(o.ceiling)&&t.push({act:n.name,domain:o.name,level:"error",message:`declared ${l}, but ${o.name} is capped at ${o.ceiling} \u2014 ${o.shape}`}),o.coachOnly&&n.effects?.some(a=>!a.reversible)&&t.push({act:n.name,domain:o.name,level:"error",message:`${o.name} points at the real control; it does not make irreversible writes`}),o.noStage&&t.push({act:n.name,domain:o.name,level:"warn",message:`${o.name} is shown as a note, never a card \u2014 an act here will take the stage`})}return t}var Kt={show:"smooth",narrow:"snappy",unfold:"smooth",hold:"settle",settle:"settle",chain:"snappy",coach:"smooth"};function pt(i){return A[Kt[i]]}function oe(i,e={}){if(!i.act)return null;if(e.domain?.coachOnly)return"coach";switch(i.status){case"committing":case"settled":return"settle";case"hold":case"explicit":case"frozen":return"hold";default:break}return i.slots.some(s=>s.status==="narrowed")?"narrow":i.slots.some(s=>s.status==="filled")?"unfold":(e.queued??0)>0?"chain":"show"}function re(i){return i.slots.find(t=>t.status==="filled")?.source==="touched"}var ie=class{constructor(e){this.clock=e}clock;marks=new Map;breaches=[];mark(e){this.marks.set(e,this.clock.now()),e==="shown"&&this.check("show","heard","shown",E.show),e==="committed"&&this.check("commit","shown","committed",E.commit),e==="undone"&&this.check("undo","undoRequested","undone",E.undo)}reset(){this.marks.clear()}check(e,t,n,s){let o=this.marks.get(t),l=this.marks.get(n);if(o===void 0||l===void 0)return;let a=l-o;a>s&&this.breaches.push({span:e,tookMs:a,budgetMs:s})}get ok(){return this.breaches.length===0}report(){return this.ok?"within budget":this.breaches.map(e=>`${e.span}: ${e.tookMs}ms over a ${e.budgetMs}ms budget`).join(`
-`)}};var R=i=>`${i}px`;function De(){let i=[];for(let[e,t]of Object.entries(y))i.push(`  --eui-${e}: ${t};`);for(let[e,t]of Object.entries(w))i.push(`  --eui-${e}: ${t};`);for(let[e,t]of Object.entries(rt))i.push(`  --eui-ground-${e}: ${t};`);for(let[e,t]of Object.entries(at))i.push(`  --eui-surface-${e}: ${t};`);for(let[e,t]of Object.entries(lt))i.push(`  --eui-radius-${e}: ${R(t)};`);for(let[e,t]of Object.entries(ee))i.push(`  --eui-type-${e}-size: ${R(t.size)};`),i.push(`  --eui-type-${e}-line: ${R(t.line)};`),i.push(`  --eui-type-${e}-tracking: ${t.tracking}px;`),i.push(`  --eui-type-${e}-weight: ${t.weight};`);for(let[e,t]of Object.entries(A))i.push(`  --eui-motion-${e}: ${t.approxMs}ms;`);return i.push(`  --eui-target-min: ${R(te)};`),i.push(`  --eui-orb-idle: ${R(O.idle)};`),i.push(`  --eui-orb-card: ${R(O.cardUp)};`),i.push(`  --eui-orb-header: ${R(O.header)};`),i.push(`  --eui-font: ${ct};`),i.push("  --eui-domain: var(--eui-neutral);"),`:root, :host {
-${i.join(`
+"use strict";var Kit=(()=>{var k=Object.defineProperty;var ie=Object.getOwnPropertyDescriptor;var ne=Object.getOwnPropertyNames;var oe=Object.prototype.hasOwnProperty;var se=(n,e,t)=>e in n?k(n,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):n[e]=t;var re=(n,e)=>{for(var t in e)k(n,t,{get:e[t],enumerable:!0})},ae=(n,e,t,i)=>{if(e&&typeof e=="object"||typeof e=="function")for(let o of ne(e))!oe.call(n,o)&&o!==t&&k(n,o,{get:()=>e[o],enumerable:!(i=ie(e,o))||i.enumerable});return n};var le=n=>ae(k({},"__esModule",{value:!0}),n);var p=(n,e,t)=>se(n,typeof e!="symbol"?e+"":e,t);var Ne={};re(Ne,{BriefingPresenter:()=>E,BriefingReader:()=>R,BundleDeck:()=>N,BundlePresenter:()=>$,Desk:()=>D,StagePresenter:()=>v,estimateLegs:()=>Q,initialsOf:()=>B,isPlace:()=>K,placeLine:()=>Z,routeOptions:()=>J,stylesheet:()=>I});var g={mint:"#76C4AE",planPurple:"#A78BFA",rewardsGold:"#FAC775",cyan:"#378ADD",poppinsCyan:"#06B6D4",neutral:"#94A3B8"},b={success:"#34D399",warning:"#FB923C",danger:"#F87171"},z={recessed:"#0B1220",base:"#111827",elevated:"#1B2434"},P={card:.05,cardStrong:.07,row:.03},F={sm:12,md:20,stage:28,pill:999},j={headline:{size:30,line:34,tracking:-.4,weight:600},row:{size:19,line:24,tracking:0,weight:500},detail:{size:13,line:18,tracking:0,weight:400},kicker:{size:11,line:14,tracking:1.3,weight:600,caps:!0}},q="'Bricolage Grotesque', 'Inter var', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif",O={snappy:{damping:20,stiffness:300,mass:.8,approxMs:150},smooth:{damping:18,stiffness:180,mass:1,approxMs:300},settle:{damping:22,stiffness:90,mass:1.2,approxMs:600}};var H=44,C={idle:196,cardUp:72,header:34},de={idle:g.poppinsCyan,listening:b.success,thinking:g.planPurple,speaking:g.poppinsCyan,done:b.success};var S={chores:{name:"chores",colour:"mint",kicker:"CHORES",does:"Assign, finish, ask for proof",shape:"what \u2192 who \u2192 when \xB7 a photo request rides along"},homework:{name:"homework",colour:"mint",kicker:"HOMEWORK",does:"Set work, review it",shape:"subject \u2192 child \u2192 due \xB7 review lands in the adult's inbox"},groceries:{name:"groceries",colour:"mint",kicker:"GROCERIES",does:"Add, clear, shop",shape:"items only \u2014 never a person \xB7 clothing is its own lane",forbids:{face:'a grocery has no assignee \u2014 "items only, never a person"'}},calendar:{name:"calendar",colour:"planPurple",kicker:"CALENDAR",does:"Events, with the clash check",shape:"what \u2192 when \u2192 who \xB7 leave-by time from the address"},trips:{name:"trips",colour:"planPurple",kicker:"TRIPS",does:"A run of stops, in order",shape:"saved places first, then geocoded \xB7 the list joins a shop stop"},places:{name:"places",colour:"planPurple",kicker:"PLACES",does:"Remember where things are",shape:'"work is on Ren\xE9-L\xE9vesque" becomes a saved place'},rewards:{name:"rewards",colour:"rewardsGold",kicker:"REWARDS",does:"Mint one, claim one, approve",shape:"a child's claim waits for an adult, never auto-settles",floor:"other-person"},allowance:{name:"allowance",colour:"rewardsGold",kicker:"ALLOWANCE",does:"Grant, hold, pay out",shape:"money always confirms \u2014 no silent hold on a payment",floor:"external"},ranks:{name:"ranks",colour:"rewardsGold",kicker:"RANKS",does:"Who's ahead, and why",shape:"read-only on the stage; fairness notes stay in-app",ceiling:"self"},household:{name:"household",colour:"cyan",kicker:"HOUSEHOLD",does:"People, iPad, house rules",shape:"the stage explains and walks you there \u2014 it never edits people",coachOnly:!0},teaching:{name:"teaching",colour:"cyan",kicker:"TEACHING",does:'"How do I\u2026" and walk-throughs',shape:"free, spotlighted on the real screen, stoppable at any step",coachOnly:!0,ceiling:"self"},memory:{name:"memory",colour:"neutral",kicker:"MEMORY",does:"What the house likes",shape:'"Noah hates mushrooms" \xB7 shown as a small note, never a card',noStage:!0}};function M(n,e){if(!n)return null;let t=S[n];if(t)return t;let i=e?.[n];return i?{name:n,colour:"neutral",hex:i.colour,kicker:i.kicker.toUpperCase().slice(0,24),does:"",shape:""}:null}function L(n,e){let t=typeof n=="string"?S[n]:n,i=t?t.hex??g[t.colour]:g.neutral;return{domain:i,kicker:i,accent:e??null}}function U(n,e={}){if(!n.act)return null;if(e.domain?.coachOnly)return"coach";switch(n.status){case"committing":case"settled":return"settle";case"hold":case"explicit":case"frozen":return"hold";default:break}return n.slots.some(o=>o.status==="narrowed")?"narrow":n.slots.some(o=>o.status==="filled")?"unfold":(e.queued??0)>0?"chain":"show"}function _(n){return n.slots.find(t=>t.status==="filled")?.source==="touched"}var x=n=>`${n}px`;function ue(){let n=[];for(let[e,t]of Object.entries(g))n.push(`  --eui-${e}: ${t};`);for(let[e,t]of Object.entries(b))n.push(`  --eui-${e}: ${t};`);for(let[e,t]of Object.entries(z))n.push(`  --eui-ground-${e}: ${t};`);for(let[e,t]of Object.entries(P))n.push(`  --eui-surface-${e}: ${t};`);for(let[e,t]of Object.entries(F))n.push(`  --eui-radius-${e}: ${x(t)};`);for(let[e,t]of Object.entries(j))n.push(`  --eui-type-${e}-size: ${x(t.size)};`),n.push(`  --eui-type-${e}-line: ${x(t.line)};`),n.push(`  --eui-type-${e}-tracking: ${t.tracking}px;`),n.push(`  --eui-type-${e}-weight: ${t.weight};`);for(let[e,t]of Object.entries(O))n.push(`  --eui-motion-${e}: ${t.approxMs}ms;`);return n.push(`  --eui-target-min: ${x(H)};`),n.push(`  --eui-orb-idle: ${x(C.idle)};`),n.push(`  --eui-orb-card: ${x(C.cardUp)};`),n.push(`  --eui-orb-header: ${x(C.header)};`),n.push(`  --eui-font: ${q};`),n.push("  --eui-domain: var(--eui-neutral);"),`:root, :host {
+${n.join(`
 `)}
-}`}function $e(){return`${De()}
+}`}function I(){return`${ue()}
 
 .eui-stage {
   font-family: var(--eui-font);
-  color: #E9EEF7;
+  color: var(--eui-ink, #E9EEF7);
   display: flex; flex-direction: column; gap: 12px;
   align-items: stretch;
 }
@@ -137,13 +163,13 @@ ${i.join(`
 .eui-card {
   position: relative;
   border-radius: var(--eui-radius-stage);
-  background: rgba(255,255,255, var(--eui-surface-card));
-  border: 1px solid rgba(255,255,255,.06);
+  background: rgba(var(--eui-tint, 255,255,255), var(--eui-surface-card));
+  border: 1px solid rgba(var(--eui-tint, 255,255,255),.06);
   padding: 18px;
   display: flex; flex-direction: column; gap: 10px;
   transition: opacity var(--eui-motion-smooth) ease, background var(--eui-motion-smooth) ease;
 }
-.eui-card[data-strong="true"] { background: rgba(255,255,255, var(--eui-surface-cardStrong)); }
+.eui-card[data-strong="true"] { background: rgba(var(--eui-tint, 255,255,255), var(--eui-surface-cardStrong)); }
 
 /* Board 13, NEVER: "A card inside a card." Made visible rather than documented. */
 .eui-card .eui-card { outline: 2px dashed var(--eui-danger); }
@@ -163,11 +189,11 @@ ${i.join(`
 /* A row is a tint, not a surface. No radius of its own beyond sm, no border,
    no shadow \u2014 three things that would make it read as a card. */
 .eui-row {
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   min-height: var(--eui-target-min);
   padding: 6px 10px;
   border-radius: var(--eui-radius-sm);
-  background: rgba(255,255,255, var(--eui-surface-row));
+  background: rgba(var(--eui-tint, 255,255,255), var(--eui-surface-row));
   font-size: var(--eui-type-row-size); line-height: var(--eui-type-row-line);
   font-weight: var(--eui-type-row-weight);
 }
@@ -175,7 +201,7 @@ ${i.join(`
 .eui-row[data-state="empty"] { opacity: .38; }
 .eui-row[data-focused="true"] {
   opacity: 1;
-  outline: 1px dashed rgba(255,255,255,.28);
+  outline: 1px dashed rgba(var(--eui-tint, 255,255,255),.28);
 }
 .eui-row[data-provisional="true"] { opacity: .72; }
 .eui-detail {
@@ -186,7 +212,7 @@ ${i.join(`
 .eui-chip, .eui-drop {
   min-height: var(--eui-target-min); min-width: var(--eui-target-min);
   border-radius: var(--eui-radius-pill);
-  border: 1px solid rgba(255,255,255,.14);
+  border: 1px solid rgba(var(--eui-tint, 255,255,255),.14);
   background: transparent; color: inherit;
   padding: 0 14px; font: inherit; cursor: pointer;
   transition: transform var(--eui-motion-snappy) ease, background var(--eui-motion-snappy) ease;
@@ -214,6 +240,237 @@ ${i.join(`
 
 /* The next act, waiting. A row on the stage, never a second card. */
 .eui-chained { opacity: .38; }
+
+/* ------------------------------------------------------ the act, at a glance
+   Steps: one dot per slot, filling as the act fills. Decoration only. */
+.eui-steps { display: flex; gap: 5px; margin-top: -2px; }
+.eui-step { width: 18px; height: 4px; border-radius: 2px; background: rgba(var(--eui-tint, 255,255,255), .14);
+  transition: background var(--eui-motion-smooth) ease, width var(--eui-motion-smooth) ease; }
+.eui-step[data-state="filled"] { background: var(--eui-domain); width: 26px; }
+.eui-step[data-state="narrowed"] { background: var(--eui-domain); opacity: .5; }
+
+.eui-value { font-weight: 600; min-width: 0; flex: 1; overflow-wrap: break-word; }
+.eui-row .eui-detail { flex: none; }
+.eui-hint { font-size: var(--eui-type-detail-size); opacity: .55; font-style: italic; }
+/* No arrival motion on answers: the card is redrawn on every tick of a hold,
+   and an entrance that replays on every redraw reads as flicker. */
+
+/* ------------------------------------------------------------ primitives ---
+   Each kind of answer has its own face. The words are always the element's
+   text; everything drawn here comes from data attributes, so a screen reader
+   hears exactly what a sighted person reads. */
+
+/* face: a person is a face, not a word. */
+.eui-p-face .eui-value[data-initials]::before,
+.eui-p-face .eui-chip[data-initials]::before {
+  content: attr(data-initials);
+  display: inline-grid; place-items: center; flex: none;
+  width: 30px; height: 30px; margin-right: 10px; border-radius: 50%;
+  font-size: 12px; font-weight: 700; letter-spacing: .02em;
+  background: var(--eui-domain); color: var(--eui-on-domain, #fff);
+  vertical-align: middle;
+}
+.eui-p-face .eui-chip[data-initials] { display: inline-flex; align-items: center; padding-left: 5px; }
+.eui-p-face .eui-chip[data-initials]::before { width: 34px; height: 34px; margin-right: 8px;
+  background: rgba(var(--eui-tint, 255,255,255), .10); color: inherit; }
+.eui-p-face .eui-chip[data-initials]:hover::before { background: var(--eui-domain); color: var(--eui-on-domain, #fff); }
+
+/* when: a day you can see. */
+.eui-p-when .eui-value[data-day] { display: inline-flex; align-items: center; gap: 12px; }
+.eui-p-when .eui-value[data-day]::before {
+  content: attr(data-dow) "\\A" attr(data-day);
+  white-space: pre; text-align: center; flex: none;
+  width: 42px; padding: 4px 0 5px; border-radius: 10px;
+  font-size: 10px; line-height: 1.25; font-weight: 700; letter-spacing: .08em;
+  background: var(--eui-domain); color: var(--eui-on-domain, #fff);
+}
+.eui-p-when .eui-value[data-day]::first-line { font-size: inherit; }
+
+/* quantity: the number is the point. */
+.eui-p-quantity .eui-value { font-size: 1.35em; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.eui-p-quantity .eui-chip { font-variant-numeric: tabular-nums; }
+
+/* ghostField: your words, as you said them, still warm. */
+.eui-p-ghostField .eui-value { font-weight: 500; }
+.eui-p-ghostField .eui-value::before { content: "\\201C"; opacity: .5; }
+.eui-p-ghostField .eui-value::after { content: "\\201D"; opacity: .5; }
+.eui-p-ghostField[data-provisional="true"] .eui-value::after {
+  content: ""; display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -2px;
+  background: var(--eui-domain); opacity: .7;
+}
+.eui-p-ghostField[data-focused="true"][data-state="empty"] .eui-hint::after {
+  content: ""; display: inline-block; width: 2px; height: 1em; margin-left: 4px; vertical-align: -2px;
+  background: var(--eui-domain); opacity: .7;
+}
+
+/* objectCard: a thing, with a tile. A tinted row, never a card in a card. */
+.eui-p-objectCard .eui-value[data-initials] { display: inline-flex; align-items: center; gap: 10px; }
+.eui-p-objectCard .eui-value[data-initials]::before {
+  content: attr(data-initials); flex: none;
+  display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 9px;
+  font-size: 13px; font-weight: 700;
+  background: rgba(var(--eui-tint, 255,255,255), .10); color: var(--eui-domain);
+  border: 1px solid rgba(var(--eui-tint, 255,255,255), .12);
+}
+
+/* peek: a glimpse of more, three lines at most. */
+.eui-p-peek .eui-value { font-weight: 400; opacity: .85; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* chip: the plain choice, made to feel chosen. */
+.eui-row[data-state="filled"] .eui-chip.eui-confirm { border-color: var(--eui-domain); color: var(--eui-domain); }
+.eui-row[data-state="narrowed"] .eui-chip { border-color: var(--eui-domain); }
+.eui-row[data-state="narrowed"] .eui-chip:first-of-type { background: var(--eui-domain); color: var(--eui-on-domain, #fff); border-color: var(--eui-domain); }
+.eui-chip:hover { border-color: var(--eui-domain); }
+
+/* List: several items in one slot, each its own token with its own \xD7.
+   (Not .eui-item \u2014 that is the menu's row.) */
+.eui-row[data-many] { align-items: flex-start; }
+.eui-row[data-many] > .eui-detail { flex: 1 1 100%; }
+.eui-list { flex: 1 1 100%; min-width: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.eui-li {
+  display: inline-flex; align-items: center; min-width: 0; max-width: 100%;
+  padding: 2px 2px 2px 12px; border-radius: 999px; font-weight: 600;
+  background: rgba(var(--eui-tint, 255,255,255), 0.08);
+  border: 1px solid rgba(var(--eui-tint, 255,255,255), 0.16);
+}
+.eui-li-label { overflow-wrap: break-word; min-width: 0; }
+.eui-li-drop {
+  font: inherit; color: inherit; background: none; border: 0; cursor: pointer; opacity: 0.55;
+  min-width: 36px; min-height: 36px; border-radius: 999px; line-height: 1;
+}
+.eui-li-drop:hover, .eui-li-drop:focus-visible { opacity: 1; background: rgba(var(--eui-tint, 255,255,255), 0.1); outline: none; }
+.eui-chip.eui-add { opacity: 0.75; border-style: dashed; font-size: 0.82em; min-height: 36px; padding-block: 4px; }
+.eui-chip.eui-add:not([data-initials])::before { content: "+ "; }
+.eui-detail[data-count]::after { content: " \xB7 " attr(data-count); }
+.eui-p-face .eui-li { padding-left: 4px; }
+.eui-p-face .eui-li-label::before {
+  content: attr(data-initials); display: inline-grid; place-items: center; vertical-align: middle;
+  width: 28px; height: 28px; margin-right: 8px; border-radius: 50%; font-size: 11px; font-weight: 700;
+  background: var(--eui-domain); color: var(--eui-on-domain, #fff);
+}
+
+/* Briefing: the morning, one item at a time. Segments show where you are;
+   nothing moves on its own except what the reader says. */
+.eui-brief-progress { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.eui-brief-bar { display: flex; gap: 6px; flex: 1 1 140px; min-width: 0; }
+.eui-brief-group { display: flex; gap: 2px; flex: var(--n, 1) 1 0; min-width: 0; }
+.eui-brief-seg { flex: 1 1 0; height: 4px; border-radius: 2px; background: rgba(var(--eui-tint, 255,255,255), 0.16); }
+.eui-brief-seg[data-state="done"] { background: var(--eui-domain); opacity: 0.55; }
+.eui-brief-seg[data-state="now"] { background: var(--eui-domain); }
+.eui-brief-count { font-size: var(--eui-type-detail-size); opacity: 0.7; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.eui-brief .eui-headline { text-wrap: balance; }
+.eui-brief > .eui-detail { margin-left: 0; opacity: .7; }
+.eui-brief-detail {
+  margin: 0; padding: 10px 12px; border-left: 3px solid var(--eui-domain);
+  background: rgba(var(--eui-tint, 255,255,255), 0.05); border-radius: 0 8px 8px 0;
+  font-size: var(--eui-type-row-size); line-height: 1.45; max-width: 60ch;
+}
+.eui-brief-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.eui-brief-controls .eui-chip[data-primary] { background: var(--eui-domain); border-color: var(--eui-domain); color: var(--eui-on-domain, #fff); }
+.eui-brief-controls .eui-chip[data-action] { border-color: var(--eui-domain); color: var(--eui-domain); }
+.eui-brief-next { font-size: var(--eui-type-detail-size); opacity: 0.6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Bundle: what was held, one sender or story at a time. Rows, not cards. */
+.eui-bundle > .eui-detail { margin-left: 0; opacity: .7; }
+.eui-notes { display: flex; flex-direction: column; gap: 2px; }
+.eui-note {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: baseline;
+  width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer;
+  min-height: var(--eui-target-min); padding: 10px 12px; border: 0; border-radius: 10px;
+  background: rgba(var(--eui-tint, 255,255,255), 0.05);
+}
+div.eui-note { cursor: default; }
+/* A row with more to read says so: a quiet chevron that turns when open. */
+button.eui-note .eui-note-title::after { content: "\u203A"; display: inline-block; margin-left: 6px; opacity: .5; font-weight: 400; }
+button.eui-note[data-open="true"] .eui-note-title::after { transform: rotate(90deg); }
+button.eui-note:hover, button.eui-note:focus-visible { background: rgba(var(--eui-tint, 255,255,255), 0.1); outline: none; }
+.eui-note[data-open="true"] { box-shadow: inset 3px 0 0 var(--eui-domain); }
+.eui-note-title { font-weight: 600; overflow-wrap: break-word; min-width: 0; }
+.eui-note-when { font-size: var(--eui-type-detail-size); opacity: .6; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.eui-note-body { grid-column: 1 / -1; opacity: .85; line-height: 1.45; padding-top: 4px; overflow-wrap: break-word; }
+
+/* A second line under an answer: a place's address and distance. */
+.eui-sub { display: block; font-size: var(--eui-type-detail-size); font-weight: 400; color: var(--eui-ink, inherit); opacity: .65; margin-top: 2px; }
+/* With a tile or a face, the tile spans both lines: name above, detail below. */
+.eui-row .eui-value[data-sub][data-initials] {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; align-items: center;
+}
+.eui-row .eui-value[data-sub][data-initials]::before { grid-row: span 2; align-self: center; }
+.eui-row .eui-value[data-sub][data-initials] > .eui-sub { grid-column: 2; margin-top: 0; }
+/* The tile and the detail line already say what this is, so the row label
+   steps aside for the name (still read by screen readers). */
+.eui-row:has(> .eui-value[data-sub]) > .eui-detail {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+
+/* Receipts: what was done today. Time, words, undo \u2014 one row each. */
+.eui-receipt {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  min-height: var(--eui-target-min); padding: 6px 6px 6px 12px; border-radius: 10px;
+  background: rgba(var(--eui-tint, 255,255,255), 0.05);
+}
+.eui-receipt-line { overflow-wrap: break-word; min-width: 0; line-height: 1.35; }
+.eui-receipt[data-state="undone"] .eui-receipt-line { text-decoration: line-through; opacity: .5; }
+.eui-receipt-tag { font-size: var(--eui-type-detail-size); opacity: .6; padding-right: 8px; white-space: nowrap; }
+.eui-receipt-undo { min-height: 36px; padding-block: 4px; font-size: .85em; }
+.eui-receipts > .eui-detail { margin-left: 0; opacity: .7; }
+
+/* Exact action: every argument as it will be sent. Nothing truncated. */
+.eui-exact {
+  display: grid; gap: 4px; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--eui-domain); background: rgba(var(--eui-tint, 255,255,255), 0.04);
+}
+.eui-exact-head { font-size: var(--eui-type-detail-size); font-weight: 700; letter-spacing: .02em; opacity: .85; }
+.eui-exact-row { display: grid; grid-template-columns: minmax(5.5em, auto) minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.eui-exact-label { font-size: var(--eui-type-detail-size); opacity: .6; }
+.eui-exact-value { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9em; overflow-wrap: anywhere; white-space: pre-wrap; }
+
+/* Before \u2192 after: the old value struck through, an arrow, the new one. */
+.eui-was { text-decoration: line-through; text-decoration-thickness: 2px; opacity: .55; font-weight: 500; white-space: nowrap; }
+.eui-was::after { content: "\u2192"; display: inline-block; margin-left: 8px; text-decoration: none; opacity: .9; }
+.eui-row[data-change] .eui-value { flex: 1 1 auto; }
+
+/* Compare: two or three options side by side, only the facts that differ.
+   Each column is one button; subgrid keeps facts level across columns. */
+.eui-row[data-compare] { align-items: stretch; }
+.eui-row[data-compare] > .eui-hint { flex: 1 1 100%; }
+.eui-compare {
+  flex: 1 1 100%; min-width: 0; font-size: 0.8em; line-height: 1.3;
+  display: grid; gap: 0 6px;
+  grid-template-columns: repeat(var(--eui-cols, 2), minmax(0, 1fr));
+  grid-template-rows: auto repeat(var(--eui-facts, 1), auto);
+}
+.eui-col {
+  grid-row: span calc(var(--eui-facts, 1) + 1);
+  display: grid; grid-template-rows: subgrid; gap: 2px;
+  min-width: 0; text-align: left; font: inherit; color: inherit; cursor: pointer;
+  padding: 10px 8px; border-radius: 12px;
+  background: rgba(var(--eui-tint, 255,255,255), 0.04);
+  border: 1px solid rgba(var(--eui-tint, 255,255,255), 0.14);
+}
+.eui-col:hover, .eui-col:focus-visible { border-color: var(--eui-domain); outline: none; }
+.eui-col-label { font-weight: 600; overflow-wrap: break-word; padding-bottom: 4px; }
+.eui-fact { font-variant-numeric: tabular-nums; overflow-wrap: break-word; opacity: 0.92; }
+/* A short fact ("1h 30m", "$312") reads as one unit: keep it on one line. */
+.eui-fact[data-short] { white-space: nowrap; }
+.eui-fact::before {
+  content: attr(data-key); display: block;
+  font-size: 0.72em; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.6;
+}
+.eui-row[data-state="narrowed"] .eui-col:first-child { border-color: var(--eui-domain); }
+
+/* ------------------------------------------------------- beats, alive ---
+   HOLD: the bar is the silence running out; it glows while it can still be
+   stopped. SETTLE: the mark draws itself once. */
+.eui-card[data-beat="hold"] { box-shadow: 0 0 0 1px var(--eui-domain) inset; }
+.eui-card[data-beat="hold"] .eui-ring { box-shadow: 0 0 10px var(--eui-domain); }
+.eui-mark { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+.eui-mark::before {
+  content: "\\2713"; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--eui-success); color: #fff; font-size: 13px;
+  transition: transform var(--eui-motion-snappy) cubic-bezier(.3, 1.6, .5, 1), opacity var(--eui-motion-snappy) ease;
+}
+@starting-style { .eui-mark::before { transform: scale(.4); opacity: 0; } }
 
 /* "Reduce Motion swaps every move for a cross-fade and keeps the timing." The
    durations are unchanged below \u2014 only what moves changes. */
@@ -251,12 +508,12 @@ ${i.join(`
   display: flex; align-items: center; gap: 10px; width: 100%;
   min-height: var(--eui-target-min); padding: 10px 14px; box-sizing: border-box;
   text-align: left; cursor: pointer; color: inherit; font: inherit;
-  background: rgba(255,255,255, var(--eui-surface-row));
+  background: rgba(var(--eui-tint, 255,255,255), var(--eui-surface-row));
   border: 1px solid transparent; border-left: 3px solid var(--eui-domain);
   border-radius: var(--eui-radius-md);
   transition: background var(--eui-motion-snappy) ease;
 }
-.eui-item:hover { background: rgba(255,255,255, var(--eui-surface-cardStrong)); }
+.eui-item:hover { background: rgba(var(--eui-tint, 255,255,255), var(--eui-surface-cardStrong)); }
 .eui-item:focus-visible { outline: 2px solid var(--eui-domain); outline-offset: 2px; }
 .eui-item[data-spotlit="true"] { border-color: var(--eui-domain); }
 .eui-item-label { flex: 1; }
@@ -268,353 +525,349 @@ ${i.join(`
 .eui-item-cost[data-radius="other-person"] { color: var(--eui-warning); opacity: 1; }
 .eui-item-count { font-size: var(--eui-type-detail-size); opacity: .55; }
 .eui-item-note { flex-basis: 100%; font-size: var(--eui-type-detail-size); opacity: .7; }
-`}var I=class{constructor(e,t,n={}){this.root=e;this.doc=t;this.opts=n}root;doc;opts;handlers=null;lastBeat=null;mount(e){this.handlers=e}render(e){let t=this.doc;if(this.root.replaceChildren(),this.root.className="eui-stage",!e.act){this.lastBeat=null;return}let n=se(e.domain,this.opts.domains),s=P(n,this.opts.accent),o=oe(e,{queued:this.opts.queued?.()??0,domain:n});this.lastBeat=o;let l=this.opts.said?.();if(l){let u=t.createElement("div");u.className="eui-said",u.textContent=`\u201C${l}\u201D`,this.root.appendChild(u)}let a=t.createElement("div");if(a.className="eui-card",a.setAttribute("data-beat",o??""),a.setAttribute("data-domain",n?.name??"neutral"),a.setAttribute("data-at-rest",String(o==="show"&&re(e))),this.setVar(a,"--eui-domain",s.domain),this.root.appendChild(a),n){let u=t.createElement("div");u.className="eui-kicker",u.textContent=n.kicker,a.appendChild(u)}let r=t.createElement("div");if(r.className="eui-headline",r.textContent=e.preview,a.appendChild(r),o==="coach")this.renderCoach(a,n);else for(let u of e.slots)this.renderRow(a,u,e);if(e.status==="hold"){let u=e.slots.filter(g=>g.status==="filled").length,c=t.createElement("div");c.className="eui-count",c.textContent=u>1?`One hold for all ${u} \xB7 tap \xD7 to drop one`:"Quiet adds it \xB7 speak or tap to change",a.appendChild(c);let d=t.createElement("div");d.className="eui-ring";let p=e.holdRemainingMs??0,h=e.holdTotalMs||1;this.setVar(d,"width",`${Math.max(0,Math.min(100,p/h*100))}%`),a.appendChild(d)}if(e.status==="explicit"){let u=t.createElement("div");u.className="eui-explicit",u.textContent=e.radius==="external"?"This one needs a yes \u2014 it cannot be taken back":`This one needs a yes \u2014 ${e.gateFailures.join("; ")}`,a.appendChild(u);let c=t.createElement("button");c.className="eui-chip",c.textContent="Do it",c.addEventListener("click",()=>this.handlers?.assent()),a.appendChild(c)}if(e.status==="settled"){let u=t.createElement("div");u.className="eui-mark",u.textContent="Added",a.appendChild(u)}if(e.status==="failed"){let u=t.createElement("div");u.className="eui-explicit",u.textContent="That didn't save. Everything else did.",a.appendChild(u)}if((this.opts.queued?.()??0)>0){let u=t.createElement("div");u.className="eui-row eui-chained",u.textContent=`${this.opts.queued()} more waiting`,this.root.appendChild(u)}this.wayOut(e)}wayOut(e){let t=this.doc.createElement("button");t.className="eui-out";let n=e.canUndo;t.textContent=n?"Undo":e.status==="settled"?"Done":"Not that",t.addEventListener("click",()=>{n?this.handlers?.undo():this.handlers?.discard()}),this.root.appendChild(t)}renderRow(e,t,n){let s=this.doc,o=s.createElement("div");o.className="eui-row",o.setAttribute("data-state",t.status),o.setAttribute("data-source",t.source??""),o.setAttribute("data-focused",String(t.focused)),o.setAttribute("data-provisional",String(t.provisional));let l=s.createElement("span");if(l.className="eui-detail",l.textContent=t.label,t.status==="filled"){let a=s.createElement("span");if(a.textContent=t.display,o.appendChild(a),o.appendChild(l),t.provisional&&(n.status==="resolving"||n.status==="explicit"||n.status==="hold")){let r=s.createElement("button");r.className="eui-chip eui-confirm",r.textContent="\u2713",r.setAttribute("aria-label",`Yes, ${t.label} is ${t.display}`),r.addEventListener("click",()=>this.handlers?.touch(t.name,t.value)),o.appendChild(r)}if(n.status==="hold"||n.status==="resolving"){let r=s.createElement("button");r.className="eui-drop",r.textContent="\xD7",r.addEventListener("click",()=>this.handlers?.touch(t.name,void 0)),o.appendChild(r)}}else if(t.status==="narrowed"){o.appendChild(l);for(let a of t.candidates.slice(0,2)){let r=s.createElement("button");r.className="eui-chip",r.textContent=a.display,r.addEventListener("click",()=>this.handlers?.touch(t.name,a.value)),o.appendChild(r)}}else if(o.appendChild(l),t.focused)for(let a of t.options.slice(0,4)){let r=s.createElement("button");r.className="eui-chip",r.textContent=a.label,r.addEventListener("click",()=>this.handlers?.touch(t.name,a.value)),o.appendChild(r)}e.appendChild(o)}renderCoach(e,t){let n=this.doc,s=n.createElement("div");s.className="eui-detail",s.textContent=t?`${t.does} \u2014 ${t.shape}`:"Walking you there.",e.appendChild(s);for(let o of["Walk me through it","Just do it"]){let l=n.createElement("button");l.className="eui-chip",l.textContent=o,l.addEventListener("click",()=>this.handlers?.assent()),e.appendChild(l)}}setVar(e,t,n){e.style&&(t.startsWith("--")&&e.style.setProperty?e.style.setProperty(t,n):e.style[t]=n)}unmount(){this.root.replaceChildren(),this.handlers=null}};function ht(i){let e=i?D[i]:null;return e?y[e.colour]:y.neutral}var Us={[w.success.toUpperCase()]:"success",[w.warning.toUpperCase()]:"warning",[w.danger.toUpperCase()]:"danger"};return vt(Yt);})();
+`}var v=class{constructor(e,t,i={}){this.root=e;this.doc=t;this.opts=i;p(this,"handlers",null);p(this,"lastBeat",null)}mount(e){this.handlers=e}render(e){let t=this.doc;if(this.root.replaceChildren(),this.root.className="eui-stage",!e.act){this.lastBeat=null;return}let i=M(e.domain,this.opts.domains),o=L(i,this.opts.accent),s=U(e,{queued:this.opts.queued?.()??0,domain:i});this.lastBeat=s;let u=this.opts.said?.();if(u){let r=t.createElement("div");r.className="eui-said",r.textContent=`\u201C${u}\u201D`,this.root.appendChild(r)}let l=t.createElement("div");if(l.className="eui-card",l.setAttribute("data-beat",s??""),l.setAttribute("data-domain",i?.name??"neutral"),l.setAttribute("data-at-rest",String(s==="show"&&_(e))),this.setVar(l,"--eui-domain",this.opts.tint??o.domain),this.root.appendChild(l),i){let r=t.createElement("div");r.className="eui-kicker",r.textContent=i.kicker,l.appendChild(r)}let a=t.createElement("div");if(a.className="eui-headline",a.textContent=e.preview,l.appendChild(a),s!=="coach"&&e.slots.length>1){let r=t.createElement("div");r.className="eui-steps",r.setAttribute("aria-hidden","true");for(let d of e.slots){let c=t.createElement("span");c.className="eui-step",c.setAttribute("data-state",d.status),r.appendChild(c)}l.appendChild(r)}if(s==="coach")this.renderCoach(l,i);else for(let r of e.slots)this.renderRow(l,r,e);if(e.status==="hold"){let r=e.slots.filter(m=>m.status==="filled").length,d=t.createElement("div");d.className="eui-count",d.textContent=r>1?`One hold for all ${r} \xB7 tap \xD7 to drop one`:"Quiet adds it \xB7 speak or tap to change",l.appendChild(d);let c=t.createElement("div");c.className="eui-ring";let h=e.holdRemainingMs??0,f=e.holdTotalMs||1;this.setVar(c,"width",`${Math.max(0,Math.min(100,h/f*100))}%`),l.appendChild(c)}if(e.exact&&(e.status==="explicit"||e.status==="hold"||e.status==="resolving")){let r=t.createElement("div");r.className="eui-exact";let d=t.createElement("div");d.className="eui-exact-head",d.textContent=`Exactly this, nothing else \xB7 ${e.exact.what}`,r.appendChild(d);for(let c of e.exact.rows){let h=t.createElement("div");h.className="eui-exact-row";let f=t.createElement("span");f.className="eui-exact-label",f.textContent=c.label;let m=t.createElement("span");m.className="eui-exact-value",m.textContent=c.value,h.appendChild(f),h.appendChild(m),r.appendChild(h)}l.appendChild(r)}if(e.refused){let r=t.createElement("div");r.className="eui-explicit eui-refused",r.textContent=`Not done: ${e.refused}`,l.appendChild(r)}if(e.status==="explicit"){let r=t.createElement("div");r.className="eui-explicit",r.textContent=e.radius==="external"?"This one needs a yes \u2014 it cannot be taken back":`This one needs a yes \u2014 ${e.gateFailures.join("; ")}`,l.appendChild(r);let d=t.createElement("button");d.className="eui-chip",d.textContent=e.exact?"Do exactly this":"Do it";let c=e.exact?.key;d.addEventListener("click",()=>c!==void 0?this.handlers?.assent(c):this.handlers?.assent()),l.appendChild(d)}if(e.status==="settled"){let r=t.createElement("div");r.className="eui-mark",r.textContent="Added",l.appendChild(r)}if(e.status==="failed"){let r=t.createElement("div");r.className="eui-explicit",r.textContent="That didn't save. Everything else did.",l.appendChild(r)}if((this.opts.queued?.()??0)>0){let r=t.createElement("div");r.className="eui-row eui-chained",r.textContent=`${this.opts.queued()} more waiting`,this.root.appendChild(r)}this.wayOut(e)}wayOut(e){let t=this.doc.createElement("button");t.className="eui-out";let i=e.canUndo;t.textContent=i?"Undo":e.status==="settled"?"Done":"Not that",t.addEventListener("click",()=>{i?this.handlers?.undo():this.handlers?.discard()}),this.root.appendChild(t)}renderRow(e,t,i){let o=this.doc,s=o.createElement("div");s.className=`eui-row eui-p-${t.primitive}`,s.setAttribute("data-primitive",t.primitive),s.setAttribute("data-state",t.status),s.setAttribute("data-source",t.source??""),s.setAttribute("data-focused",String(t.focused)),s.setAttribute("data-provisional",String(t.provisional)),t.many&&s.setAttribute("data-many","");let u=o.createElement("span");if(u.className="eui-detail",u.textContent=t.label,t.status==="filled"&&t.many)this.renderList(s,u,t,i.status==="hold"||i.status==="resolving");else if(t.status==="filled"){if(t.was){let d=o.createElement("span");d.className="eui-was",d.textContent=t.was,d.setAttribute("aria-label",`was ${t.was}`),s.appendChild(d),s.setAttribute("data-change","")}let l=o.createElement("span");l.className="eui-value",l.textContent=t.display,w(l,t.primitive,t.value,t.display);let a=t.options.find(d=>d.value===t.value),r=this.opts.detailFor?.(t.name,t.value)??(a?.facts&&Object.entries(a.facts).filter(([d])=>d!=="source").map(([,d])=>d).join(" \xB7 ")||null);if(r){let d=o.createElement("span");d.className="eui-sub",d.textContent=r,l.appendChild(d),l.setAttribute("data-sub","")}if(s.appendChild(l),s.appendChild(u),t.provisional&&(i.status==="resolving"||i.status==="explicit"||i.status==="hold")){let d=o.createElement("button");d.className="eui-chip eui-confirm",d.textContent="\u2713",d.setAttribute("aria-label",`Yes, ${t.label} is ${t.display}`),d.addEventListener("click",()=>this.handlers?.touch(t.name,t.value)),s.appendChild(d)}if(i.status==="hold"||i.status==="resolving"){let d=o.createElement("button");d.className="eui-drop",d.textContent="\xD7",d.addEventListener("click",()=>this.handlers?.touch(t.name,void 0)),s.appendChild(d)}}else if(t.status==="narrowed"){s.appendChild(u);let l=t.candidates.slice(0,2).map(a=>t.options.find(r=>r.value===a.value)??null);if(l.every(a=>a?.facts)){this.renderCompare(s,t.name,t.primitive,l),e.appendChild(s);return}for(let a of t.candidates.slice(0,2)){let r=o.createElement("button");r.className="eui-chip",r.textContent=a.display,w(r,t.primitive,a.value,a.display),r.addEventListener("click",()=>this.handlers?.touch(t.name,a.value)),s.appendChild(r)}}else{s.appendChild(u);let l=t.focused||!t.required&&t.status==="empty"&&t.options.length>0;if(l&&pe(t.options))this.renderCompare(s,t.name,t.primitive,t.options);else if(l){for(let a of t.options.slice(0,4)){let r=o.createElement("button");r.className="eui-chip",r.textContent=a.label,w(r,t.primitive,a.value,a.label),r.addEventListener("click",()=>this.handlers?.touch(t.name,t.many?[a.value]:a.value)),s.appendChild(r)}if(t.many){let a=o.createElement("span");a.className="eui-hint",a.textContent="say several",s.appendChild(a)}if(!t.options.length&&(t.primitive==="ghostField"||t.primitive==="when"||t.primitive==="quantity")){let a=o.createElement("span");a.className="eui-hint",a.textContent=t.primitive==="when"?"say a day or a time":t.primitive==="quantity"?"say an amount":"say it",s.appendChild(a)}}}e.appendChild(s)}renderList(e,t,i,o){let s=this.doc,u=i.items.map(a=>a.value),l=s.createElement("span");if(l.className="eui-list",i.items.forEach((a,r)=>{let d=s.createElement("span");d.className="eui-li";let c=s.createElement("span");if(c.className="eui-li-label",c.textContent=a.display,w(c,i.primitive,a.value,a.display),d.appendChild(c),o){let h=s.createElement("button");h.className="eui-li-drop",h.textContent="\xD7",h.setAttribute("aria-label",`Remove ${a.display}`),h.addEventListener("click",()=>{let f=u.filter((m,y)=>y!==r);this.handlers?.touch(i.name,f.length?f:void 0)}),d.appendChild(h)}l.appendChild(d)}),t.setAttribute("data-count",String(i.items.length)),e.appendChild(t),e.appendChild(l),o)for(let a of i.options.filter(r=>!u.includes(r.value)).slice(0,3)){let r=s.createElement("button");r.className="eui-chip eui-add",r.textContent=a.label,r.setAttribute("aria-label",`Add ${a.label}`),w(r,i.primitive,a.value,a.label),r.addEventListener("click",()=>this.handlers?.touch(i.name,[...u,a.value])),e.appendChild(r)}}renderCompare(e,t,i,o){let s=this.doc,u=he(o);e.setAttribute("data-compare",String(o.length));let l=s.createElement("div");l.className="eui-compare",l.setAttribute("style",`--eui-cols:${o.length};--eui-facts:${u.length}`);for(let a of o){let r=s.createElement("button");r.className="eui-col";let d=s.createElement("span");d.className="eui-col-label",d.textContent=a.label,w(d,i,a.value,a.label),r.appendChild(d);for(let c of u){let h=s.createElement("span");h.className="eui-fact",h.setAttribute("data-key",c),h.textContent=a.facts?.[c]??"\u2014",h.textContent.length<=8&&h.setAttribute("data-short",""),r.appendChild(h)}r.addEventListener("click",()=>this.handlers?.touch(t,a.value)),l.appendChild(r)}if(e.appendChild(l),o.some(a=>a.facts?.source==="estimate")){let a=s.createElement("span");a.className="eui-hint",a.textContent="times are estimates \xB7 no route service connected",e.appendChild(a)}}renderCoach(e,t){let i=this.doc,o=i.createElement("div");o.className="eui-detail",o.textContent=t?`${t.does} \u2014 ${t.shape}`:"Walking you there.",e.appendChild(o);for(let s of["Walk me through it","Just do it"]){let u=i.createElement("button");u.className="eui-chip",u.textContent=s,u.addEventListener("click",()=>this.handlers?.assent()),e.appendChild(u)}}setVar(e,t,i){e.style&&(t.startsWith("--")&&e.style.setProperty?e.style.setProperty(t,i):e.style[t]=i)}unmount(){this.root.replaceChildren(),this.handlers=null}},ce=["SUN","MON","TUE","WED","THU","FRI","SAT"];function B(n){let e=n.replace(/[^\p{L}\p{N}\s]/gu," ").trim().split(/\s+/).filter(Boolean);return(e.length>1?e[0][0]+e[1][0]:(e[0]??"?").slice(0,1)).toUpperCase()}function pe(n){return n.length>=2&&n.length<=3&&n.filter(e=>e.facts&&Object.keys(e.facts).length).length>=2}function he(n){let e=[];for(let i of n)for(let o of Object.keys(i.facts??{}))e.includes(o)||e.push(o);let t=e.filter(i=>new Set(n.map(o=>o.facts?.[i]??"")).size>1);return(t.length?t:e).slice(0,4)}function w(n,e,t,i){if((e==="face"||e==="objectCard")&&n.setAttribute("data-initials",B(i)),e==="face"&&n.setAttribute("data-hue",String([...i].reduce((o,s)=>(o*31+s.charCodeAt(0))%360,7))),e==="when"){let o=typeof t=="object"&&t!==null&&typeof t.at=="number"?t.at:null;if(o!==null){let s=new Date(o);n.setAttribute("data-dow",ce[s.getDay()]),n.setAttribute("data-day",String(s.getDate()))}}}function me(n){if(/^person:/.test(n))return null;let e=/^app:(.+)$/.exec(n),t=(e?e[1]:n).replace(/[-_]+/g," ").trim();return t?t.charAt(0).toUpperCase()+t.slice(1):null}var E=class{constructor(e,t,i={}){this.root=e;this.doc=t;this.opts=i;p(this,"h",null)}mount(e){this.h=e}render(e){let t=this.doc;this.root.replaceChildren(),this.root.className="eui-stage";let i=t.createElement("div");i.className="eui-card eui-brief",i.setAttribute("data-mode",e.mode),i.style?.setProperty?.("--eui-domain",this.opts.accent??`var(--eui-neutral, ${g.neutral})`),this.root.appendChild(i);let o=t.createElement("div");o.className="eui-kicker";let s=(this.opts.kicker??"Morning").toUpperCase();o.textContent=e.section&&e.mode!=="end"?`${s} \xB7 ${e.section.toUpperCase()}`:s,i.appendChild(o),e.total>0&&i.appendChild(this.progress(e));let u=t.createElement("div");u.className="eui-headline",u.textContent=e.mode==="empty"?"Nothing needs you this morning.":e.mode==="end"?"That\u2019s everything.":e.item?.title??"",i.appendChild(u);let l=t.createElement("div");if(l.className="eui-detail",e.mode==="empty")l.textContent="And nothing moved in what you follow.";else if(e.mode==="end")l.textContent=e.leftOut?`${e.leftOut} more left out to keep it short \xB7 ask for the long version`:`${e.total} item${e.total===1?"":"s"}, all heard`;else if(e.item){let d=me(e.item.source);l.textContent=!d||e.item.why.toLowerCase().includes(d.toLowerCase())?e.item.why:`${e.item.why} \xB7 ${d}`}if(i.appendChild(l),e.mode==="more"&&e.detail){let d=t.createElement("p");d.className="eui-brief-detail",d.textContent=e.detail,i.appendChild(d)}if(e.mode==="stopped"){let d=t.createElement("div");d.className="eui-hint",d.textContent="Paused here \xB7 say \u201Ccontinue\u201D",i.appendChild(d)}if(e.mode!=="empty"&&i.appendChild(this.controls(e)),(e.mode==="item"||e.mode==="more")&&e.upNext){let d=t.createElement("div");d.className="eui-brief-next",d.textContent=`Next: ${e.upNext}`,i.appendChild(d)}let a=t.createElement("button");a.className="eui-out";let r=e.mode==="item"||e.mode==="more";a.textContent=r?"Stop":"Done",a.addEventListener("click",()=>r?this.h?.stop():this.h?.done()),this.root.appendChild(a)}progress(e){let t=this.doc,i=t.createElement("div");i.className="eui-brief-progress";let o=t.createElement("div");o.className="eui-brief-bar",o.setAttribute("aria-hidden","true");for(let u of e.sections){let l=t.createElement("span");l.className="eui-brief-group",l.style?.setProperty&&l.style.setProperty("--n",String(u.count));for(let a=0;a<u.count;a++){let r=t.createElement("span");r.className="eui-brief-seg",r.setAttribute("data-state",a<u.done?"done":u.current&&a===u.done?"now":"todo"),l.appendChild(r)}o.appendChild(l)}i.appendChild(o);let s=t.createElement("span");return s.className="eui-brief-count",s.textContent=e.mode==="end"?`${e.total} of ${e.total}`:`${e.position} of ${e.total}${e.minutesLeft?` \xB7 about ${e.minutesLeft} min left`:""}`,i.appendChild(s),i}controls(e){let t=this.doc,i=t.createElement("div");i.className="eui-brief-controls";let o=(s,u,l)=>{let a=t.createElement("button");a.className="eui-chip",a.textContent=s,l&&a.setAttribute(l,""),a.addEventListener("click",u),i.appendChild(a)};if((e.position>1||e.mode==="end"||e.mode==="more")&&o("Back",()=>this.h?.back()),e.mode==="item"&&e.hasMore&&o("More on this",()=>this.h?.more()),e.item?.action&&e.mode!=="end"){let s=e.item.action.say;o(e.item.action.label,()=>this.h?.act(s),"data-action")}return e.mode==="stopped"?o("Continue",()=>this.h?.resume(),"data-primary"):e.mode!=="end"&&o(e.position===e.total?"Finish":"Next",()=>this.h?.next(),"data-primary"),i}};var $=class{constructor(e,t,i={}){this.root=e;this.doc=t;this.opts=i;p(this,"h",null)}mount(e){this.h=e}render(e){let t=this.doc;this.root.replaceChildren(),this.root.className="eui-stage";let i=t.createElement("div");i.className="eui-card eui-bundle",i.setAttribute("data-mode",e.mode),i.style?.setProperty?.("--eui-domain",this.opts.accent??`var(--eui-neutral, ${g.neutral})`),this.root.appendChild(i);let o=t.createElement("div");o.className="eui-kicker",o.textContent=e.mode==="bundle"&&e.total>1?`HELD FOR YOU \xB7 ${e.position} OF ${e.total}`:"HELD FOR YOU",i.appendChild(o);let s=t.createElement("div");s.className="eui-headline",s.textContent=e.title,i.appendChild(s);let u=t.createElement("div");if(u.className="eui-detail",u.textContent=e.mode==="clear"?"You\u2019ve seen everything that was held. It\u2019s all still on the Desk.":e.why,i.appendChild(u),e.mode==="bundle"){let a=t.createElement("div");a.className="eui-notes";for(let c of e.items){let h=t.createElement(c.body?"button":"div");h.className="eui-note",h.setAttribute("data-open",String(c.open)),c.body&&h.setAttribute("aria-expanded",String(c.open));let f=t.createElement("span");f.className="eui-note-title",f.textContent=c.title;let m=t.createElement("span");if(m.className="eui-note-when",m.textContent=c.when,h.appendChild(f),h.appendChild(m),c.open&&c.body){let y=t.createElement("span");y.className="eui-note-body",y.textContent=c.body,h.appendChild(y)}c.body&&h.addEventListener("click",()=>this.h?.open(c.id)),a.appendChild(h)}i.appendChild(a);let r=t.createElement("div");r.className="eui-brief-controls";let d=(c,h,f)=>{let m=t.createElement("button");m.className="eui-chip",m.textContent=c,f&&m.setAttribute(f,""),m.addEventListener("click",h),r.appendChild(m)};if(e.more>0&&d(`${e.more} more`,()=>this.h?.expand()),e.action){let c=e.action.say;d(e.action.label,()=>this.h?.act(c),"data-action")}d(e.count>1?`Mark all ${e.count} read`:"Got it",()=>this.h?.read(),"data-primary"),i.appendChild(r)}let l=t.createElement("button");l.className="eui-out",l.textContent=e.mode==="bundle"?"Later":"Done",l.addEventListener("click",()=>e.mode==="bundle"?this.h?.later():this.h?.done()),this.root.appendChild(l)}};var ct={[b.success.toUpperCase()]:"success",[b.warning.toUpperCase()]:"warning",[b.danger.toUpperCase()]:"danger"};function K(n){let e=n;return!!e&&typeof e=="object"&&typeof e.lat=="number"&&typeof e.lon=="number"&&typeof e.label=="string"}function Y(n,e){let i=Math.PI/180,o=(e.lat-n.lat)*i,s=(e.lon-n.lon)*i,u=Math.sin(o/2)**2+Math.cos(n.lat*i)*Math.cos(e.lat*i)*Math.sin(s/2)**2;return 2*6371*Math.asin(Math.min(1,Math.sqrt(u)))}function X(n){return n<1?`${Math.max(50,Math.round(n*1e3/50)*50)} m`:n<10?`${(Math.round(n*10)/10).toFixed(1)} km`:`${Math.round(n)} km`}function fe(n){if(n<60)return`about ${n} min`;let e=Math.floor(n/60),t=n%60;return`about ${e} h${t?` ${String(t).padStart(2,"0")}`:""}`}var V=1.3,W={walk:4.8,bike:15,transit:20,drive:28},ge={walk:0,bike:2,transit:8,drive:5},G={walk:[0,4],bike:[.8,15],transit:[1.2,80],drive:[1.5,1/0]},ye={walk:"Walk",bike:"Bike",transit:"Transit",drive:"Drive"};function Q(n,e){let t=Y(n,e);return Object.keys(W).filter(i=>t>=G[i][0]&&t<=G[i][1]).map(i=>({mode:i,km:t*V,minutes:Math.max(1,Math.round(t*V/W[i]*60+ge[i])),estimated:!0})).sort((i,o)=>i.minutes-o.minutes)}function J(n){let e=n.find(o=>o.mode==="walk"),t=n.filter(o=>o.mode!=="walk");return(e?[...t.slice(0,2),e]:t.slice(0,3)).sort((o,s)=>o.minutes-s.minutes).map(o=>({value:o.mode,label:ye[o.mode],facts:{time:fe(o.minutes),distance:X(o.km),...o.estimated?{source:"estimate"}:{}}}))}function Z(n,e){let t=[];return n.address&&t.push(n.address),e&&t.push(`${X(Y(e,n))} away`),t.join(" \xB7 ")}var be=["self","shared","other-person","external"];function A(n){return be.indexOf(n)}var Bt=A("external");var R=class{constructor(e,t){this.b=e;this.name=t;p(this,"flat");p(this,"i",0);p(this,"mode");p(this,"announced",null);p(this,"greeted",!1);this.flat=e.sections.flatMap(i=>i.items.map(o=>({section:i.name,item:o}))),this.mode=this.flat.length?"item":"empty"}get done(){return this.mode==="end"||this.mode==="empty"}next(){if(!(this.mode==="empty"||this.mode==="end")){if(this.mode==="stopped"){this.mode="item";return}this.i<this.flat.length-1?(this.i++,this.mode="item"):this.mode="end"}}back(){if(this.mode!=="empty"){if(this.mode==="end"){this.mode="item",this.announced=null;return}if(this.mode==="more"){this.mode="item";return}this.i>0&&this.i--,this.mode="item",this.announced=null}}more(){(this.mode==="item"||this.mode==="stopped")&&this.flat[this.i]?.item.detail&&(this.mode="more")}stop(){(this.mode==="item"||this.mode==="more")&&(this.mode="stopped")}resume(){this.mode==="stopped"&&(this.mode="item")}hear(e){let t=xe(e,this.flat[this.i]?.item.action);return t?t==="act"?{command:t,say:this.flat[this.i].item.action.say}:(t!=="again"&&this[t](),{command:t}):null}line(){if(this.mode==="empty")return`${this.name?`${this.name}, n`:"N"}othing needs you this morning, and nothing moved in what you follow.`;if(this.mode==="stopped")return"";if(this.mode==="end")return`That's everything.${this.b.leftOut?` I left out ${this.b.leftOut} more to keep it short.`:""}`;let e=this.flat[this.i];if(this.mode==="more")return e.item.detail??"";let t=[];if(!this.greeted){this.greeted=!0;let i=Math.max(1,Math.round(this.b.minutes));t.push(`${this.name?`Good morning, ${this.name}. `:""}Here is your briefing. About ${i} minute${i===1?"":"s"}.`)}return this.announced!==e.section&&(t.push(`${e.section}.`),this.announced=e.section),t.push(/[.!?]$/.test(e.item.title)?e.item.title:`${e.item.title}.`),t.join(" ")}view(){let e=this.flat[this.i]??null,t=this.mode==="end",i=[],o=0;for(let l of this.b.sections){let a=o;o+=l.items.length;let r=t?l.items.length:Math.max(0,Math.min(l.items.length,this.i-a));i.push({name:l.name,count:l.items.length,done:r,current:!t&&this.i>=a&&this.i<o})}let s=t?[]:this.flat.slice(this.i),u=s.reduce((l,a)=>l+a.item.words,0);return{mode:this.mode,position:this.flat.length?Math.min(this.i+1,this.flat.length):0,total:this.flat.length,section:t||!e?null:e.section,sections:i,item:t?null:e?.item??null,detail:this.mode==="more"?e?.item.detail??null:null,hasMore:!!e?.item.detail&&!t,upNext:t?null:this.flat[this.i+1]?.item.title??null,leftOut:this.b.leftOut,minutesLeft:s.length?Math.max(1,Math.ceil(u/130)):0}}};function xe(n,e){let t=n.toLowerCase().replace(/[^\p{L}\p{N}'\s]/gu," ").replace(/\s+/g," ").trim();return t?e&&(t===e.say.toLowerCase()||/^(reply|answer|respond)( to (them|him|her|it))?$/.test(t))?"act":t.split(" ").length>6?null:/^(go back|back|previous|last one|the one before)$/.test(t)?"back":/^(again|repeat|say (that|it) again|what|sorry|pardon|come again)$/.test(t)?"again":/^(stop|pause|enough|that'?s enough|that'?s all|quiet|hold on|wait|not now|later)$/.test(t)?"stop":/^(continue|go on|keep going|carry on|resume)$/.test(t)?"resume":/^(next|skip|skip it|skip that|ok next|okay next|got it|moving on|next one)$/.test(t)?"next":/^(more|tell me more|more on (that|this)|details|what'?s that about|go deeper|and)$/.test(t)?"more":null:null}function we(n){let e=T(n);if(e)return e;let t=/^app:(.+)$/.exec(n),i=(t?t[1]:n).replace(/[-_]+/g," ").trim();return i.charAt(0).toUpperCase()+i.slice(1)}var ve=[[/^quiet hours/,"Held during quiet hours"],[/^from a person/,"Waiting for your next look"],[/^part of a story/,"The same story, told again"],[/^already interrupted/,"Held so you weren\u2019t interrupted again"]];function ke(n){for(let[e,t]of ve)if(e.test(n))return t;return"Held for you"}function Ce(n){let e=new Map;for(let i of n){let o=i.notice.groupKey?`story:${i.notice.groupKey}`:`from:${i.notice.from}`;(e.get(o)??e.set(o,[]).get(o)).push(i)}let t=[];for(let[i,o]of e){let s=o.map(m=>m.notice).sort((m,y)=>y.at-m.at),u=s.length,l=i.startsWith("story:"),a=s[0].from,r=we(a),d=l?`${s[s.length-1].title}${u>1?` \xB7 ${u} updates`:""}`:u===1?`From ${r}`:`${u} from ${r}`,c=new Map;for(let m of o){let y=ke(m.why);c.set(y,(c.get(y)??0)+1)}let h=[...c].sort((m,y)=>y[1]-m[1])[0][0],f=l?null:T(a);t.push({key:i,title:d,why:h,notices:s,...f?{action:{label:`Reply to ${f}`,say:`reply to ${f}`}}:{}})}return t.sort((i,o)=>o.notices[0].at-i.notices[0].at)}var Ee=4;function $e(n,e){let t=Math.round((e-n)/6e4);if(t<1)return"just now";if(t<60)return`${t} min ago`;let i=Math.round(t/60);if(i<24)return`${i} h ago`;let o=new Date(n);return`${o.toLocaleDateString([],{weekday:"short"})} ${String(o.getHours()).padStart(2,"0")}:${String(o.getMinutes()).padStart(2,"0")}`}var N=class{constructor(e,t=Date.now){this.desk=e;this.now=t;p(this,"bundles");p(this,"i",0);p(this,"opened",null);p(this,"showAll",!1);this.bundles=Ce(e.held())}get done(){return this.i>=this.bundles.length}get current(){return this.bundles[this.i]??null}open(e){this.opened=this.opened===e?null:e,this.opened&&this.desk.read([e])}expand(){this.showAll=!0}markRead(){let e=this.current;e&&(this.desk.read(e.notices.map(t=>t.id)),this.advance())}later(){this.advance()}advance(){this.i++,this.opened=null,this.showAll=!1}view(){let e=this.current;if(!e)return{mode:"clear",position:0,total:this.bundles.length,title:"Nothing waiting",why:"",count:0,items:[],more:0,action:null};let t=this.now(),i=this.showAll?e.notices:e.notices.slice(0,Ee);return{mode:"bundle",position:this.i+1,total:this.bundles.length,title:e.title,why:e.why,count:e.notices.length,items:i.map(o=>({id:o.id,title:o.title,when:$e(o.at,t),body:o.body??null,open:this.opened===o.id})),more:e.notices.length-i.length,action:e.action??null}}};var Ae={perHour:3,quiet:[22,7],bar:.7,breakthrough:["person:*"]},Re=(n,e)=>{if(!e)return!1;let[t,i]=e;return t<=i?n>=t&&n<i:n>=t||n<i},te=(n,e=[])=>e.some(t=>t===n||t.endsWith(":*")&&n.startsWith(t.slice(0,-1))),D=class{constructor(e=Ae,t=i=>new Date(i).getHours()){this.hourOf=t;p(this,"notices",[]);p(this,"interrupted",[]);p(this,"seen",new Set);p(this,"decisions",new Map);p(this,"readIds",new Set);p(this,"budgetOf");this.budgetOf=typeof e=="function"?e:()=>e}get budget(){return this.budgetOf()}ingest(e){if(this.seen.has(e.id))return{notice:e,delivery:"briefing",why:"already on the desk"};this.seen.add(e.id),this.notices.push(e);let t=this.decide(e);return this.decisions.set(e.id,t),t}decide(e){let t=e.at-36e5;for(;this.interrupted.length&&this.interrupted[0]<t;)this.interrupted.shift();return e.urgency<this.budget.bar?te(e.from,this.budget.breakthrough)?{notice:e,delivery:"bundle",why:"from a person; it waits for your next look, not for the briefing"}:{notice:e,delivery:"briefing",why:"not urgent enough to interrupt; it waits for the briefing"}:Re(this.hourOf(e.at),this.budget.quiet)&&!te(e.from,this.budget.breakthrough)?{notice:e,delivery:"bundle",why:"quiet hours; it is held for when they end"}:e.groupKey&&this.notices.some(i=>i!==e&&i.groupKey===e.groupKey&&i.at>t)?{notice:e,delivery:"bundle",why:"part of a story already told this hour"}:this.interrupted.length>=this.budget.perHour?{notice:e,delivery:"bundle",why:`already interrupted ${this.interrupted.length} times this hour`}:(this.interrupted.push(e.at),{notice:e,delivery:"now",why:"urgent, and within the budget"})}all(){return[...this.notices].sort((e,t)=>t.at-e.at)}snapshot(){return{notices:[...this.notices],decisions:[...this.decisions.values()].map(e=>({id:e.notice.id,delivery:e.delivery,why:e.why})),read:[...this.readIds]}}restore(e,t=300){let i=[...e.notices].sort((s,u)=>s.at-u.at).slice(-t),o=new Map(e.decisions.map(s=>[s.id,s]));for(let s of i){if(this.seen.has(s.id))continue;this.seen.add(s.id),this.notices.push(s);let u=o.get(s.id);this.decisions.set(s.id,{notice:s,delivery:u?.delivery??"briefing",why:u?.why??"kept from before"})}for(let s of e.read)this.seen.has(s)&&this.readIds.add(s)}decision(e){return this.decisions.get(e)}held(){return this.all().filter(e=>!this.readIds.has(e.id)&&this.decisions.get(e.id)?.delivery==="bundle").map(e=>this.decisions.get(e.id))}read(e){for(let t of e)this.seen.has(t)&&this.readIds.add(t)}isRead(e){return this.readIds.has(e)}bundles(){let e=new Map;for(let t of this.notices){let i=t.groupKey??t.topics[0]??t.from;(e.get(i)??e.set(i,[]).get(i)).push(t)}return[...e].map(([t,i])=>({key:t,notices:i.sort((o,s)=>s.at-o.at)})).sort((t,i)=>i.notices[0].at-t.notices[0].at)}};function T(n){let e=/^person:(.+)$/.exec(n);return e?e[1].split(/[\s_-]+/).map(t=>t.charAt(0).toUpperCase()+t.slice(1)).join(" "):null}return le(Ne);})();
 
 </script>
 <script>
-(() => {
-const A = window.AIUIC;
-const $ = (id) => document.getElementById(id);
+(function () {
+  'use strict';
+  var K = window.Kit;
+  var style = document.createElement('style'); style.textContent = K.stylesheet(); document.head.appendChild(style);
+  var $ = function (id) { return document.getElementById(id); };
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
 
-// The language's own stylesheet, injected from the package. Nothing in
-// head.html knows a domain colour.
-const sheet = document.createElement('style');
-sheet.textContent = A.stylesheet();
-document.head.appendChild(sheet);
-
-// ---------------------------------------------------------------- the acts
-
-const PEOPLE = [
-  { value: { id: 'maya', label: 'Maya' }, label: 'Maya', aliases: ['maya'] },
-  { value: { id: 'sam', label: 'Sam' }, label: 'Sam', aliases: ['sam'] },
-  { value: { id: 'noah', label: 'Noah' }, label: 'Noah', aliases: ['noah'] },
-];
-const CHORES = [
-  { value: 'dishes', label: 'Dishes', aliases: ['the dishes', 'washing up'] },
-  { value: 'laundry', label: 'Laundry', aliases: ['the laundry', 'washing'] },
-  { value: 'bins', label: 'Bins', aliases: ['the bins', 'rubbish', 'trash'] },
-];
-const ITEMS = [
-  { value: 'milk', label: 'Milk', aliases: ['milk'] },
-  { value: 'jam', label: 'Jam', aliases: ['jam'] },
-  { value: 'bread', label: 'Bread', aliases: ['bread'] },
-  { value: 'eggs', label: 'Eggs', aliases: ['eggs'] },
-];
-const PLACES = [
-  { value: 'dentist', label: 'Dentist', aliases: ['the dentist'] },
-  { value: 'school', label: 'School', aliases: ['school'] },
-];
-
-const attention = { foreground: true, unlocked: true, proximityClear: true, listening: true };
-const ui = A.createAIUIC({
-  ctx: () => ({ actor: { id: 'me', basePauseMs: 850 }, attention, reachLimit: 1, undoWindowMs: 5000 }),
-});
-
-const D = {
-  chores: A.defineAct({
-    name: 'assign_chore', domain: 'chores',
-    phrases: ['for', 'assign', 'should do', 'needs to do', 'can do'],
-    slots: {
-      chore: { primitive: 'chip', options: () => CHORES, required: true, order: 1 },
-      assignee: { primitive: 'face', options: () => PEOPLE, required: true, order: 2 },
-      due: { primitive: 'when', resolve: A.resolveWhen, order: 3 },
-    },
-    radius: { max: 'other-person', of: () => 'other-person' },
-    commit: () => ({ id: 'c' + Date.now() }), undo: () => {},
-    preview: (f) => [[f.chore ? A.display(f.chore) : 'A chore',
-                      f.assignee ? 'for ' + A.display(f.assignee) : null,
-                      f.due ? A.display(f.due) : null].filter(Boolean).join(' ')],
-  }),
-  groceries: A.defineAct({
-    name: 'add_items', domain: 'groceries',
-    phrases: ['add', 'put on the list', 'we need'],
-    slots: { item: { primitive: 'chip', options: () => ITEMS, required: true, order: 1 } },
-    radius: 'self',
-    commit: () => ({ id: 'g' + Date.now() }), undo: () => {},
-    preview: (f) => [(f.item ? A.display(f.item) : 'An item') + ' on the list'],
-  }),
-  calendar: A.defineAct({
-    name: 'add_event', domain: 'calendar',
-    phrases: ['book', 'appointment', 'at'],
-    slots: {
-      what: { primitive: 'chip', options: () => PLACES, required: true, order: 1 },
-      when: { primitive: 'when', resolve: A.resolveWhen, required: true, order: 2 },
-      who: { primitive: 'face', options: () => PEOPLE, order: 3 },
-    },
-    radius: { max: 'shared', of: () => 'shared' },
-    commit: () => ({ id: 'e' + Date.now() }), undo: () => {},
-    preview: (f) => [[f.what ? A.display(f.what) : 'An event',
-                      f.when ? A.display(f.when) : null,
-                      f.who ? 'with ' + A.display(f.who) : null].filter(Boolean).join(' ')],
-  }),
-  allowance: A.defineAct({
-    name: 'pay_allowance', domain: 'allowance',
-    phrases: ['pay', 'send', 'allowance'],
-    slots: {
-      payee: { primitive: 'face', options: () => PEOPLE, required: true, order: 1 },
-      amount: { primitive: 'quantity', resolve: A.resolveQuantity, required: true, order: 2 },
-    },
-    radius: 'external',
-    commit: () => ({ id: 'p' + Date.now() }),
-    preview: (f) => [[f.amount ? A.display(f.amount) : 'Money',
-                      f.payee ? 'to ' + A.display(f.payee) : null].filter(Boolean).join(' ')],
-  }),
-  teaching: A.defineAct({
-    name: 'how_do_i', domain: 'teaching',
-    phrases: ['how do i', 'show me', 'walk me through'],
-    slots: { topic: { primitive: 'chip', options: () => [
-      { value: 'proof', label: 'ask for a photo', aliases: ['photo', 'proof'] },
-      { value: 'ipad', label: 'set iPad limits', aliases: ['ipad', 'screen time'] },
-    ], required: true, order: 1 } },
-    radius: 'self',
-    commit: () => ({ id: 't' + Date.now() }), undo: () => {},
-    preview: (f) => [f.topic ? A.display(f.topic) : 'Show me how'],
-  }),
-};
-for (const def of Object.values(D)) ui.defineAct(def);
-
-const ALL = Object.values(D);
-const optionsForDef = (def, slot) => {
-  const sd = def.slots[slot];
-  return sd && sd.options ? sd.options({}, {}) : [];
-};
-const local = new A.LocalResolver();
-
-// ------------------------------------------------------------------ stage
-
-let run = null;
-let said = '';
-let presenter = null;
-let unlisten = null;
-let update = () => {};
-const monitor = new A.BudgetMonitor({ now: () => performance.now() });
-
-function mountStage() {
-  const root = $('stage');
-  presenter = new A.StagePresenter(root, document, {
-    said: () => said,
-    queued: () => 0,
-    accent: '#FF5FA2', // a member's accent pack. It never reaches a domain.
-  });
-}
-
-function refresh() {
-  if (!run) return;
-  update();
-  paintBeats();
-  paintMeta();
-  requestAnimationFrame(() => { if (run && run.status === 'hold') refresh(); });
-}
-
-function startFrom(text) {
-  said = text;
-  monitor.reset();
-  monitor.mark('heard');
-
-  const scores = local.scoreSync(text, ALL, { now: new Date(), actor: { id: 'me' } }, optionsForDef);
-  const decision = A.pickAct(scores);
-  const name = decision.kind === 'start' ? decision.act
-    : decision.kind === 'narrow' ? decision.acts[0] : null;
-  if (!name) { $('stage').replaceChildren(); said = ''; paintMeta(scores); return; }
-
-  const def = ALL.find((a) => a.name === name);
-  run = ui.start(name);
-  const wired = A.attachPresenters(run, [presenter], (r, slot) => optionsForDef(r.def, slot));
-  update = wired.update;
-
-  const cands = local.fillSync(text, def, {}, { now: new Date(), actor: { id: 'me' } }, optionsForDef);
-  for (const [slot, list] of Object.entries(cands)) {
-    const best = list[0];
-    if (best && best.score >= 0.85) run.setValue(slot, best.value, 'spoken');
-    else if (list.length) run.offer(slot, list, 'spoken');
+  // ------------------------------------------------------------ theme
+  function setTheme(t) {
+    if (t === 'system') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+    document.querySelectorAll('#theme button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.t === t)); });
   }
-  run.evaluate();
-  monitor.mark('shown');
-  unlisten?.();
-  unlisten = ui.on((e) => { if (e.type === 'commit') monitor.mark('committed'); });
-  refresh();
-  paintMeta(scores);
-}
+  document.querySelectorAll('#theme button').forEach(function (b) { b.onclick = function () { setTheme(b.dataset.t); }; });
 
-function paintBeats() {
-  const v = A.toView(run, (r, slot) => optionsForDef(r.def, slot));
-  const domain = A.DOMAINS[v.domain] || null;
-  const now = A.beatOf(v, { domain });
-  $('beats').replaceChildren(...['show','narrow','unfold','hold','settle','chain','coach'].map((b, i) => {
-    const el = document.createElement('span');
-    el.className = 'beat';
-    el.dataset.on = String(b === now);
-    el.textContent = (i + 1) + ' · ' + b;
-    return el;
-  }));
-}
-
-function paintMeta(scores) {
-  const v = run ? A.toView(run, (r, slot) => optionsForDef(r.def, slot)) : null;
-  const bits = [];
-  if (v) {
-    bits.push(`act <b>${v.act}</b>`);
-    bits.push(`radius <b>${v.radius || '—'}</b>`);
-    bits.push(`assent <b>${v.assent || 'pending'}</b>`);
-    if (v.holdTotalMs) bits.push(`hold <b>${v.holdTotalMs}ms</b>`);
-    if (A.skipsShow(v)) bits.push('<b>show skipped — already named</b>');
+  // ------------------------------------------------------------ views
+  function day(offset, h, m) { var d = new Date(); d.setDate(d.getDate() + offset); d.setHours(h, m || 0, 0, 0); return d.getTime(); }
+  // Days until the next given weekday (0 = Sunday), never today.
+  function until(dow) { var n = (dow - new Date().getDay() + 7) % 7; return n || 7; }
+  function slot(o) {
+    return Object.assign({ label: o.name, status: 'empty', display: '', source: null, provisional: false, stale: false,
+      required: true, focused: false, options: [], many: false, items: [], was: null, candidates: [] }, o);
   }
-  if (scores && scores.length) {
-    bits.push('routing <b>' + scores.slice(0, 2).map((s) => `${s.act} ${s.score.toFixed(2)}`).join(' · ') + '</b>');
+  function view(o) {
+    return Object.assign({ act: 'demo', domain: null, status: 'resolving', phase: 'listening', radius: 'self', assent: null,
+      holdRemainingMs: null, holdTotalMs: null, slots: [], preview: '', exact: null, refused: null, gateFailures: [], canAssent: false, canUndo: false, canResume: false }, o);
   }
-  $('meta').replaceChildren(...bits.map((b) => {
-    const s = document.createElement('span'); s.innerHTML = b; return s;
-  }));
-  paintBudget();
-}
+  // A small stage you can poke: chips fill, × empties, "Do it" settles, "Not that" resets.
+  function stage(host, initial, said, extra) {
+    var current = JSON.parse(JSON.stringify(initial));
+    // The presenter owns the element it draws into (it sets its class), so it gets its own, inside the themed host.
+    var inner = document.createElement('div'); host.replaceChildren(inner);
+    var p = new K.StagePresenter(inner, document, Object.assign({ said: function () { return said || ''; } }, extra || {}));
+    function draw() { p.render(current); }
+    p.mount({
+      touch: function (name, value) {
+        current.slots.forEach(function (s) {
+          if (s.name !== name) return;
+          if (value === undefined) { s.status = 'empty'; s.display = ''; s.value = undefined; s.items = []; s.focused = true; return; }
+          if (s.many && Array.isArray(value)) {
+            s.items = value.map(function (v) { var o = s.options.find(function (x) { return x.value === v; }); return { value: v, display: o ? o.label : String(v) }; });
+            s.status = 'filled'; s.value = value; s.display = s.items.map(function (i) { return i.display; }).join(', ');
+            s.source = 'tapped'; s.provisional = false; s.focused = false; return;
+          }
+          var pick = (s.options || []).concat(s.candidates || []).find(function (o) { return JSON.stringify(o.value) === JSON.stringify(value); });
+          s.status = 'filled'; s.value = value; s.display = pick ? (pick.label || pick.display) : s.display; s.source = 'tapped'; s.provisional = false; s.focused = false;
+        });
+        var next = current.slots.find(function (s) { return s.status !== 'filled'; });
+        if (next) next.focused = true;
+        draw();
+      },
+      assent: function () { current.status = 'settled'; current.canUndo = true; draw(); },
+      discard: function () { current = JSON.parse(JSON.stringify(initial)); draw(); },
+      undo: function () { current = JSON.parse(JSON.stringify(initial)); draw(); },
+      freeze: function () {}, resume: function () {},
+    });
+    draw();
+    return { set: function (v) { initial = v; current = JSON.parse(JSON.stringify(v)); draw(); } };
+  }
 
-function paintBudget() {
-  const lines = [
-    `words end -> card      budget ${A.BUDGET_MS.show}ms`,
-    `card -> writes landed  budget ${A.BUDGET_MS.commit}ms`,
-    `undo -> gone           budget ${A.BUDGET_MS.undo}ms`,
-    '',
-    monitor.ok ? 'this run: within budget' : 'this run:\n' + monitor.report(),
+  // ------------------------------------------------------------ kinds
+  var PEOPLE = [{ value: 'maya', label: 'Maya Lee' }, { value: 'sam', label: 'Sam' }, { value: 'sylla', label: 'Sylla Mugabo' }, { value: 'vincent', label: 'Vincent' }];
+  var KINDS = [
+    { primitive: 'face', title: 'Face', what: 'Someone. A person is a face, not a word.', name: 'with', preview: 'Dinner with …',
+      options: PEOPLE, filled: { display: 'Maya Lee', value: 'maya' },
+      two: [{ value: 'sam', display: 'Sam' }, { value: 'sylla', display: 'Sylla Mugabo' }] },
+    { primitive: 'chip', title: 'Chip', what: 'One of a few. The plain choice.', name: 'chore', preview: 'Assign a chore',
+      options: [{ value: 'dishes', label: 'Dishes' }, { value: 'laundry', label: 'Laundry' }, { value: 'trash', label: 'Trash' }],
+      filled: { display: 'Dishes', value: 'dishes' }, two: [{ value: 'dishes', display: 'Dishes' }, { value: 'laundry', display: 'Laundry' }] },
+    { primitive: 'when', title: 'When', what: 'A day and a time you can see at a glance.', name: 'at', preview: 'Call the bank',
+      options: [{ value: { at: day(0, 17), label: 'Today 5:00', granularity: 'minute' }, label: 'Today 5:00' }, { value: { at: day(1, 9), label: 'Tomorrow 9:00', granularity: 'minute' }, label: 'Tomorrow 9:00' }],
+      filled: { display: 'Wednesday at 7', value: { at: day(until(3), 19), label: 'Wednesday at 7', granularity: 'minute' } },
+      two: [{ value: { at: day(1, 8), label: '8:00', granularity: 'minute' }, display: 'Tomorrow 8:00' }, { value: { at: day(1, 9), label: '9:00', granularity: 'minute' }, display: 'Tomorrow 9:00' }] },
+    { primitive: 'quantity', title: 'Quantity', what: 'An amount. The number is the point.', name: 'budget', preview: 'Set the grocery budget',
+      options: [{ value: 400, label: '$400' }, { value: 450, label: '$450' }, { value: 500, label: '$500' }],
+      filled: { display: '$420', value: 420 }, two: [{ value: 1.5, display: '$1.50' }, { value: 1500, display: '$1,500' }] },
+    { primitive: 'ghostField', title: 'Ghost field', what: 'Your own words, kept as you said them.', name: 'note', preview: 'Book the restaurant',
+      options: [], filled: { display: 'ask for the patio', value: 'ask for the patio' }, guess: true },
+    { primitive: 'objectCard', title: 'Object', what: 'A thing from your world: a file, a place, an order.', name: 'place', preview: 'Share the address',
+      options: [{ value: 'olive', label: 'Olive & Gourmando' }, { value: 'dispatch', label: 'Dispatch Coffee' }],
+      filled: { display: 'Olive & Gourmando, 351 Saint-Paul O', value: 'olive' } },
+    { primitive: 'peek', title: 'Peek', what: 'A glimpse of more: a list, a result, a draft.', name: 'draft', preview: 'Reply to Vincent',
+      options: [], filled: { display: 'Sounds good, Thursday works. I’ll bring the deck and the numbers from last quarter so we can go through them together before the call with the bank.', value: 'draft' } },
+    { primitive: 'objectCard', tag: 'compare', title: 'Compare', what: 'Two or three options side by side. Only what differs is shown.', name: 'flight', preview: 'Book the Toronto flight',
+      options: [
+        { value: 'ac', label: 'Air Canada 7:05', facts: { price: '$312', time: '1h 25m', arrives: '8:30', bags: '1 free' } },
+        { value: 'po', label: 'Porter 8:40', facts: { price: '$268', time: '1h 30m', arrives: '10:10', bags: '1 free' } },
+        { value: 'ws', label: 'WestJet 11:15', facts: { price: '$241', time: '1h 35m', arrives: '12:50', bags: '1 free' } },
+      ],
+      filled: { display: 'Porter 8:40', value: 'po' },
+      two: [{ value: 'po', display: 'Porter 8:40' }, { value: 'ac', display: 'Air Canada 7:05' }] },
+    { primitive: 'chip', tag: 'list', many: true, title: 'List', what: 'Several things said in one go. Each one can go on its own.', name: 'items', label: 'Groceries', preview: 'Add to the grocery list',
+      options: [{ value: 'milk', label: 'Oat milk' }, { value: 'eggs', label: 'Eggs' }, { value: 'coffee', label: 'Coffee' }, { value: 'bread', label: 'Sourdough' }, { value: 'bananas', label: 'Bananas' }, { value: 'rice', label: 'Rice' }],
+      filled: { value: ['milk', 'eggs', 'coffee'] } },
+    { primitive: 'face', tag: 'list · face', many: true, title: 'People', what: 'More than one person. Each is a face, and each can be taken out.', name: 'with', label: 'With', preview: 'Dinner Friday',
+      options: PEOPLE, filled: { value: ['maya', 'sam'] } },
   ];
-  $('budget').textContent = lines.join('\n');
-}
+  KINDS.forEach(function (k) {
+    var tile = el('div', 'tile');
+    var head = el('header'); head.appendChild(el('h3', '', k.title)); head.appendChild(el('span', 'eyebrow', k.tag || k.primitive));
+    tile.appendChild(head); tile.appendChild(el('p', 'what', k.what));
+    var host = el('div', 'host'); var tabs = el('div', 'tabs');
+    var states = [['ask', 'Asking']];
+    if (k.two) states.push(['two', 'Two readings']);
+    if (k.guess) states.push(['guess', 'A guess']);
+    states.push(['filled', 'Answered']);
+    function v(state) {
+      var s = slot({ name: k.name, primitive: k.primitive, options: k.options, many: !!k.many, label: k.label || k.name });
+      if (state === 'ask') s.focused = true;
+      if (state === 'two') { s.status = 'narrowed'; s.candidates = k.two.map(function (c) { return Object.assign({ score: 0.5 }, c); }); }
+      if (state === 'filled' || state === 'guess') { s.status = 'filled'; s.display = k.filled.display; s.value = k.filled.value; s.source = state === 'guess' ? 'model' : 'spoken'; s.provisional = state === 'guess'; }
+      if (k.many && s.status === 'filled') {
+        s.items = k.filled.value.map(function (v) { return { value: v, display: k.options.find(function (o) { return o.value === v; }).label }; });
+        s.display = s.items.map(function (i) { return i.display; }).join(', ');
+      }
+      return view({ slots: [s], preview: k.preview, status: state === 'filled' ? 'hold' : 'resolving', holdRemainingMs: 2200, holdTotalMs: 3000 });
+    }
+    var st = stage(host, v('ask'));
+    states.forEach(function (x, i) {
+      var b = el('button', '', x[1]); b.type = 'button'; b.setAttribute('aria-pressed', String(i === 0));
+      b.onclick = function () { tabs.querySelectorAll('button').forEach(function (y) { y.setAttribute('aria-pressed', String(y === b)); }); st.set(v(x[0])); };
+      tabs.appendChild(b);
+    });
+    tile.append(tabs, host); $('kinds').appendChild(tile);
+  });
 
-// --------------------------------------------------------------- controls
+  // ------------------------------------------------------------ place and route
+  (function () {
+    var HOME = { lat: 45.5226, lon: -73.5794 }; // Plateau
+    var OLIVE = { label: 'Olive & Gourmando', address: '351 Saint-Paul O', lat: 45.5009, lon: -73.5571 };
+    var WAYS = K.routeOptions(K.estimateLegs(HOME, OLIVE));
+    var opts = { detailFor: function (name, v) { return K.isPlace(v) ? K.placeLine(v, HOME) : null; } };
+    var tile = el('div', 'tile');
+    var head = el('header'); head.appendChild(el('h3', '', 'Place and route')); head.appendChild(el('span', 'eyebrow', 'objectCard · compare'));
+    tile.append(head, el('p', 'what', 'Where it is, how far from you, and the sensible ways there side by side. No map service is connected, so times are estimates and say so.'));
+    var host = el('div', 'host'), tabs = el('div', 'tabs');
+    function v(state) {
+      var place = slot({ name: 'place', label: 'Where', primitive: 'objectCard', status: 'filled', display: OLIVE.label, value: OLIVE, source: 'spoken' });
+      var who = slot({ name: 'with', label: 'With', primitive: 'face', status: 'filled', display: 'Maya Lee', value: 'maya', source: 'spoken' });
+      var by = slot({ name: 'by', label: 'Getting there', primitive: 'chip', options: WAYS, focused: state === 'ask' });
+      if (state === 'filled') { by.status = 'filled'; by.value = 'bike'; var b = WAYS.find(function (w) { return w.value === 'bike'; }) || WAYS[0]; by.value = b.value; by.display = b.label + ' · ' + b.facts.time; by.source = 'touched'; }
+      return view({ slots: [place, who, by], preview: 'Meet Maya at Olive & Gourmando', status: state === 'filled' ? 'hold' : 'resolving', holdRemainingMs: 2200, holdTotalMs: 3000 });
+    }
+    var st = stage(host, v('ask'), 'meet Maya at Olive and Gourmando', opts);
+    [['ask', 'Which way'], ['filled', 'Answered']].forEach(function (x, i) {
+      var b = el('button', '', x[1]); b.type = 'button'; b.setAttribute('aria-pressed', String(i === 0));
+      b.onclick = function () { tabs.querySelectorAll('button').forEach(function (y) { y.setAttribute('aria-pressed', String(y === b)); }); st.set(v(x[0])); };
+      tabs.appendChild(b);
+    });
+    tile.append(tabs, host); $('kinds').appendChild(tile);
+  })();
 
-const SCENES = [
-  'dishes for Maya tomorrow',
-  'add milk and jam',
-  'book the dentist at 9:30am',
-  'pay Sam twelve dollars',
-  'how do I ask for a photo',
-];
-$('scenes').replaceChildren(...SCENES.map((t) => {
-  const b = document.createElement('button');
-  b.className = 'b'; b.textContent = t;
-  b.onclick = () => { $('say').value = t; startFrom(t); };
-  return b;
-}));
-
-$('domains').replaceChildren(...Object.keys(D).map((k) => {
-  const b = document.createElement('button');
-  b.className = 'b';
-  b.textContent = A.DOMAINS[k].kicker;
-  b.style.color = A.domainColour(k);
-  b.onclick = () => {
-    const seed = { chores: 'laundry for Noah', groceries: 'add bread and eggs',
-      calendar: 'book school at 8am', allowance: 'pay Maya five dollars',
-      teaching: 'how do I set iPad limits' }[k];
-    $('say').value = seed; startFrom(seed);
+  // ------------------------------------------------------------ beats
+  var full = function () {
+    return [
+      slot({ name: 'with', primitive: 'face', status: 'filled', display: 'Maya Lee', value: 'maya', source: 'spoken' }),
+      slot({ name: 'at', primitive: 'when', status: 'filled', display: 'Wednesday at 7', value: KINDS[2].filled.value, source: 'spoken' }),
+      slot({ name: 'budget', primitive: 'quantity', status: 'filled', display: '$80', value: 80, source: 'spoken' }),
+    ];
   };
-  return b;
-}));
+  var BEATS = [
+    { title: 'Show', what: 'The first reading, the moment the sentence makes sense.', v: function () { var s = full(); s[1] = slot({ name: 'at', primitive: 'when', focused: true }); s[2] = slot({ name: 'budget', primitive: 'quantity' }); return view({ slots: s, preview: 'Dinner with Maya' }); } },
+    { title: 'Hold', what: 'Everything is filled. Silence lets it happen; the bar is the silence running out.', live: true, v: function () { return view({ slots: full(), preview: 'Dinner with Maya · Wednesday 7:00 · $80', status: 'hold', holdRemainingMs: 3000, holdTotalMs: 3000 }); } },
+    { title: 'Needs a yes', what: 'It reaches someone else or cannot be taken back, so silence is not enough.', v: function () { return view({ slots: full(), preview: 'Book a table for 2 at Olive & Gourmando', status: 'explicit', radius: 'external' }); } },
+    { title: 'Settled', what: 'One mark for the whole card, and an undo while it still can.', v: function () { return view({ slots: full(), preview: 'Dinner with Maya · Wednesday 7:00 · $80', status: 'settled', canUndo: true }); } },
+    { title: 'A change', what: 'Changing something that already exists shows what it was, crossed out, beside what it will be.',
+      v: function () { var at = KINDS[2].filled.value; return view({ slots: [
+        slot({ name: 'plan', label: 'Plan', primitive: 'objectCard', status: 'filled', display: 'Maya · Olive & Gourmando', value: 'p1', source: 'remembered' }),
+        slot({ name: 'at', label: 'When', primitive: 'when', status: 'filled', display: 'Wed 8pm', was: 'Wednesday 7pm', value: { at: at.at + 3600000, label: 'Wed 8pm', granularity: 'minute' }, source: 'spoken' })],
+        preview: 'Move Maya at Olive & Gourmando to Wed 8pm', status: 'hold', holdRemainingMs: 2000, holdTotalMs: 3000 }); } },
+    { title: 'Exactly this', what: 'For anything that leaves the app, every argument is shown as it will be sent, and the yes is given to exactly that.',
+      v: function () { return view({ slots: [slot({ name: 'to', primitive: 'face', status: 'filled', display: 'Sam Okafor', value: 'sam', source: 'spoken' }), slot({ name: 'amount', primitive: 'quantity', status: 'filled', display: '$40', value: 40, source: 'spoken' })],
+        preview: 'Send Sam $40', status: 'explicit', radius: 'external',
+        exact: { what: 'Bank · Send money', rows: [{ label: 'To', value: 'Sam Okafor (sam.okafor@…)' }, { label: 'Amount', value: '40.00 CAD' }, { label: 'From', value: 'Chequing ••42' }, { label: 'Message', value: 'Dinner Friday' }], key: 'k-shown' } }); } },
+    { title: 'Changed since you saw it', what: 'The amount changed after the card was drawn. The tap is not a yes to the new amount; the card says so and asks again.',
+      v: function () { return view({ slots: [slot({ name: 'to', primitive: 'face', status: 'filled', display: 'Sam Okafor', value: 'sam', source: 'spoken' }), slot({ name: 'amount', primitive: 'quantity', status: 'filled', display: '$400', value: 400, source: 'model', provisional: false })],
+        preview: 'Send Sam $400', status: 'explicit', radius: 'external', refused: 'it changed since you saw it — look again',
+        exact: { what: 'Bank · Send money', rows: [{ label: 'To', value: 'Sam Okafor (sam.okafor@…)' }, { label: 'Amount', value: '400.00 CAD' }, { label: 'From', value: 'Chequing ••42' }], key: 'k-new' } }); } },
+    { title: 'Failed', what: 'Said plainly, never on the same turn as a success.', v: function () { return view({ slots: full(), preview: 'Dinner with Maya · Wednesday 7:00 · $80', status: 'failed' }); } },
+  ];
+  BEATS.forEach(function (b) {
+    var tile = el('div', 'tile');
+    var head = el('header'); head.appendChild(el('h3', '', b.title)); tile.appendChild(head); tile.appendChild(el('p', 'what', b.what));
+    var host = el('div', 'host'); tile.appendChild(host); $('beats').appendChild(tile);
+    var st = stage(host, b.v(), b.title === 'Show' ? 'dinner with Maya…' : '');
+    if (b.live) {
+      // The bar is redrawn as the hold runs down, then starts again. JavaScript time, not a CSS loop.
+      var left = 3000;
+      setInterval(function () { left -= 100; if (left < -800) left = 3000; var v = b.v(); v.holdRemainingMs = Math.max(0, left); if (left <= 0) { v.status = 'settled'; v.canUndo = true; } st.set(v); }, 100);
+    }
+  });
 
-let typing;
-$('say').addEventListener('input', (e) => {
-  clearTimeout(typing);
-  const t = e.target.value;
-  typing = setTimeout(() => t.trim() && startFrom(t), 260);
-});
+  // ------------------------------------------------------------ surfaces
+  var it = function (title, why, source, extra) { return Object.assign({ title: title, why: why, source: source, at: 0, words: 22 }, extra || {}); };
+  var MORNING = {
+    sections: [
+      { name: 'For you', items: [
+        it('Vincent sent the revised deck', 'from Vincent', 'person:vincent', { detail: 'He changed the revenue slide and wants your comments before Thursday’s call with the bank.', action: { label: 'Reply to Vincent', say: 'reply to Vincent' } }),
+        it('Rent is due Monday', 'it was marked urgent', 'app:bank', { detail: '$1,850 to Gestion Laurier, from your chequing account.' }),
+      ] },
+      { name: 'Around you', items: [
+        it('Rain from 3pm, 12°', 'near Plateau', 'weather', { detail: 'Clearing by 8. Tomorrow is dry and colder, high of 7.' }),
+      ] },
+      { name: 'What you follow', items: [
+        it('Bank of Canada holds its rate at 2.25%', 'you follow markets', 'world'),
+        it('Montréal approves the Peel Street bike lane', 'you follow the city', 'world', { detail: 'Work starts in April and closes two lanes for six weeks.' }),
+      ] },
+    ],
+    words: 110, minutes: 0.8, leftOut: 3,
+  };
+  (function () {
+    var tile = el('div', 'tile wide');
+    var head = el('header'); head.appendChild(el('h3', '', 'Briefing')); head.appendChild(el('span', 'eyebrow', 'morning'));
+    tile.append(head, el('p', 'what', 'The morning, one item at a time. Next, back, more on this, stop and continue — by voice or by tap. It keeps your place.'));
+    var host = el('div', 'host'), note = el('p', 'what said');
+    tile.append(host, note); $('surfaces').appendChild(tile);
+    var r, card;
+    function draw(line) { card.render(r.view()); note.textContent = line ? 'It says: “' + line + '”' : ''; }
+    function move(fn) { return function () { fn(); draw(r.line()); }; }
+    function start() {
+      r = new K.BriefingReader(MORNING, 'Cicentos');
+      var inner = document.createElement('div'); host.replaceChildren(inner);
+      card = new K.BriefingPresenter(inner, document);
+      card.mount({
+        next: move(function () { r.next(); }), back: move(function () { r.back(); }), more: move(function () { r.more(); }),
+        stop: move(function () { r.stop(); }), resume: move(function () { r.resume(); }),
+        act: function (s) { note.textContent = 'Handed to the conversation: “' + s + '”. Replying reaches Vincent, so it will wait for a yes.'; },
+        done: function () { host.replaceChildren(); var again = el('button', 'again', 'Start the briefing again'); again.type = 'button'; again.onclick = start; host.appendChild(again); note.textContent = ''; },
+      });
+      draw(r.line());
+    }
+    start();
+  })();
 
-// --------------------------------------------------------------- the audit
+  (function () {
+    var tile = el('div', 'tile wide');
+    var head = el('header'); head.appendChild(el('h3', '', 'Held for you')); head.appendChild(el('span', 'eyebrow', 'bundle'));
+    tile.append(head, el('p', 'what', 'What the Desk held back, one sender or story at a time. Open one, mark the bundle read, or leave it for later. Read is never deleted.'));
+    var host = el('div', 'host'), note = el('p', 'what said');
+    tile.append(host, note); $('surfaces').appendChild(tile);
+    var M = 60000, NOW = new Date(2026, 9, 16, 23, 40).getTime();
+    function sample() {
+      // 11:40 pm: quiet hours, so even urgent app notices wait.
+      var d = new K.Desk(undefined, function () { return 23; }), i = 0;
+      function add(p) { d.ingest(Object.assign({ id: 'k' + (++i), topics: ['x'], urgency: 0.9, at: NOW }, p)); }
+      add({ from: 'app:bank', title: 'Deposit received: $2,400', at: NOW - 95 * M, body: 'Payroll from Mytikas 73 into chequing.' });
+      add({ from: 'app:bank', title: 'Card used at Metro, $38.12', at: NOW - 62 * M });
+      add({ from: 'app:bank', title: 'Card used at SAQ, $27.40', at: NOW - 41 * M });
+      add({ from: 'app:bank', title: 'Low balance on chequing', at: NOW - 12 * M, body: 'Chequing is under $100 after tonight’s card payments.' });
+      add({ from: 'app:bank', title: 'Statement ready', at: NOW - 9 * M });
+      add({ from: 'person:maya', title: 'Still on for Friday? I found a place on Saint-Laurent', urgency: 0.3, at: NOW - 5 * M, body: 'Table for two at 7, or 8 if you’re coming from the office.' });
+      add({ from: 'app:weather', groupKey: 'storm', title: 'Wind warning overnight', at: NOW - 80 * M, body: 'Gusts to 70 km/h after midnight.' });
+      add({ from: 'app:news', groupKey: 'storm', title: 'Wind warning extended to 6 am', at: NOW - 30 * M });
+      return d;
+    }
+    var deck, card;
+    function draw() { card.render(deck.view()); }
+    function start() {
+      deck = new K.BundleDeck(sample(), function () { return NOW; });
+      var inner = document.createElement('div'); host.replaceChildren(inner); note.textContent = '';
+      card = new K.BundlePresenter(inner, document);
+      card.mount({
+        open: function (id) { deck.open(id); draw(); },
+        expand: function () { deck.expand(); draw(); },
+        read: function () { deck.markRead(); draw(); },
+        later: function () { deck.later(); draw(); },
+        act: function (s) { note.textContent = 'Handed to the conversation: “' + s + '”. A reply reaches Maya, so it will wait for a yes.'; },
+        done: function () { host.replaceChildren(); var again = el('button', 'again', 'Start again'); again.type = 'button'; again.onclick = start; host.appendChild(again); },
+      });
+      draw();
+    }
+    start();
+  })();
 
-const SPECS = {
-  'a good grocery act': {
-    name: 'add_items', domain: 'groceries', capability: 'list_add',
-    slots: { item: { primitive: 'chip', required: true, order: 1,
-      options: [{ value: 'milk', label: 'Milk' }] } },
-  },
-  'a face on a grocery': {
-    name: 'add_items', domain: 'groceries', capability: 'list_add',
-    slots: {
-      item: { primitive: 'chip', required: true, order: 1, options: [{ value: 'milk', label: 'Milk' }] },
-      who: { primitive: 'face', required: true, order: 2,
-        options: [{ value: 'maya', label: 'Maya' }] },
-    },
-  },
-  'an allowance that settles on silence': {
-    name: 'quick_payout', domain: 'allowance', capability: 'list_add',
-    slots: { amount: { primitive: 'quantity', required: true, order: 1 } },
-  },
-  'a domain nobody owns': {
-    name: 'do_a_vibe', domain: 'vibes', capability: 'list_add',
-    slots: { what: { primitive: 'chip', required: true, order: 1,
-      options: [{ value: 'x', label: 'X' }] } },
-  },
-};
-
-const composer = new A.Composer();
-composer.register({
-  name: 'list_add', describe: 'add rows to a list the actor owns',
-  radius: 'self', run: () => ({ id: 'x' }), undo: () => {},
-});
-
-function audit() {
-  let spec;
-  try { spec = JSON.parse($('spec').value); }
-  catch (e) { return say([{ level: 'error', act: 'spec', message: 'not JSON: ' + e.message }]); }
-
-  let def;
-  try { def = composer.compose(spec); }
-  catch (e) { return say([{ level: 'error', act: spec.name || '?', message: e.message }]); }
-
-  // The composer strips anything it does not know about, so the domain tag is
-  // reattached here. That is the right way round: a model picks a capability,
-  // and the host says which part of its app the act belongs to.
-  def.domain = spec.domain;
-  say([...A.lintDomains([def]), ...A.lintActs([def])]);
-}
-
-function say(lints) {
-  const el = $('lint');
-  if (!lints.length) {
-    el.innerHTML = '';
-    const ok = document.createElement('span');
-    ok.className = 'ok'; ok.textContent = 'clean — the colour is earned by meaning';
-    el.replaceChildren(ok);
-    return;
+  // ------------------------------------------------------------ live replay
+  var SCRIPTS = [
+    { text: 'Dinner with Maya on Wednesday at 7, about 80 dollars, and ask for the patio', radius: 'external',
+      steps: [
+        { at: 2, preview: 'Dinner with Maya', fill: ['with', 'Maya Lee', 'maya', 'face'] },
+        { at: 5, narrow: ['at', 'when', [{ value: { at: day(until(3), 7), granularity: 'minute' }, display: 'Wednesday 7:00 am' }, { value: { at: day(until(3), 19), granularity: 'minute' }, display: 'Wednesday 7:00 pm' }]] },
+        { at: 6, preview: 'Dinner with Maya · Wednesday 7 pm', fill: ['at', 'Wednesday 7:00 pm', { at: day(until(3), 19), granularity: 'minute' }, 'when'] },
+        { at: 9, preview: 'Dinner with Maya · Wednesday 7 pm · $80', fill: ['budget', '$80', 80, 'quantity'] },
+        { at: 14, fill: ['note', 'ask for the patio', 'ask for the patio', 'ghostField'] },
+      ],
+      slots: [['with', 'face'], ['at', 'when'], ['budget', 'quantity'], ['note', 'ghostField']],
+      end: 'Booking reaches the restaurant, so it waits for your yes.' },
+    { text: 'Add milk, eggs and coffee to the groceries', radius: 'self',
+      steps: [
+        { at: 1, preview: 'Add to groceries', fill: ['item', 'Milk', 'milk', 'chip'] },
+        { at: 2, fill: ['also', 'Eggs', 'eggs', 'chip'] },
+        { at: 4, preview: 'Milk, eggs and coffee on the list', fill: ['and', 'Coffee', 'coffee', 'chip'] },
+      ],
+      slots: [['item', 'chip'], ['also', 'chip'], ['and', 'chip']],
+      end: 'Only your list, and undoable: silence is enough.' },
+    { text: 'Remind me to call Sylla tomorrow morning', radius: 'self',
+      steps: [
+        { at: 4, preview: 'Remind you to call Sylla', fill: ['who', 'Sylla Mugabo', 'sylla', 'face'] },
+        { at: 6, narrow: ['when', 'when', [{ value: { at: day(1, 8), granularity: 'minute' }, display: 'Tomorrow 8:00' }, { value: { at: day(1, 9), granularity: 'minute' }, display: 'Tomorrow 9:00' }]] },
+      ],
+      slots: [['who', 'face'], ['when', 'when']],
+      end: '“Morning” has two readings. Tap one, or say it.' },
+  ];
+  var live = null, which = 0, timer = null;
+  function play() {
+    clearInterval(timer);
+    var sc = SCRIPTS[which]; var words = sc.text.split(' '); var i = 0; var said = '';
+    var v = view({ preview: '…', radius: sc.radius, slots: sc.slots.map(function (x, j) { return slot({ name: x[0], primitive: x[1], focused: j === 0 }); }) });
+    var hold = 0;
+    if (!live) live = stage($('live'), v, ''); else live.set(v);
+    $('replay-note').textContent = '';
+    function render() {
+      var s = $('said'); s.replaceChildren();
+      s.appendChild(el('span', 'heard', words.slice(0, i).join(' ')));
+      s.appendChild(el('span', 'coming', (i ? ' ' : '') + words.slice(i).join(' ')));
+    }
+    render();
+    timer = setInterval(function () {
+      if (i < words.length) {
+        i++; render();
+        sc.steps.forEach(function (st) {
+          if (st.at !== i) return;
+          if (st.preview) v.preview = st.preview;
+          if (st.fill) v.slots.forEach(function (s) { if (s.name === st.fill[0]) { s.status = 'filled'; s.display = st.fill[1]; s.value = st.fill[2]; s.source = 'spoken'; s.focused = false; s.candidates = []; } });
+          if (st.narrow) v.slots.forEach(function (s) { if (s.name === st.narrow[0]) { s.status = 'narrowed'; s.candidates = st.narrow[2].map(function (c) { return Object.assign({ score: .5 }, c); }); } });
+          var next = v.slots.find(function (s) { return s.status === 'empty'; }); v.slots.forEach(function (s) { s.focused = s === next; });
+        });
+        live.set(JSON.parse(JSON.stringify(v)));
+        return;
+      }
+      // The sentence is over.
+      var open = v.slots.some(function (s) { return s.status !== 'filled'; });
+      if (open) { $('replay-note').textContent = sc.end; clearInterval(timer); return; }
+      if (sc.radius === 'external') { v.status = 'explicit'; live.set(v); $('replay-note').textContent = sc.end; clearInterval(timer); return; }
+      hold += 200; v.status = hold >= 3000 ? 'settled' : 'hold'; v.holdTotalMs = 3000; v.holdRemainingMs = Math.max(0, 3000 - hold); v.canUndo = v.status === 'settled';
+      live.set(JSON.parse(JSON.stringify(v)));
+      if (v.status === 'settled') { $('replay-note').textContent = sc.end; clearInterval(timer); }
+    }, 220);
   }
-  el.replaceChildren(...lints
-    .sort((a, b) => ({ error: 0, warn: 1, note: 2 })[a.level] - ({ error: 0, warn: 1, note: 2 })[b.level])
-    .map((l) => {
-      const s = document.createElement('span');
-      s.className = l.level;
-      s.textContent = `${l.level.padEnd(5)} ${l.act}: ${l.message}\n`;
-      return s;
-    }));
-}
-
-$('breaks').replaceChildren(...Object.keys(SPECS).map((k) => {
-  const b = document.createElement('button');
-  b.className = 'b'; b.textContent = k;
-  b.onclick = () => { $('spec').value = JSON.stringify(SPECS[k], null, 2); audit(); };
-  return b;
-}));
-$('spec').addEventListener('input', () => { clearTimeout(typing); typing = setTimeout(audit, 300); });
-
-// -------------------------------------------------------------- swatches
-
-$('swatches').replaceChildren(...Object.keys(A.DOMAINS).map((k) => {
-  const d = A.DOMAINS[k];
-  const el = document.createElement('div');
-  el.className = 'sw';
-  const i = document.createElement('i'); i.style.background = A.domainColour(k);
-  const b = document.createElement('b'); b.textContent = d.kicker;
-  const s = document.createElement('span'); s.textContent = A.domainColour(k);
-  const p = document.createElement('div');
-  p.style.cssText = 'font-size:11.5px;color:#9aa6bb;margin-top:6px;line-height:1.5';
-  p.textContent = d.shape;
-  el.append(i, b, s, p);
-  return el;
-}));
-
-// --------------------------------------------------------------------- go
-
-mountStage();
-$('spec').value = JSON.stringify(SPECS['a face on a grocery'], null, 2);
-audit();
-$('say').value = SCENES[0];
-startFrom(SCENES[0]);
+  $('play').onclick = play;
+  $('next').onclick = function () { which = (which + 1) % SCRIPTS.length; play(); };
+  play();
 })();
-
 </script>

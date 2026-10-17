@@ -916,10 +916,10 @@ var require_codegen = __commonJS({
         return this._leafNode(new Throw(error2));
       }
       // start self-balancing block
-      block(body2, nodeCount) {
+      block(body, nodeCount) {
         this._blockStarts.push(this._nodes.length);
-        if (body2)
-          this.code(body2).endBlock(nodeCount);
+        if (body)
+          this.code(body).endBlock(nodeCount);
         return this;
       }
       // end the current self-balancing block
@@ -2344,15 +2344,15 @@ var require_validate = __commonJS({
       validateFunction(it, () => (0, boolSchema_1.topBoolOrEmptySchema)(it));
     }
     exports.validateFunctionCode = validateFunctionCode;
-    function validateFunction({ gen, validateName, schema, schemaEnv, opts }, body2) {
+    function validateFunction({ gen, validateName, schema, schemaEnv, opts }, body) {
       if (opts.code.es5) {
         gen.func(validateName, (0, codegen_1._)`${names_1.default.data}, ${names_1.default.valCxt}`, schemaEnv.$async, () => {
           gen.code((0, codegen_1._)`"use strict"; ${funcSourceUrl(schema, opts)}`);
           destructureValCxtES5(gen, opts);
-          gen.code(body2);
+          gen.code(body);
         });
       } else {
-        gen.func(validateName, (0, codegen_1._)`${names_1.default.data}, ${destructureValCxt(opts)}`, schemaEnv.$async, () => gen.code(funcSourceUrl(schema, opts)).code(body2));
+        gen.func(validateName, (0, codegen_1._)`${names_1.default.data}, ${destructureValCxt(opts)}`, schemaEnv.$async, () => gen.code(funcSourceUrl(schema, opts)).code(body));
       }
     }
     function destructureValCxt(opts) {
@@ -2869,20 +2869,20 @@ var require_compile = __commonJS({
     var util_1 = require_util();
     var validate_1 = require_validate();
     var SchemaEnv = class {
-      constructor(env) {
+      constructor(env2) {
         var _a3;
         this.refs = {};
         this.dynamicAnchors = {};
         let schema;
-        if (typeof env.schema == "object")
-          schema = env.schema;
-        this.schema = env.schema;
-        this.schemaId = env.schemaId;
-        this.root = env.root || this;
-        this.baseId = (_a3 = env.baseId) !== null && _a3 !== void 0 ? _a3 : (0, resolve_1.normalizeId)(schema === null || schema === void 0 ? void 0 : schema[env.schemaId || "$id"]);
-        this.schemaPath = env.schemaPath;
-        this.localRefs = env.localRefs;
-        this.meta = env.meta;
+        if (typeof env2.schema == "object")
+          schema = env2.schema;
+        this.schema = env2.schema;
+        this.schemaId = env2.schemaId;
+        this.root = env2.root || this;
+        this.baseId = (_a3 = env2.baseId) !== null && _a3 !== void 0 ? _a3 : (0, resolve_1.normalizeId)(schema === null || schema === void 0 ? void 0 : schema[env2.schemaId || "$id"]);
+        this.schemaPath = env2.schemaPath;
+        this.localRefs = env2.localRefs;
+        this.meta = env2.meta;
         this.$async = schema === null || schema === void 0 ? void 0 : schema.$async;
         this.refs = {};
       }
@@ -3066,15 +3066,15 @@ var require_compile = __commonJS({
           baseId = (0, resolve_1.resolveUrl)(this.opts.uriResolver, baseId, schId);
         }
       }
-      let env;
+      let env2;
       if (typeof schema != "boolean" && schema.$ref && !(0, util_1.schemaHasRulesButRef)(schema, this.RULES)) {
         const $ref = (0, resolve_1.resolveUrl)(this.opts.uriResolver, baseId, schema.$ref);
-        env = resolveSchema.call(this, root, $ref);
+        env2 = resolveSchema.call(this, root, $ref);
       }
       const { schemaId } = this.opts;
-      env = env || new SchemaEnv({ schema, schemaId, root, baseId });
-      if (env.schema !== env.root.schema)
-        return env;
+      env2 = env2 || new SchemaEnv({ schema, schemaId, root, baseId });
+      if (env2.schema !== env2.root.schema)
+        return env2;
       return void 0;
     }
   }
@@ -3336,8 +3336,8 @@ var require_utils = __commonJS({
     var HOST_DELIMS = { "@": "%40", "/": "%2F", "?": "%3F", "#": "%23", ":": "%3A" };
     var HOST_DELIM_RE = /[@/?#:]/g;
     var HOST_DELIM_NO_COLON_RE = /[@/?#]/g;
-    function reescapeHostDelimiters(host, isIP) {
-      const re = isIP ? HOST_DELIM_NO_COLON_RE : HOST_DELIM_RE;
+    function reescapeHostDelimiters(host, isIP2) {
+      const re = isIP2 ? HOST_DELIM_NO_COLON_RE : HOST_DELIM_RE;
       re.lastIndex = 0;
       return host.replace(re, (ch) => HOST_DELIMS[ch]);
     }
@@ -4026,8 +4026,8 @@ var require_fast_uri = __commonJS({
       const host = matches[4];
       return hasMalformedPercentEncoding(matches[3]) || host !== void 0 && !isIPLiteral(host) && hasMalformedPercentEncoding(host) || hasMalformedPercentEncoding(matches[6]) || hasMalformedPercentEncoding(matches[7]) || hasMalformedPercentEncoding(matches[8]);
     }
-    function canonicalizeHost(parsed, options, schemeHandler, isIP) {
-      if (!options.unicodeSupport && (!schemeHandler || !schemeHandler.unicodeSupport) && parsed.host && !isIPLiteral(parsed.host) && (options.domainHost || schemeHandler && schemeHandler.domainHost) && isIP === false && nonSimpleDomain(parsed.host)) {
+    function canonicalizeHost(parsed, options, schemeHandler, isIP2) {
+      if (!options.unicodeSupport && (!schemeHandler || !schemeHandler.unicodeSupport) && parsed.host && !isIPLiteral(parsed.host) && (options.domainHost || schemeHandler && schemeHandler.domainHost) && isIP2 === false && nonSimpleDomain(parsed.host)) {
         try {
           parsed.host = new URL("http://" + parsed.host).hostname;
         } catch (e) {
@@ -4054,7 +4054,7 @@ var require_fast_uri = __commonJS({
       let malformedHost = false;
       let malformedIPLiteral = false;
       let malformedScheme = false;
-      let isIP = false;
+      let isIP2 = false;
       if (options.reference === "suffix") {
         if (options.scheme) {
           uri = options.scheme + ":" + uri;
@@ -4117,15 +4117,15 @@ var require_fast_uri = __commonJS({
             const bracketedIPLiteral = isIPLiteral(parsed.host);
             const hasIPLiteralBracket = parsed.host.indexOf("[") !== -1 || parsed.host.indexOf("]") !== -1;
             const ipv6result = normalizeIPv6(parsed.host);
-            isIP = ipv6result.isIPV6 || ipv6result.isIPVFuture === true;
+            isIP2 = ipv6result.isIPV6 || ipv6result.isIPVFuture === true;
             malformedIPLiteral = hasIPLiteralBracket && (!bracketedIPLiteral || ipv6result.error === true);
-            parsed.host = isIP ? ipv6result.host : ipv6result.host.toLowerCase();
+            parsed.host = isIP2 ? ipv6result.host : ipv6result.host.toLowerCase();
             if (malformedIPLiteral) {
               parsed.error = parsed.error || "URI host is malformed.";
               malformedAuthorityOrPort = true;
             }
           } else {
-            isIP = true;
+            isIP2 = true;
           }
         }
         if (parsed.scheme === void 0 && parsed.userinfo === void 0 && parsed.host === void 0 && parsed.port === void 0 && parsed.query === void 0 && !parsed.path) {
@@ -4142,14 +4142,14 @@ var require_fast_uri = __commonJS({
         }
         const schemeHandler = getSchemeHandler(options.scheme || parsed.scheme);
         if (!malformedIPLiteral) {
-          malformedHost = canonicalizeHost(parsed, options, schemeHandler, isIP);
+          malformedHost = canonicalizeHost(parsed, options, schemeHandler, isIP2);
         }
         if (uri.indexOf("%") !== -1 && parsed.host !== void 0 && !malformedIPLiteral) {
-          let host = isIP ? parsed.host : normalizePercentEncoding(parsed.host, true);
-          if (!isIP) {
+          let host = isIP2 ? parsed.host : normalizePercentEncoding(parsed.host, true);
+          if (!isIP2) {
             host = normalizePercentEncoding(host.toLowerCase());
           }
-          parsed.host = reescapeHostDelimiters(host, isIP);
+          parsed.host = reescapeHostDelimiters(host, isIP2);
         }
         if (!schemeHandler || schemeHandler && !schemeHandler.skipNormalize) {
           if (parsed.path) {
@@ -4872,8 +4872,8 @@ var require_ref = __commonJS({
       schemaType: "string",
       code(cxt) {
         const { gen, schema: $ref, it } = cxt;
-        const { baseId, schemaEnv: env, validateName, opts, self } = it;
-        const { root } = env;
+        const { baseId, schemaEnv: env2, validateName, opts, self } = it;
+        const { root } = env2;
         if (($ref === "#" || $ref === "#/") && baseId === root.baseId)
           return callRootRef();
         const schOrEnv = compile_1.resolveRef.call(self, root, baseId, $ref);
@@ -4883,8 +4883,8 @@ var require_ref = __commonJS({
           return callValidate(schOrEnv);
         return inlineRefSchema(schOrEnv);
         function callRootRef() {
-          if (env === root)
-            return callRef(cxt, validateName, env, env.$async);
+          if (env2 === root)
+            return callRef(cxt, validateName, env2, env2.$async);
           const rootName = gen.scopeValue("root", { ref: root });
           return callRef(cxt, (0, codegen_1._)`${rootName}.validate`, root, root.$async);
         }
@@ -4914,14 +4914,14 @@ var require_ref = __commonJS({
     exports.getValidate = getValidate;
     function callRef(cxt, v, sch, $async) {
       const { gen, it } = cxt;
-      const { allErrors, schemaEnv: env, opts } = it;
+      const { allErrors, schemaEnv: env2, opts } = it;
       const passCxt = opts.passContext ? names_1.default.this : codegen_1.nil;
       if ($async)
         callAsyncRef();
       else
         callSyncRef();
       function callAsyncRef() {
-        if (!env.$async)
+        if (!env2.$async)
           throw new Error("async schema referenced by sync schema");
         const valid = gen.let("valid");
         gen.try(() => {
@@ -7234,12 +7234,12 @@ var require_content_type = __commonJS({
       if (!string4) {
         throw new TypeError("argument string is required");
       }
-      var header = typeof string4 === "object" ? getcontenttype(string4) : string4;
-      if (typeof header !== "string") {
+      var header2 = typeof string4 === "object" ? getcontenttype(string4) : string4;
+      if (typeof header2 !== "string") {
         throw new TypeError("argument string is required to be a string");
       }
-      var index = header.indexOf(";");
-      var type = index !== -1 ? header.slice(0, index).trim() : header.trim();
+      var index = header2.indexOf(";");
+      var type = index !== -1 ? header2.slice(0, index).trim() : header2.trim();
       if (!TYPE_REGEXP.test(type)) {
         throw new TypeError("invalid media type");
       }
@@ -7249,7 +7249,7 @@ var require_content_type = __commonJS({
         var match;
         var value;
         PARAM_REGEXP.lastIndex = index;
-        while (match = PARAM_REGEXP.exec(header)) {
+        while (match = PARAM_REGEXP.exec(header2)) {
           if (match.index !== index) {
             throw new TypeError("invalid parameter format");
           }
@@ -7264,23 +7264,23 @@ var require_content_type = __commonJS({
           }
           obj.parameters[key] = value;
         }
-        if (index !== header.length) {
+        if (index !== header2.length) {
           throw new TypeError("invalid parameter format");
         }
       }
       return obj;
     }
     function getcontenttype(obj) {
-      var header;
+      var header2;
       if (typeof obj.getHeader === "function") {
-        header = obj.getHeader("content-type");
+        header2 = obj.getHeader("content-type");
       } else if (typeof obj.headers === "object") {
-        header = obj.headers && obj.headers["content-type"];
+        header2 = obj.headers && obj.headers["content-type"];
       }
-      if (typeof header !== "string") {
+      if (typeof header2 !== "string") {
         throw new TypeError("content-type header is missing from object");
       }
-      return header;
+      return header2;
     }
     function qstring(val) {
       var str2 = String(val);
@@ -7301,10 +7301,14 @@ var require_content_type = __commonJS({
 
 // apps/tacit/server.ts
 import { createServer } from "node:http";
-import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+
+// apps/tacit/api.ts
+import { timingSafeEqual } from "node:crypto";
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
 
 // node_modules/zod/v4/core/util.js
 var util_exports = {};
@@ -7902,7 +7906,7 @@ function attachSchema(issues, start, inst) {
     (_a3 = issues[i]).schema ?? (_a3.schema = inst);
   }
 }
-function finalizeIssue(iss, ctx, config3) {
+function finalizeIssue(iss, ctx, config2) {
   var _a3;
   const traits = iss.inst?._zod?.traits;
   if (traits?.has("$ZodType")) {
@@ -7912,7 +7916,7 @@ function finalizeIssue(iss, ctx, config3) {
       iss.schema = iss.inst;
   }
   const schemaError = iss.schema !== iss.inst ? iss.schema?._zod.def?.error : void 0;
-  const message = iss.message ? iss.message : unwrapMessage(iss.inst?._zod.def?.error?.(iss)) ?? unwrapMessage(schemaError?.(iss)) ?? unwrapMessage(ctx?.error?.(iss)) ?? unwrapMessage(config3.customError?.(iss)) ?? unwrapMessage(config3.localeError?.(iss)) ?? "Invalid input";
+  const message = iss.message ? iss.message : unwrapMessage(iss.inst?._zod.def?.error?.(iss)) ?? unwrapMessage(schemaError?.(iss)) ?? unwrapMessage(ctx?.error?.(iss)) ?? unwrapMessage(config2.customError?.(iss)) ?? unwrapMessage(config2.localeError?.(iss)) ?? "Invalid input";
   const full = {};
   for (const k of Object.keys(iss)) {
     if (k === "inst" || k === "schema" || k === "continue" || k === "input" || k === "__proto__")
@@ -9422,10 +9426,10 @@ function isValidJWT(token, algorithm = null) {
     const tokensParts = token.split(".");
     if (tokensParts.length !== 3)
       return false;
-    const [header] = tokensParts;
-    if (!header)
+    const [header2] = tokensParts;
+    if (!header2)
       return false;
-    const parsedHeader = JSON.parse(atob(header));
+    const parsedHeader = JSON.parse(atob(header2));
     if ("typ" in parsedHeader && parsedHeader?.typ !== "JWT")
       return false;
     if (!parsedHeader.alg)
@@ -15474,8 +15478,8 @@ var UrlElicitationRequiredError = class extends McpError {
 };
 
 // node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js
-function isTerminal(status2) {
-  return status2 === "completed" || status2 === "failed" || status2 === "cancelled";
+function isTerminal(status) {
+  return status === "completed" || status === "failed" || status === "cancelled";
 }
 
 // node_modules/zod-to-json-schema/dist/esm/Options.js
@@ -16395,8 +16399,8 @@ var Protocol = class {
         }
         return task;
       },
-      storeTaskResult: async (taskId, status2, result) => {
-        await taskStore.storeTaskResult(taskId, status2, result, sessionId);
+      storeTaskResult: async (taskId, status, result) => {
+        await taskStore.storeTaskResult(taskId, status, result, sessionId);
         const task = await taskStore.getTask(taskId, sessionId);
         if (task) {
           const notification = TaskStatusNotificationSchema.parse({
@@ -16412,15 +16416,15 @@ var Protocol = class {
       getTaskResult: (taskId) => {
         return taskStore.getTaskResult(taskId, sessionId);
       },
-      updateTaskStatus: async (taskId, status2, statusMessage) => {
+      updateTaskStatus: async (taskId, status, statusMessage) => {
         const task = await taskStore.getTask(taskId, sessionId);
         if (!task) {
           throw new McpError(ErrorCode.InvalidParams, `Task "${taskId}" not found - it may have been cleaned up`);
         }
         if (isTerminal(task.status)) {
-          throw new McpError(ErrorCode.InvalidParams, `Cannot update task "${taskId}" from terminal status "${task.status}" to "${status2}". Terminal states (completed, failed, cancelled) cannot transition to other states.`);
+          throw new McpError(ErrorCode.InvalidParams, `Cannot update task "${taskId}" from terminal status "${task.status}" to "${status}". Terminal states (completed, failed, cancelled) cannot transition to other states.`);
         }
-        await taskStore.updateTaskStatus(taskId, status2, statusMessage, sessionId);
+        await taskStore.updateTaskStatus(taskId, status, statusMessage, sessionId);
         const updatedTask = await taskStore.getTask(taskId, sessionId);
         if (updatedTask) {
           const notification = TaskStatusNotificationSchema.parse({
@@ -16781,21 +16785,21 @@ var Client = class extends Protocol {
    * Handlers are silently skipped if the server doesn't advertise the corresponding listChanged capability.
    * @internal
    */
-  _setupListChangedHandlers(config3) {
-    if (config3.tools && this._serverCapabilities?.tools?.listChanged) {
-      this._setupListChangedHandler("tools", ToolListChangedNotificationSchema, config3.tools, async () => {
+  _setupListChangedHandlers(config2) {
+    if (config2.tools && this._serverCapabilities?.tools?.listChanged) {
+      this._setupListChangedHandler("tools", ToolListChangedNotificationSchema, config2.tools, async () => {
         const result = await this.listTools();
         return result.tools;
       });
     }
-    if (config3.prompts && this._serverCapabilities?.prompts?.listChanged) {
-      this._setupListChangedHandler("prompts", PromptListChangedNotificationSchema, config3.prompts, async () => {
+    if (config2.prompts && this._serverCapabilities?.prompts?.listChanged) {
+      this._setupListChangedHandler("prompts", PromptListChangedNotificationSchema, config2.prompts, async () => {
         const result = await this.listPrompts();
         return result.prompts;
       });
     }
-    if (config3.resources && this._serverCapabilities?.resources?.listChanged) {
-      this._setupListChangedHandler("resources", ResourceListChangedNotificationSchema, config3.resources, async () => {
+    if (config2.resources && this._serverCapabilities?.resources?.listChanged) {
+      this._setupListChangedHandler("resources", ResourceListChangedNotificationSchema, config2.resources, async () => {
         const result = await this.listResources();
         return result.resources;
       });
@@ -17229,15 +17233,15 @@ var Client = class extends Protocol {
 
 // node_modules/@modelcontextprotocol/sdk/dist/esm/shared/mediaType.js
 var import_content_type = __toESM(require_content_type(), 1);
-function mediaTypeEssence(header) {
-  if (!header) {
+function mediaTypeEssence(header2) {
+  if (!header2) {
     return void 0;
   }
   try {
-    return import_content_type.default.parse(header).type;
+    return import_content_type.default.parse(header2).type;
   } catch {
-    const essence = (header.split(";", 1)[0] ?? "").trim().toLowerCase();
-    if (essence === "" || header.slice(essence.length).includes(",")) {
+    const essence = (header2.split(";", 1)[0] ?? "").trim().toLowerCase();
+    if (essence === "" || header2.slice(essence.length).includes(",")) {
       return void 0;
     }
     return essence;
@@ -17637,14 +17641,14 @@ function applyPublicAuth(clientId, params) {
 }
 async function parseErrorResponse(input) {
   const statusCode = input instanceof Response ? input.status : void 0;
-  const body2 = input instanceof Response ? await input.text() : input;
+  const body = input instanceof Response ? await input.text() : input;
   try {
-    const result = OAuthErrorResponseSchema.parse(JSON.parse(body2));
+    const result = OAuthErrorResponseSchema.parse(JSON.parse(body));
     const { error: error2, error_description, error_uri } = result;
     const errorClass = OAUTH_ERRORS[error2] || ServerError;
     return new errorClass(error_description || "", error_uri);
   } catch (error2) {
-    const errorMessage = `${statusCode ? `HTTP ${statusCode}: ` : ""}Invalid OAuth error response: ${error2}. Raw body: ${body2}`;
+    const errorMessage = `${statusCode ? `HTTP ${statusCode}: ` : ""}Invalid OAuth error response: ${error2}. Raw body: ${body}`;
     return new ServerError(errorMessage);
   }
 }
@@ -18129,12 +18133,12 @@ var CR = 13;
 var SPACE = 32;
 function noop(_arg) {
 }
-function createParser(config3) {
-  if (typeof config3 == "function")
+function createParser(config2) {
+  if (typeof config2 == "function")
     throw new TypeError(
       "`config` must be an object, got a function instead. Did you mean `createParser({onEvent: fn})`?"
     );
-  const { onEvent = noop, onError = noop, onRetry = noop, onComment, maxBufferSize } = config3, pendingFragments = [];
+  const { onEvent = noop, onError = noop, onRetry = noop, onComment, maxBufferSize } = config2, pendingFragments = [];
   let pendingFragmentsLength = 0, isFirstChunk = true, id, data = "", dataLines = 0, eventType, terminated = false;
   function feed(chunk) {
     if (terminated)
@@ -18813,33 +18817,33 @@ var EventSource = class extends EventTarget {
     super(), __privateAdd(this, _EventSource_instances), this.CONNECTING = 0, this.OPEN = 1, this.CLOSED = 2, __privateAdd(this, _readyState), __privateAdd(this, _url2), __privateAdd(this, _redirectUrl), __privateAdd(this, _withCredentials), __privateAdd(this, _fetch), __privateAdd(this, _reconnectInterval), __privateAdd(this, _reconnectTimer), __privateAdd(this, _lastEventId, null), __privateAdd(this, _controller), __privateAdd(this, _parser), __privateAdd(this, _onError, null), __privateAdd(this, _onMessage, null), __privateAdd(this, _onOpen, null), __privateAdd(this, _onFetchResponse, async (response) => {
       var _a22;
       __privateGet(this, _parser).reset();
-      const { body: body2, redirected, status: status2, headers } = response;
-      if (status2 === 204) {
+      const { body, redirected, status, headers } = response;
+      if (status === 204) {
         __privateMethod(this, _EventSource_instances, failConnection_fn).call(this, "Server sent HTTP 204, not reconnecting", 204), this.close();
         return;
       }
-      if (redirected ? __privateSet(this, _redirectUrl, new URL(response.url)) : __privateSet(this, _redirectUrl, void 0), status2 !== 200) {
-        __privateMethod(this, _EventSource_instances, failConnection_fn).call(this, `Non-200 status code (${status2})`, status2);
+      if (redirected ? __privateSet(this, _redirectUrl, new URL(response.url)) : __privateSet(this, _redirectUrl, void 0), status !== 200) {
+        __privateMethod(this, _EventSource_instances, failConnection_fn).call(this, `Non-200 status code (${status})`, status);
         return;
       }
       if (!(headers.get("content-type") || "").startsWith("text/event-stream")) {
-        __privateMethod(this, _EventSource_instances, failConnection_fn).call(this, 'Invalid content type, expected "text/event-stream"', status2);
+        __privateMethod(this, _EventSource_instances, failConnection_fn).call(this, 'Invalid content type, expected "text/event-stream"', status);
         return;
       }
       if (__privateGet(this, _readyState) === this.CLOSED)
         return;
       __privateSet(this, _readyState, this.OPEN);
       const openEvent = new Event("open");
-      if ((_a22 = __privateGet(this, _onOpen)) == null || _a22.call(this, openEvent), this.dispatchEvent(openEvent), typeof body2 != "object" || !body2 || !("getReader" in body2)) {
-        __privateMethod(this, _EventSource_instances, failConnection_fn).call(this, "Invalid response body, expected a web ReadableStream", status2), this.close();
+      if ((_a22 = __privateGet(this, _onOpen)) == null || _a22.call(this, openEvent), this.dispatchEvent(openEvent), typeof body != "object" || !body || !("getReader" in body)) {
+        __privateMethod(this, _EventSource_instances, failConnection_fn).call(this, "Invalid response body, expected a web ReadableStream", status), this.close();
         return;
       }
-      const decoder = new TextDecoder(), reader = body2.getReader();
-      let open3 = true;
+      const decoder = new TextDecoder(), reader = body.getReader();
+      let open2 = true;
       do {
         const { done, value } = await reader.read();
-        value && __privateGet(this, _parser).feed(decoder.decode(value, { stream: !done })), done && (open3 = false, __privateGet(this, _parser).reset(), __privateMethod(this, _EventSource_instances, scheduleReconnect_fn).call(this));
-      } while (open3);
+        value && __privateGet(this, _parser).feed(decoder.decode(value, { stream: !done })), done && (open2 = false, __privateGet(this, _parser).reset(), __privateMethod(this, _EventSource_instances, scheduleReconnect_fn).call(this));
+      } while (open2);
     }), __privateAdd(this, _onFetchError, (err) => {
       __privateSet(this, _controller, void 0), !(err.name === "AbortError" || err.type === "aborted") && __privateMethod(this, _EventSource_instances, scheduleReconnect_fn).call(this, flattenError2(err));
     }), __privateAdd(this, _onEvent, (event) => {
@@ -19324,10 +19328,10 @@ var FEEDS = {
     }
   }
 };
-function rowsOf(body2, key) {
-  if (Array.isArray(body2)) return body2;
-  if (!body2 || typeof body2 !== "object") return [];
-  const o = body2;
+function rowsOf(body, key) {
+  if (Array.isArray(body)) return body;
+  if (!body || typeof body !== "object") return [];
+  const o = body;
   if (key && Array.isArray(o[key])) return o[key];
   const first = Object.values(o).find(Array.isArray);
   return first ?? [];
@@ -19425,7 +19429,7 @@ function worldRoute(o) {
   let refreshedAt = null;
   let errors = [];
   let pending = null;
-  const scrub3 = (s) => (o.secrets ?? []).filter(Boolean).reduce((t, k) => t.split(k).join("[key]"), s);
+  const scrub2 = (s) => (o.secrets ?? []).filter(Boolean).reduce((t, k) => t.split(k).join("[key]"), s);
   return async function get(q = {}) {
     if (refreshedAt === null || now() - refreshedAt >= every) {
       pending ??= memory.refresh(now()).then((r) => {
@@ -19433,9 +19437,9 @@ function worldRoute(o) {
         errors = [
           ...r.failed.map((n) => `${n}: did not answer`),
           ...o.sources.flatMap((s) => s.lastErrors ?? [])
-        ].map(scrub3);
+        ].map(scrub2);
       }, (e) => {
-        errors = [scrub3(`could not refresh: ${e.message}`)];
+        errors = [scrub2(`could not refresh: ${e.message}`)];
       }).finally(() => {
         pending = null;
       });
@@ -19453,9 +19457,9 @@ var PROVIDERS = {
   xai: { label: "Grok", maker: "xAI", models: ["grok-4", "grok-4-fast"], keyHint: "xai-\u2026" }
 };
 var ModelError = class extends Error {
-  constructor(message, status2) {
+  constructor(message, status) {
     super(message);
-    this.status = status2;
+    this.status = status;
     this.name = "ModelError";
   }
 };
@@ -19467,15 +19471,15 @@ var scrub = (s, key) => {
 async function chat(cfg, system, messages, o = {}) {
   const f = o.fetch ?? globalThis.fetch;
   const max = o.maxTokens ?? 300;
-  let url2, headers, body2;
+  let url2, headers, body;
   if (cfg.provider === "anthropic") {
     url2 = "https://api.anthropic.com/v1/messages";
     headers = { "content-type": "application/json", "x-api-key": cfg.key, "anthropic-version": "2023-06-01" };
-    body2 = { model: cfg.model, max_tokens: max, system, messages };
+    body = { model: cfg.model, max_tokens: max, system, messages };
   } else {
     url2 = cfg.provider === "openai" ? "https://api.openai.com/v1/chat/completions" : "https://api.x.ai/v1/chat/completions";
     headers = { "content-type": "application/json", authorization: `Bearer ${cfg.key}` };
-    body2 = {
+    body = {
       model: cfg.model,
       messages: [{ role: "system", content: system }, ...messages],
       ...cfg.provider === "openai" ? { max_completion_tokens: max } : { max_tokens: max }
@@ -19483,7 +19487,7 @@ async function chat(cfg, system, messages, o = {}) {
   }
   let res;
   try {
-    res = await f(url2, { method: "POST", headers, body: JSON.stringify(body2) });
+    res = await f(url2, { method: "POST", headers, body: JSON.stringify(body) });
   } catch (e) {
     throw new ModelError(`could not reach ${PROVIDERS[cfg.provider].maker}: ${scrub(String(e.message), cfg.key)}`);
   }
@@ -19552,246 +19556,173 @@ function classify2(a, hasUndo) {
   return { kind: "write", start: "external", floor, lowerable: true, why };
 }
 
+// apps/tacit/api.ts
+var header = (r, k) => {
+  const v = r.headers[k];
+  return (Array.isArray(v) ? v[0] : v) ?? "";
+};
+var ENV_KEY = { anthropic: "ANTHROPIC_API_KEY", openai: "OPENAI_API_KEY", xai: "XAI_API_KEY" };
+function sameCode(given, want) {
+  const a = Buffer.from(given), b = Buffer.from(want);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+function unlocked(r, env2) {
+  const code = env2.TACIT_ACCESS_CODE;
+  if (!code) return true;
+  return sameCode(header(r, "x-tacit-code"), code);
+}
+function modelFor(r, env2) {
+  const provider = String(r.body.provider ?? header(r, "x-tacit-provider")) || firstHosted(env2) || "anthropic";
+  if (!PROVIDERS[provider]) return { error: "unknown provider", status: 400 };
+  const model = String(r.body.model ?? header(r, "x-tacit-model") ?? "").trim() || PROVIDERS[provider].models[0];
+  const own2 = header(r, "x-tacit-key").trim();
+  if (own2) return { provider, key: own2, model };
+  const hosted = env2[ENV_KEY[provider]];
+  if (!hosted) return { error: `no ${PROVIDERS[provider].label} key on this site: add your own in Settings`, status: 409 };
+  if (!unlocked(r, env2)) return { error: "enter the access code in Settings to use this site\u2019s AI", status: 401 };
+  return { provider, key: hosted, model };
+}
+var firstHosted = (env2) => Object.keys(ENV_KEY).find((p) => env2[ENV_KEY[p]]);
+function scrubber(r, env2) {
+  const secrets = [header(r, "x-tacit-key"), String(r.body.token ?? ""), ...Object.values(ENV_KEY).map((k) => env2[k]), env2.WORLDMONITOR_API_KEY, env2.TACIT_ACCESS_CODE].filter((s) => !!s && s.length > 3);
+  return (s) => secrets.reduce((t, k) => t.split(k).join("[key]"), s);
+}
+var world = null;
+function worldOf(env2) {
+  const key = env2.WORLDMONITOR_API_KEY ?? "";
+  if (!world || world.key !== key) world = { key, get: worldRoute({ sources: key ? [worldMonitorSource(worldMonitorFetch(key))] : [], secrets: [key] }) };
+  return world;
+}
+function privateAddress(ip) {
+  if (isIP(ip) === 6) {
+    const v = ip.toLowerCase();
+    if (v === "::1" || v === "::" || v.startsWith("fc") || v.startsWith("fd") || v.startsWith("fe80")) return true;
+    const m = v.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+    return m ? privateAddress(m[1]) : false;
+  }
+  const [a, b] = ip.split(".").map(Number);
+  return a === 10 || a === 127 || a === 0 || a === 169 && b === 254 || a === 172 && b >= 16 && b <= 31 || a === 192 && b === 168 || a === 100 && b >= 64 && b <= 127 || a >= 224;
+}
+async function checkTarget(raw, env2) {
+  let u;
+  try {
+    u = new URL(raw);
+  } catch {
+    throw new Error("that is not a web address");
+  }
+  const local = env2.TACIT_LOCAL === "1";
+  if (u.protocol !== "https:" && !(local && u.protocol === "http:")) throw new Error("only https servers can be connected");
+  if (u.username || u.password) throw new Error("put credentials in the token field, not the address");
+  if (!local) {
+    const addrs = isIP(u.hostname) ? [{ address: u.hostname }] : await lookup(u.hostname, { all: true });
+    if (addrs.some((a) => privateAddress(a.address))) throw new Error("that address points inside a private network");
+  }
+  return u;
+}
+async function openClient(url2, token) {
+  const init = token ? { requestInit: { headers: { authorization: `Bearer ${token}` } } } : void 0;
+  const client = new Client({ name: "tacit", version: "0.1.0" });
+  try {
+    await client.connect(new StreamableHTTPClientTransport(url2, init));
+    return client;
+  } catch {
+    const legacy = new Client({ name: "tacit", version: "0.1.0" });
+    await legacy.connect(new SSEClientTransport(url2, init));
+    return legacy;
+  }
+}
+var RPC = /* @__PURE__ */ new Set(["listTools", "callTool", "readResource", "getServerCapabilities", "getServerVersion"]);
+async function handle(r, env2) {
+  const scrub2 = scrubber(r, env2);
+  const p = r.path.replace(/^\/+|\/+$/g, "");
+  if (r.method === "GET" && p === "status") {
+    const providers = Object.fromEntries(Object.keys(PROVIDERS).map((k) => [k, { ...PROVIDERS[k], hosted: !!env2[ENV_KEY[k]] }]));
+    return { status: 200, body: { v: 2, providers, hosted: firstHosted(env2) ?? null, locked: !!env2.TACIT_ACCESS_CODE, unlocked: unlocked(r, env2), world: !!env2.WORLDMONITOR_API_KEY } };
+  }
+  if (r.method === "GET" && p === "world") {
+    const w = worldOf(env2);
+    if (!w.key) return { status: 503, body: { items: [], errors: ["no World Monitor key"] } };
+    const out = await w.get({});
+    return { status: out.status, body: out.body };
+  }
+  if (r.method !== "POST") return { status: 404, body: { error: "not here" } };
+  if (p === "unlock") return { status: 200, body: { ok: unlocked(r, env2) } };
+  if (p === "model/test" || p === "say" || p === "answer" || p === "summary") {
+    const m = modelFor(r, env2);
+    if ("error" in m) return { status: m.status, body: { ok: false, error: m.error } };
+    const b = r.body;
+    try {
+      if (p === "model/test") {
+        await chat(m, "Reply with exactly: ready", [{ role: "user", content: "Are you there?" }], { maxTokens: 16 });
+        return { status: 200, body: { ok: true, label: PROVIDERS[m.provider].label, model: m.model } };
+      }
+      const pr = p === "say" ? phrasePrompt({ said: String(b.said ?? ""), question: String(b.question ?? ""), move: String(b.move ?? "ask"), topic: String(b.topic ?? ""), known: String(b.known ?? "") }) : p === "answer" ? answerPrompt({ question: String(b.question ?? ""), known: String(b.known ?? ""), world: String(b.world ?? ""), recent: (Array.isArray(b.recent) ? b.recent : []).slice(-8) }) : summaryPrompt({ said: String(b.said ?? ""), topic: String(b.topic ?? ""), question: String(b.question ?? "") });
+      const text = await chat(m, pr.system, pr.messages, { maxTokens: p === "answer" ? 400 : 120 });
+      return { status: 200, body: { text } };
+    } catch (e) {
+      return { status: 502, body: { ok: false, error: scrub2(e instanceof ModelError ? e.message : "the model did not answer") } };
+    }
+  }
+  if (p === "mcp/preview" || p === "mcp/rpc") {
+    if (!unlocked(r, env2)) return { status: 401, body: { error: "enter the access code in Settings to connect tools" } };
+    let client = null;
+    try {
+      const url2 = await checkTarget(String(r.body.url ?? ""), env2);
+      client = await openClient(url2, String(r.body.token ?? ""));
+      if (p === "mcp/preview") {
+        const tools = [];
+        let cursor;
+        do {
+          const page = await client.listTools(cursor ? { cursor } : {});
+          tools.push(...page.tools);
+          cursor = page.nextCursor;
+        } while (cursor && tools.length < 200);
+        return { status: 200, body: { ok: true, name: client.getServerVersion()?.name ?? url2.hostname, tools: tools.map((t) => {
+          const c = classify2(t.annotations, false);
+          return { name: t.name, description: (t.description ?? "").slice(0, 160), radius: c.kind === "read" ? "read" : c.start };
+        }) } };
+      }
+      const method = String(r.body.method);
+      if (!RPC.has(method)) return { status: 400, body: { error: "not allowed" } };
+      const fn = client[method].bind(client);
+      return { status: 200, body: { result: await fn(r.body.params) ?? null } };
+    } catch (e) {
+      return { status: 200, body: { ok: false, error: scrub2(String(e.message)).slice(0, 300) } };
+    } finally {
+      await client?.close().catch(() => {
+      });
+    }
+  }
+  return { status: 404, body: { error: "not here" } };
+}
+
 // apps/tacit/server.ts
 var here = dirname(fileURLToPath(import.meta.url));
 var port = Number(process.env.PORT ?? 7373);
-var dir = join(homedir(), ".tacit");
-var file = join(dir, "config.json");
-function load() {
-  try {
-    const c = JSON.parse(readFileSync(file, "utf8"));
-    return { ...c, mcp: c.mcp ?? [] };
-  } catch {
-    return { mcp: [] };
-  }
-}
-function save(c) {
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(file, JSON.stringify(c, null, 2), { mode: 384 });
-  try {
-    chmodSync(file, 384);
-  } catch {
-  }
-}
-var config2 = load();
-var ENV_KEYS = {
-  anthropic: process.env.ANTHROPIC_API_KEY,
-  openai: process.env.OPENAI_API_KEY,
-  xai: process.env.XAI_API_KEY
-};
-function model() {
-  if (config2.model?.key) return config2.model;
-  for (const p of Object.keys(ENV_KEYS)) {
-    const key = ENV_KEYS[p];
-    if (key) return { provider: p, key, model: PROVIDERS[p].models[0] };
-  }
-  return null;
-}
-var secrets = () => [config2.model?.key, config2.worldKey, process.env.WORLDMONITOR_API_KEY, ...Object.values(ENV_KEYS), ...config2.mcp.map((m) => m.token)].filter(Boolean);
-var scrub2 = (s) => secrets().reduce((t, k) => t.split(k).join("[key]"), s);
-var world = buildWorld();
-function buildWorld() {
-  const key = process.env.WORLDMONITOR_API_KEY ?? config2.worldKey ?? "";
-  const sources = key ? [worldMonitorSource(worldMonitorFetch(key))] : [];
-  return { key, get: worldRoute({ sources, secrets: [key] }) };
-}
-var live = /* @__PURE__ */ new Map();
-async function open2(e) {
-  const have = live.get(e.id);
-  if (have) return have;
-  const headers = e.token ? { authorization: `Bearer ${e.token}` } : void 0;
-  const url2 = new URL(e.url);
-  if (!/^https?:$/.test(url2.protocol)) throw new Error("only http and https servers can be connected");
-  const client = new Client({ name: "tacit", version: "0.1.0" });
-  try {
-    await client.connect(new StreamableHTTPClientTransport(url2, headers ? { requestInit: { headers } } : void 0));
-  } catch {
-    const legacy = new Client({ name: "tacit", version: "0.1.0" });
-    await legacy.connect(new SSEClientTransport(url2, headers ? { requestInit: { headers } } : void 0));
-    return remember(e, legacy);
-  }
-  return remember(e, client);
-}
-async function remember(e, client) {
-  const tools = [];
-  let cursor;
-  do {
-    const page = await client.listTools(cursor ? { cursor } : {});
-    tools.push(...page.tools);
-    cursor = page.nextCursor;
-  } while (cursor);
-  const l = { client, tools };
-  live.set(e.id, l);
-  e.name = client.getServerVersion()?.name ?? e.name;
-  return l;
-}
-function costs(l) {
-  return l.tools.map((t) => {
-    const c = classify2(t.annotations, false);
-    return { name: t.name, description: (t.description ?? "").slice(0, 160), radius: c.kind === "read" ? "read" : c.start, why: c.kind === "read" ? c.why : c.why.join("; ") };
-  });
-}
-async function body(req) {
-  let s = "";
-  for await (const chunk of req) {
-    s += chunk;
-    if (s.length > 2e5) throw new Error("too large");
-  }
-  return s ? JSON.parse(s) : {};
-}
-function send(res, status2, v) {
-  res.writeHead(status2, { "content-type": "application/json", "cache-control": "no-store" });
-  res.end(JSON.stringify(v));
-}
-function status() {
-  const m = model();
-  return {
-    model: m ? { provider: m.provider, label: PROVIDERS[m.provider].label, model: m.model, from: config2.model?.key ? "settings" : "environment" } : null,
-    providers: PROVIDERS,
-    world: !!world.key,
-    mcp: config2.mcp.map((e) => ({ id: e.id, url: e.url, name: e.name ?? e.url, approved: e.approved, connected: live.has(e.id), tools: live.get(e.id)?.tools.length ?? 0 }))
-  };
-}
-var slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 24) || "server";
-var RPC = /* @__PURE__ */ new Set(["listTools", "callTool", "readResource", "getServerCapabilities", "getServerVersion"]);
-async function route(req, res) {
+var env = { ...process.env, TACIT_LOCAL: "1" };
+createServer(async (req, res) => {
   const url2 = new URL(req.url ?? "/", "http://local");
-  const p = url2.pathname;
-  const post = req.method === "POST";
-  if (!post && (p === "/" || p === "/index.html")) {
-    res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
-    res.end(readFileSync(join(here, "index.html")));
-    return;
-  }
-  if (!post && p === "/api/status") return send(res, 200, status());
-  if (!post && p === "/api/world") {
-    if (!world.key) return send(res, 503, { items: [], refreshedAt: null, errors: ["no World Monitor key"] });
-    const topics = url2.searchParams.get("topics")?.split(",").filter(Boolean) ?? [];
-    const r = await world.get({ topics });
-    return send(res, r.status, r.body);
-  }
-  if (!post) return send(res, 404, { error: "not here" });
-  const origin = req.headers.origin;
-  if (origin && !/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin)) return send(res, 403, { error: "not from Tacit" });
-  const b = await body(req);
-  if (p === "/api/model") {
-    const provider = b.provider;
-    if (!PROVIDERS[provider]) return send(res, 400, { error: "unknown provider" });
-    const key = String(b.key ?? "").trim() || (config2.model?.provider === provider ? config2.model.key : "");
-    const name = String(b.model ?? "").trim() || PROVIDERS[provider].models[0];
-    if (!key) return send(res, 400, { error: "paste a key first" });
-    const cand = { provider, key, model: name };
-    try {
-      const said = await chat(cand, "Reply with exactly: ready", [{ role: "user", content: "Are you there?" }], { maxTokens: 16 });
-      config2.model = cand;
-      save(config2);
-      return send(res, 200, { ok: true, said: said.slice(0, 60), status: status() });
-    } catch (e) {
-      return send(res, 200, { ok: false, error: scrub2(e.message) });
+  try {
+    if (!url2.pathname.startsWith("/api/")) {
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+      res.end(readFileSync(join(here, "public", "index.html")));
+      return;
     }
-  }
-  if (p === "/api/model/forget") {
-    delete config2.model;
-    save(config2);
-    return send(res, 200, status());
-  }
-  if (p === "/api/say" || p === "/api/answer" || p === "/api/summary") {
-    const m = model();
-    if (!m) return send(res, 409, { error: "no model connected" });
-    try {
-      const pr = p === "/api/say" ? phrasePrompt({ said: String(b.said ?? ""), question: String(b.question ?? ""), move: String(b.move ?? "ask"), topic: String(b.topic ?? ""), known: String(b.known ?? "") }) : p === "/api/answer" ? answerPrompt({ question: String(b.question ?? ""), known: String(b.known ?? ""), world: String(b.world ?? ""), recent: Array.isArray(b.recent) ? b.recent : [] }) : summaryPrompt({ said: String(b.said ?? ""), topic: String(b.topic ?? ""), question: String(b.question ?? "") });
-      const text = await chat(m, pr.system, pr.messages, { maxTokens: p === "/api/answer" ? 400 : 120 });
-      return send(res, 200, { text });
-    } catch (e) {
-      return send(res, 502, { error: scrub2(e instanceof ModelError ? e.message : "the model did not answer") });
+    let raw = "";
+    for await (const c of req) {
+      raw += c;
+      if (raw.length > 2e5) throw new Error("too large");
     }
+    const out = await handle({ method: req.method ?? "GET", path: url2.pathname.slice(5), headers: req.headers, body: raw ? JSON.parse(raw) : {} }, env);
+    res.writeHead(out.status, { "content-type": "application/json", "cache-control": "no-store" });
+    res.end(JSON.stringify(out.body));
+  } catch {
+    res.writeHead(500, { "content-type": "application/json" });
+    res.end('{"error":"something broke"}');
   }
-  if (p === "/api/world/key") {
-    config2.worldKey = String(b.key ?? "").trim() || void 0;
-    save(config2);
-    world = buildWorld();
-    return send(res, 200, status());
-  }
-  if (p === "/api/mcp/add") {
-    const raw = String(b.url ?? "").trim();
-    let id = "";
-    try {
-      id = slug(new URL(raw).hostname.split(".")[0] ?? "server");
-    } catch {
-      return send(res, 400, { error: "that is not a web address" });
-    }
-    while (config2.mcp.some((e) => e.id === id)) id += "2";
-    const entry = { id, url: raw, ...b.token ? { token: String(b.token) } : {}, approved: false };
-    try {
-      const l = await open2(entry);
-      let named = slug(entry.name ?? id);
-      while (config2.mcp.some((e) => e.id === named)) named += "2";
-      if (named !== id) {
-        live.set(named, l);
-        live.delete(id);
-        entry.id = id = named;
-      }
-      config2.mcp.push(entry);
-      save(config2);
-      return send(res, 200, { ok: true, id, name: entry.name, tools: costs(l) });
-    } catch (e) {
-      return send(res, 200, { ok: false, error: scrub2(`could not connect: ${e.message}`).slice(0, 300) });
-    }
-  }
-  if (p === "/api/mcp/approve" || p === "/api/mcp/remove") {
-    const e = config2.mcp.find((x) => x.id === b.id);
-    if (!e) return send(res, 404, { error: "no such connection" });
-    if (p.endsWith("approve")) e.approved = true;
-    else {
-      config2.mcp = config2.mcp.filter((x) => x !== e);
-      await live.get(e.id)?.client.close().catch(() => {
-      });
-      live.delete(e.id);
-    }
-    save(config2);
-    return send(res, 200, status());
-  }
-  if (p === "/api/mcp/tools") {
-    const e = config2.mcp.find((x) => x.id === b.id);
-    if (!e) return send(res, 404, { error: "no such connection" });
-    try {
-      return send(res, 200, { tools: costs(await open2(e)) });
-    } catch (err) {
-      return send(res, 200, { error: scrub2(err.message) });
-    }
-  }
-  const rpc = p.match(/^\/api\/mcp\/([a-z0-9_]+)\/rpc$/);
-  if (rpc) {
-    const e = config2.mcp.find((x) => x.id === rpc[1]);
-    if (!e || !e.approved) return send(res, 403, { error: "this server has not been approved" });
-    const method = String(b.method);
-    if (!RPC.has(method)) return send(res, 400, { error: "not allowed" });
-    try {
-      const l = await open2(e);
-      const fn = l.client[method].bind(l.client);
-      const out = await fn(b.params);
-      return send(res, 200, { result: out ?? null });
-    } catch (err) {
-      return send(res, 200, { error: scrub2(err.message).slice(0, 300) });
-    }
-  }
-  return send(res, 404, { error: "not here" });
-}
-createServer((req, res) => {
-  route(req, res).catch((e) => {
-    console.error(scrub2(String(e.message)));
-    if (!res.headersSent) send(res, 500, { error: "something broke on the server; details are in its window" });
-  });
-}).listen(port, "127.0.0.1", () => {
-  const m = model();
-  console.log(`
+}).listen(port, "127.0.0.1", () => console.log(`
   Tacit is running:  http://127.0.0.1:${port}
-`);
-  console.log(`  Model:  ${m ? `${PROVIDERS[m.provider].label} (${m.model})` : "none yet \u2014 add one in Settings"}`);
-  console.log(`  World:  ${world.key ? "World Monitor" : "sample"}`);
-  console.log(`  MCP:    ${config2.mcp.filter((e) => e.approved).length} approved
-`);
-});
+`));
 /*! Bundled license information:
 
 content-type/index.js:

@@ -1,59 +1,78 @@
-<!doctype html>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The EUI Stage</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Azeret+Mono:wght@300;400;500&display=swap">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stage Kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-  :root{
-    color-scheme:dark;
-    --void:#0B1220; --deep:#111827; --up:#1B2434;
-    --edge:rgba(255,255,255,.09); --ink:#E9EEF7; --dim:#9aa6bb; --faint:#6c7689;
+  :root {
+    --bg: #FFFFFF; --paper: #FAF8F5; --raised: #FFFFFF; --sunk: #F4F1EC;
+    --ink: #1D1E22; --dim: #6B6E78; --faint: #9A9CA4; --line: rgba(29,30,34,.09); --line-strong: rgba(29,30,34,.16);
+    --accent: #E8722C; --accent-deep: #C85A17; --accent-ink: #FFFFFF; --accent-soft: rgba(232,114,44,.10);
+    --blue: #6F8FB6; --ok: #2F9E6B; --bad: #C8443B; --stage-tint: 29,30,34;
+    --shadow: 0 1px 2px rgba(29,30,34,.04), 0 8px 28px rgba(29,30,34,.06);
+    --display: "Familjen Grotesk", "Segoe UI", system-ui, sans-serif;
+    --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
   }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--void);color:var(--ink);
-    font:15px/1.6 "Bricolage Grotesque",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:1120px;margin:0 auto;padding:26px 16px 80px}
-  .mono,.lbl,pre,code{font-family:"Azeret Mono",ui-monospace,monospace}
-  h1{font-size:clamp(28px,4.6vw,44px);font-weight:700;letter-spacing:-.025em;line-height:1.06;margin:0}
-  h2{font-size:clamp(19px,2.4vw,24px);font-weight:600;letter-spacing:-.01em;margin:0}
-  .lbl{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint)}
-  .lede{color:var(--dim);font-size:17px;max-width:64ch;margin:16px 0 0}
-  .lede b{color:var(--ink);font-weight:600}
-  header{padding-bottom:30px;border-bottom:1px solid var(--edge);margin-bottom:34px}
-  section{margin-bottom:52px}
-  .shead{display:flex;align-items:baseline;gap:12px;margin-bottom:6px;flex-wrap:wrap}
-  .note{color:var(--dim);max-width:66ch;margin:8px 0 20px}
-  .grid{display:grid;gap:18px}
-  @media(min-width:900px){.two{grid-template-columns:minmax(360px,1fr) minmax(0,1fr)}}
-  .panel{background:var(--deep);border:1px solid var(--edge);border-radius:20px;padding:18px}
-  .panel.tight{padding:14px}
-  .rowbtns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-  button.b{background:transparent;border:1px solid var(--edge);color:var(--ink);
-    border-radius:999px;padding:9px 15px;font:inherit;font-size:13px;cursor:pointer;min-height:40px}
-  button.b:hover{background:rgba(255,255,255,.05)}
-  button.b[aria-pressed="true"]{border-color:currentColor}
-  input.t,textarea.t{width:100%;background:#0d1524;border:1px solid var(--edge);color:var(--ink);
-    border-radius:12px;padding:11px 13px;font:inherit;font-size:14px}
-  textarea.t{font-family:"Azeret Mono",monospace;font-size:12.5px;line-height:1.55;min-height:230px}
-  pre{background:#0d1524;border:1px solid var(--edge);border-radius:12px;padding:13px;
-    overflow:auto;font-size:12px;line-height:1.6;margin:0;color:var(--dim)}
-  .beats{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
-  .beat{font-size:10px;letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--edge);
-    border-radius:999px;padding:4px 10px;color:var(--faint)}
-  .beat[data-on="true"]{color:var(--ink);border-color:currentColor}
-  .swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px}
-  .sw{border:1px solid var(--edge);border-radius:14px;padding:12px;background:var(--deep)}
-  .sw i{display:block;height:28px;border-radius:8px;margin-bottom:9px}
-  .sw b{display:block;font-size:12px;font-weight:600}
-  .sw span{font-size:11px;color:var(--faint);font-family:"Azeret Mono",monospace}
-  .lint{font-size:12.5px;line-height:1.7;font-family:"Azeret Mono",monospace;white-space:pre-wrap;margin:0}
-  .lint .error{color:#F87171} .lint .warn{color:#FB923C} .lint .note{color:var(--faint)}
-  .ok{color:#34D399}
-  .stagewrap{min-height:260px;display:flex;flex-direction:column;justify-content:center;
-    background:var(--void);border:1px solid var(--edge);border-radius:24px;padding:20px}
-  .meta{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--faint);
-    font-family:"Azeret Mono",monospace;margin-top:12px}
-  .meta b{color:var(--dim);font-weight:400}
-  /* Fingers are wider than cursors: every tap target is at least 44 px where the pointer is coarse. */
-  @media (pointer:coarse){ button.b{min-height:44px} }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #131417; --paper: #18191D; --raised: #1E2024; --sunk: #101114;
+    --ink: #F2F0EB; --dim: #A3A5AD; --faint: #6E7079; --line: rgba(242,240,235,.08); --line-strong: rgba(242,240,235,.16);
+    --accent: #F08A47; --accent-deep: #F5A06A; --accent-ink: #1A1206; --accent-soft: rgba(240,138,71,.13);
+    --blue: #93AED0; --ok: #5CC795; --bad: #E77A70; --stage-tint: 255,255,255;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35); color-scheme: dark; } }
+  :root[data-theme="dark"] {
+    --bg: #131417; --paper: #18191D; --raised: #1E2024; --sunk: #101114;
+    --ink: #F2F0EB; --dim: #A3A5AD; --faint: #6E7079; --line: rgba(242,240,235,.08); --line-strong: rgba(242,240,235,.16);
+    --accent: #F08A47; --accent-deep: #F5A06A; --accent-ink: #1A1206; --accent-soft: rgba(240,138,71,.13);
+    --blue: #93AED0; --ok: #5CC795; --bad: #E77A70; --stage-tint: 255,255,255;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35); color-scheme: dark; }
+  [hidden] { display: none !important; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 var(--body); -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  h1, h2, h3 { font-family: var(--display); margin: 0; letter-spacing: -.015em; text-wrap: balance; }
+  p { margin: 0; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding-inline: clamp(16px, 4vw, 40px); padding-block: 40px 96px; display: flex; flex-direction: column; gap: 48px; }
+  .eyebrow { font: 500 11.5px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
+  header.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+  header.top .t { display: flex; flex-direction: column; gap: 10px; }
+  header.top h1 { font-size: clamp(36px, 6vw, 60px); line-height: 1; }
+  header.top h1 em { font-style: normal; color: var(--accent); }
+  header.top p { color: var(--dim); max-width: 58ch; }
+  .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 999px; padding: 3px; background: var(--raised); }
+  .seg button { border: 0; background: none; border-radius: 999px; padding: 6px 14px; font-size: 14px; color: var(--dim); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+  section { display: flex; flex-direction: column; gap: 18px; }
+  section > h2 { font-size: 26px; }
+  section > p { color: var(--dim); max-width: 64ch; }
+  .tile.wide { grid-column: 1 / -1; }
+  .what.said { font-style: italic; min-height: 1.4em; }
+  .again { font: inherit; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--accent); background: none; color: var(--accent); cursor: pointer; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
+  .tile { background: var(--raised); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .tile header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .tile h3 { font-size: 17px; }
+  .tile .what { color: var(--dim); font-size: 13.5px; }
+  .tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+  .tabs button { border: 1px solid var(--line); background: none; border-radius: 999px; padding: 3px 10px; font-size: 12.5px; color: var(--dim); }
+  .tabs button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent-deep); background: var(--accent-soft); }
+  .host { min-height: 140px; }
+  .replay { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+  .said { font: 600 clamp(20px, 2.6vw, 28px)/1.35 var(--display); letter-spacing: -.01em; min-height: 3.5em; }
+  .said .heard { color: var(--ink); }
+  .said .coming { color: var(--faint); }
+  .btn { border: 1px solid var(--line-strong); background: var(--raised); border-radius: 999px; padding: 9px 18px; font-weight: 700; font-size: 14px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .note { font-size: 13.5px; color: var(--dim); }
+  .rules { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .rule { border-top: 2px solid var(--accent); padding-top: 10px; font-size: 14px; color: var(--dim); }
+  .rule b { display: block; color: var(--ink); font-family: var(--display); font-size: 15.5px; margin-bottom: 2px; }
+  footer { color: var(--faint); font: 500 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+  @media (max-width: 760px) { .replay { grid-template-columns: minmax(0, 1fr); } }
+  /* The Stage, in Tacit's colours: its own rules stay its own. */
+  .host { --eui-ink: var(--ink); --eui-tint: var(--stage-tint); --eui-font: var(--body);
+    --eui-mint: var(--accent); --eui-planPurple: var(--accent); --eui-rewardsGold: var(--accent); --eui-cyan: var(--accent); --eui-poppinsCyan: var(--accent); --eui-neutral: var(--accent);
+    --eui-success: var(--ok); --eui-warning: var(--accent); --eui-danger: var(--bad); --eui-on-domain: var(--accent-ink); }
+  /* One accent in Tacit: the card's domain colour is always Kairos orange. */
+  .host .eui-card, .host .eui-item { --eui-domain: var(--accent) !important; }
 </style>
